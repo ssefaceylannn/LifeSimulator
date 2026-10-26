@@ -366,7 +366,9 @@
         (CAR_UPKEEP[s.car] || 4500) * s.idx.transport;
     }
     if (s.policy === "transit") transport *= 0.85;
-    let total = b.food * s.idx.food + transport + b.other * s.idx.cpi;
+    // Oyuncunun seçtiği yaşam tarzı (js/systems/budget.js): tutumlu, normal, rahat
+    const st = HS.styleMul ? HS.styleMul(s) : { food: 1, transport: 1, other: 1 };
+    let total = b.food * s.idx.food * st.food + transport * st.transport + b.other * s.idx.cpi * st.other;
     if (s.housing === "aile") total *= E().familyContribution;
     if (s.housing === "ev") total += rentFull(s) * 0.05; // aidat ve bakım
     return total * abroadMul(s, "cost");
@@ -991,7 +993,8 @@
     const last = s.seen[def.id];
     if (last !== undefined) {
       if (def.once) return false;
-      if (s.weeks - last < (def.cooldown ?? 52)) return false;
+      // Haftada birden çok olay geldiği için bekleme süreleri ölçeklenir (js/systems/time.js).
+      if (s.weeks - last < (def.cooldown ?? 52) * (HS.COOLDOWN_SCALE || 1)) return false;
     }
     try {
       return !def.when || !!def.when(s, ctx(s));
@@ -1022,7 +1025,7 @@
     return HS.FALLBACK_EVENT;
   }
   function nextEvent(s) {
-    const def = s.weeks === 0 ? HS.INTRO_EVENT : chooseEvent(s);
+    const def = s.weeks === 0 && s.seen[HS.INTRO_EVENT.id] === undefined ? HS.INTRO_EVENT : chooseEvent(s);
     s.seen[def.id] = s.weeks;
     (HS.HOOKS.event || []).forEach((f) => f(s, def));
     s.current = materialize(def, s);

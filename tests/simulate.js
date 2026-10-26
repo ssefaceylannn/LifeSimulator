@@ -77,7 +77,7 @@ for (let n = 0; n < N; n++) {
   if (s.card) s.card.auto = "full";
   // Sekme eylemlerini taklit et: zaman zaman ev/araba al, birikim yap.
   let guard = 0;
-  while (s.alive && guard++ < 12000) {
+  while (s.alive && guard++ < 30000) {
     // Boş zaman: botlar rastgele etkinlik yapar (sürprizler dahil)
     for (let k = 0; k < 3 && s.free > 0; k++) {
       const acts = HS.ACTIVITIES.filter((a) => !a.when || a.when(s));

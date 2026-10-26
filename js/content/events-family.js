@@ -298,7 +298,8 @@
       maxAge: 40,
       title: "Kuzeninle kıyaslanmak",
       text: (s, h) =>
-        "Aile yemeğinde biri yine kuzeninin " +
+        "Aile yemeğinde biri yine " +
+        ((s.kin || []).find((k) => k.rel === "kuzen" && k.alive) ? "kuzenin " + HS.ek(s.kin.find((k) => k.rel === "kuzen" && k.alive).name, "gen") + " " : "kuzeninin ") +
         h.pick([
           "doktor olduğunu",
           "ev aldığını",

@@ -99,15 +99,20 @@ const assert = (c, m) => {
   }
   await playWeeks(60);
   const before = await p.evaluate(SAVES);
-  assert(before.length === 1 && before[0].weeks >= 25, "haftalar kaydedilmedi");
+  assert(before.length === 1 && before[0].weeks >= 8, "haftalar kaydedilmedi");
 
-  // Sahne seçici: oda değiştir
-  for (const v of ["yatak", "mutfak", "salon"]) {
-    while (await p.isVisible("#event")) await p.click("#eventContinue");
-    await p.click(`#viewChips [data-v=${v}]`);
-    assert((await p.evaluate(() => HS.ui.active.view)) === v, v + " sahnesine geçilmedi");
-    await shot(p, "04-oda-" + v);
-  }
+  // Sahne olayın geçtiği yere kendiliğinden geçer (elle seçim yok)
+  while (await p.isVisible("#event")) await p.click("#eventContinue");
+  const sc = await p.evaluate(() => ({ v: HS.ui.active.view, r: HS.ui.active.clock.room, views: HS.Art.views(HS.ui.active).map((x) => x.id) }));
+  assert(!sc.views.includes(sc.r) || sc.v === sc.r, "sahne olayın odasına geçmedi: " + JSON.stringify(sc));
+  assert(!(await p.$("#viewChips")), "elle sahne düğmeleri hâlâ var");
+  // Bütçe: tutumlu yaşam gideri düşürür
+  await p.click(".tab[data-tab=money]");
+  const out0 = await p.evaluate(() => HS.weeklyBudget(HS.ui.active).out);
+  await p.click('#panel .style-row:has-text("Yemek") button:has-text("Tutumlu")');
+  const out1 = await p.evaluate(() => HS.weeklyBudget(HS.ui.active).out);
+  assert(out1 < out0, "tutumlu yemek gideri düşürmedi");
+  await shot(p, "04-butce");
   // Sekmeler
   for (const t of ["work", "skills", "me", "world", "money", "life"]) {
     await p.click(`.tab[data-tab=${t}]`);
@@ -147,7 +152,10 @@ const assert = (c, m) => {
   await sub("Araç");
   await clickRow("Al: SUV");
   assert((await p.evaluate(() => HS.ui.active.car)) === "suv", "araba alınmadı");
-  await p.click("#viewChips [data-v=garaj]");
+  await p.evaluate(() => {
+    HS.ui.active.view = "garaj";
+    HS.ui.render();
+  });
   assert(await p.$("#sceneArt .hs-car"), "araba garajda yok");
   await shot(p, "05-garaj");
   // Yatırım ve bahis

@@ -5,25 +5,38 @@
   const c = (label, hint, fx = {}) => ({ label, hint, fx });
 
   // Yedek olay da her seferinde farklı küçük bir an anlatır.
+  // Planlanmış bir olay yoksa: boş bir akşam ya da plansız bir gün. Seçenekler her
+  // seferinde küçük ama gerçek etkileri olan gündelik işlerden rastgele seçilir.
+  const FREE = [
+    c("Dizi aç, kanepeye uzan", "Stres −", { stress: -4, m: 1, kg: 0.05 }),
+    c("Bir arkadaşını ara", "Çevre +", { people: 1, m: 2 }),
+    c("Akşam yürüyüşü", "Sağlık +, stres −", { h: 1, stress: -3, kg: -0.05 }),
+    c("Kitap oku", "Beceri +", { skill: 1, stress: -2 }),
+    c("Evi topla", "İçin rahatlar.", { stress: -2, m: 1 }),
+    c("Ücretsiz çevrim içi ders izle", "Beceri +, yorgunluk", { skill: 1.5, stress: 1 }),
+    c("Telefonda vakit geçir", "Zaman uçup gider.", { m: 1, stress: 1 }),
+    c("Erken yat", "Sağlık +", { h: 2, stress: -2 }),
+    c("Mahalle kahvesine in", "₺60 · sohbet", { cost: 60, people: 1, m: 2 }),
+    c("Annene telefon et", "Aile bağı +", { m: 1, people: 0.5 }),
+    c("Kendine iyi bir kahve yap", "Küçük bir keyif.", { m: 2 }),
+    c("Yarına plan yap", "Daha düzenli bir hafta.", { stress: -2, perf: 1 }),
+  ];
   HS.FALLBACK_EVENT = {
     id: "ordinary",
-    title: (s, h) =>
-      h.pick(["Sıradan bir hafta", "Sakin günler", "Takvimden bir yaprak"]),
+    title: (s, h) => (HS.isNight && HS.isNight(s) ? h.pick(["Boş bir akşam", "Sessiz bir gece", "Akşam üstü"]) : h.pick(["Plansız bir gün", "Kendine kalan saatler", "Sakin bir öğleden sonra"])),
     text: (s, h) =>
       h.pick([
-        "Sabah kahvesi, akşam haberleri. Hayat bu hafta kendi ritminde aktı.",
-        "Pencereden bakınca mahallede her şey aynı; sen biraz değişmişsin gibi.",
-        "Bu hafta dikkat çekici bir şey olmadı. Belki de iyi haber budur.",
-        "Otobüste yanındaki kişinin telefonundan eski bir şarkı çaldı; günün geri kalanında aklından çıkmadı.",
+        "Bugün kimse bir şey istemedi, telefon da sustu. Bu saatleri nasıl geçireceksin?",
+        "İş güç bitti, önünde birkaç saat var.",
+        "Pencereden mahalleye baktın; herkes kendi telaşında.",
+        "Çay demlendi. Kafanda bir sürü yapılacak iş var ama hiçbiri acil değil.",
       ]),
-    choices: [
-      c("Düzenini sürdür", "Bu hafta sakin geçsin.", { m: 1 }),
-      c("Kendine küçük bir iyilik yap", "Bir kahve, bir kitap.", {
-        cost: 250,
-        m: 3,
-      }),
-      c("Birini ara", "Uzun zamandır konuşmadığın biri.", { people: 1, m: 2 }),
-    ],
+    choices: (s, h) => {
+      const pool = FREE.slice();
+      const out = [];
+      while (out.length < 3) out.push(pool.splice((Math.random() * pool.length) | 0, 1)[0]);
+      return out;
+    },
   };
 
   HS.EVENTS.push(

@@ -1997,3 +1997,38 @@ html.big-text .fine {
   min-height: 28px;
   padding: 3px 9px;
 }
+
+/* ---------- Haftalık plan ve bütçe ---------- */
+.week-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+}
+.week-dots i {
+  width: 22px;
+  height: 6px;
+  border-radius: 6px;
+  background: var(--line);
+}
+.week-dots i.done {
+  background: var(--green);
+}
+.week-dots i.now {
+  background: var(--blue);
+}
+.week-dots span {
+  margin-left: auto;
+  font: 800 11px var(--body);
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.style-row {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+}

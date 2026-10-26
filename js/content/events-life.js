@@ -8,7 +8,7 @@
   const c = (label, hint, fx = {}) => ({ label, hint, fx });
   const P = (a) => a[(Math.random() * a.length) | 0];
   const working = (s) => s.job !== "none" && !s.retired;
-  const weekend = (s) => s.half === 1;
+  const weekend = (s) => HS.lateWeek(s);
   const home = (s) => s.housing !== "aile";
   const E = (id, room, opts) => ({ id, room, cooldown: 16, weight: 0.55, ...opts });
 
@@ -219,6 +219,7 @@
     }),
     E("bazaar", "sokak", {
       when: weekend,
+      weekend: true,
       title: "Semt pazarı",
       text: "Pazar tezgâhlarında mevsim sebzeleri, bağırışlar, \"abla gel bak\" sesleri.",
       choices: [
@@ -228,6 +229,7 @@
     }),
     E("parkWalk", "sokak", {
       when: weekend,
+      weekend: true,
       title: "Güneşli bir öğleden sonra",
       text: (s) => "Parkta insanlar piknik yapıyor, çocuklar bisiklet sürüyor." + (s.partner ? " " + s.partner.name + " dışarı çıkmak istiyor." : ""),
       choices: (s) => [

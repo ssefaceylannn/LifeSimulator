@@ -43,6 +43,7 @@ module.exports = function load() {
     "js/systems/time.js",
     "js/systems/bank.js",
     "js/systems/life.js",
+    "js/systems/budget.js",
     "js/systems/family.js",
     "js/systems/achievements.js",
   ])

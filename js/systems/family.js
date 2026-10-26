@@ -18,6 +18,7 @@
     baba: "Baban",
     kardesK: "Kız kardeşin",
     kardesE: "Erkek kardeşin",
+    kuzen: "Kuzenin",
     abla: "Ablan",
     abi: "Abin",
     anneanne: "Anneannen",
@@ -30,7 +31,7 @@
     kayinvalide: "Kayınvaliden",
     kayinpeder: "Kayınpederin",
   };
-  const GEN = { anneanne: 0, dede: 0, babaanne: 0, anne: 1, baba: 1, dayi: 1, teyze: 1, amca: 1, hala: 1, kayinvalide: 1, kayinpeder: 1, kardesK: 2, kardesE: 2, abla: 2, abi: 2 };
+  const GEN = { anneanne: 0, dede: 0, babaanne: 0, anne: 1, baba: 1, dayi: 1, teyze: 1, amca: 1, hala: 1, kayinvalide: 1, kayinpeder: 1, kardesK: 2, kardesE: 2, abla: 2, abi: 2, kuzen: 2 };
   HS.KIN_GEN = GEN;
   let uid = 0;
   // Aynı ailede iki kişiye aynı ad verilmesin (oyuncu dahil)
@@ -66,7 +67,7 @@
       dadAge = momAge + 2 + ((r() * 5) | 0);
     k.push(mk(s, "anne", "woman", momAge, { bond: 70 }));
     k.push(mk(s, "baba", "man", dadAge, { bond: 62, name: undefined }));
-    const sib = r() < 0.25 ? 0 : r() < 0.7 ? 1 : 2;
+    const sib = r() < 0.1 ? 0 : r() < 0.55 ? 1 : r() < 0.85 ? 2 : 3;
     for (let i = 0; i < sib; i++) {
       const older = r() < 0.5;
       const g = r() < 0.5 ? "woman" : "man";
@@ -84,11 +85,34 @@
     s.kin = k;
     delete s._kinTmp;
   }
+  // Kuzenler: dayı, teyze, amca ve halanın çocukları (her birinden 0-2)
+  function cousins(s) {
+    if (!s.kin || s.flags.kuzenGen) return;
+    s.flags.kuzenGen = 1;
+    const parents = s.kin.filter((k) => ["dayi", "teyze", "amca", "hala"].includes(k.rel));
+    for (const p of parents) {
+      const n = r() < 0.25 ? 0 : r() < 0.7 ? 1 : 2;
+      for (let i = 0; i < n; i++) {
+        const g = r() < 0.5 ? "woman" : "man";
+        const c = mk(s, "kuzen", g, 12 + ((r() * 16) | 0), { bond: 35 + ((r() * 35) | 0), city: p.city, skin: p.skin, hairColor: p.hairColor });
+        c.parent = p.id;
+        s.kin.push(c);
+      }
+    }
+    delete s._kinTmp;
+  }
   HS.HOOKS.newLife.push(init);
   HS.HOOKS.migrate.push(init);
+  HS.HOOKS.newLife.push(cousins);
+  HS.HOOKS.migrate.push(cousins);
   const age = (s, k) => s.year - k.born;
   HS.kinAge = age;
   HS.kinLabel = (k) => HS.KIN_REL[k.rel] || "Akraban";
+  HS.kinDetail = (s, k) => {
+    if (k.rel !== "kuzen") return HS.kinLabel(k);
+    const p = s.kin.find((x) => x.id === k.parent);
+    return p ? HS.ek(p.name, "gen") + " " + (k.gender === "woman" ? "kızı" : "oğlu") : "Kuzenin";
+  };
   // Akrabanın görünüşü (karakter motoruna parametre)
   HS.kinLook = (s, k) => {
     const a = age(s, k);
@@ -152,8 +176,8 @@
   HS.CAN.visit = (s, id) => {
     const k = s.kin.find((x) => x.id === id);
     if (!k || !k.alive) return "Ziyaret edilemez.";
-    if ((s.free || 0) < (k.city === s.city ? 1 : 2)) return k.city === s.city ? "Bu yarım haftada boş zamanın kalmadı." : "Başka ile gitmek için 2 boş zaman gerekir.";
-    if (s.flags.visited === s.weeks * 2 + (s.half || 0)) return "Bu yarım haftada zaten bir ziyaret yaptın.";
+    if ((s.free || 0) < (k.city === s.city ? 1 : 2)) return k.city === s.city ? "Bu hafta boş zamanın kalmadı." : "Başka ile gitmek için 2 boş zaman gerekir.";
+    if (s.flags.visited === s.weeks) return "Bu hafta zaten bir ziyaret yaptın.";
     const cost = HS.visitCost(s, k);
     return HS.fundsOf(s) < cost ? HS.short(s, cost) : true;
   };
@@ -169,11 +193,11 @@
     const cost = HS.visitCost(s, k);
     HS.book(s, (k.city === s.city ? "Ziyaret: " : k.city + " yolu: ") + HS.kinLabel(k).toLocaleLowerCase("tr-TR"), cost);
     s.free = Math.max(0, s.free - (k.city === s.city ? 1 : 2));
-    s.flags.visited = s.weeks * 2 + (s.half || 0);
+    s.flags.visited = s.weeks;
     k.bond = clamp(k.bond + 9, 0, 100);
     s.mood = clamp(s.mood + 3, 0, 100);
     if (HS.addStress) HS.addStress(s, -4);
-    s.visitKin = { id: k.id, at: s.weeks * 2 + (s.half || 0) };
+    s.visitKin = { id: k.id, at: HS.slotKey(s) };
     s.view = "ziyaret";
     const lines = VISIT_TEXT[k.rel] || [k.name + " seni görünce çok sevindi; saatlerce sohbet ettiniz.", k.name + " ile eski fotoğraflara baktınız."];
     let extra = "";
@@ -185,7 +209,7 @@
     s.scenes.push({ t: HS.kinLabel(k) + " " + k.name, p: pickN(lines) + extra, art: "♡", kind: "win" });
   };
   HS.visitNow = (s) => {
-    if (!s.visitKin || s.visitKin.at !== s.weeks * 2 + (s.half || 0)) return null;
+    if (!s.visitKin || s.visitKin.at !== HS.slotKey(s)) return null;
     return s.kin.find((k) => k.id === s.visitKin.id) || null;
   };
   HS.CAN.callKin = (s, id) => (s.flags["call" + id] === s.weeks ? "Bu hafta zaten aradın." : true);
@@ -269,8 +293,82 @@
       },
     },
   );
+  const cousin = (s, f) => living(s, ["kuzen"]).filter(f || (() => true));
+  HS.EVENTS.push(
+    {
+      id: "kuzenDugun",
+      weight: (s) => (cousin(s, (k) => age(s, k) >= 23 && !k.married).length ? 0.5 : 0),
+      cooldown: 52,
+      room: "sokak",
+      title: (s) => "Kuzenin " + (s.cuzPick ? s.kin.find((k) => k.id === s.cuzPick).name : "") + " evleniyor",
+      text: "Düğün salonu tutulmuş, davetiyeler dağıtılmış. Bütün akrabalar orada olacak; kimin ne taktığı konuşulacak.",
+      choices: (s) => {
+        const k = s.kin.find((x) => x.id === s.cuzPick) || cousin(s)[0];
+        return [
+          c("Çeyrek altın tak, halaya katıl", "Yaklaşık " + money(Math.round(12500 * s.idx.cpi)), { cost: 12500, kinBond: { id: k.id, v: 10 }, kinMarry: k.id, people: 2, m: 4 }),
+          c("Zarfa para koy", money(Math.round(3000 * s.idx.cpi)), { cost: 3000, kinBond: { id: k.id, v: 4 }, kinMarry: k.id, m: 2 }),
+          c("İşim var de, gitme", "Akrabalar konuşur.", { kinBond: { id: k.id, v: -10 }, kinMarry: k.id, people: -1 }),
+        ];
+      },
+    },
+    {
+      id: "kuzenIs",
+      weight: (s) => (cousin(s, (k) => age(s, k) >= 25).length && s.job === "none" && !s.retired && s.age >= 20 ? 0.7 : 0),
+      cooldown: 52,
+      title: "Kuzeninden bir telefon",
+      text: (s) => {
+        const k = cousin(s, (x) => age(s, x) >= 25)[0];
+        return k.name + " (" + HS.kinDetail(s, k) + ") arıyor: çalıştığı yerde eleman aranıyormuş, istersen seni önerebilirmiş.";
+      },
+      choices: (s) => {
+        const k = cousin(s, (x) => age(s, x) >= 25)[0];
+        return [
+          c("Önersin", "Başvuru şansın artar", { apply: HS.pick(["office", "cafe", "factory"]), boost: 0.25, kinBond: { id: k.id, v: 6 }, useFree: 0 }),
+          c("Teşekkür et, kendin bulacaksın", "", { kinBond: { id: k.id, v: 2 } }),
+        ];
+      },
+    },
+    {
+      id: "kuzenBorc",
+      weight: (s) => (cousin(s, (k) => age(s, k) >= 20).length && s.cash > 15000 * s.idx.cpi ? 0.4 : 0),
+      cooldown: 104,
+      title: "Kuzenin yardım istiyor",
+      text: (s) => {
+        const k = cousin(s, (x) => age(s, x) >= 20)[0];
+        return k.name + " araba tamiri için " + money(Math.round(15000 * s.idx.cpi)) + " istiyor. \"Maaş yatınca veririm\" diyor.";
+      },
+      choices: (s) => {
+        const k = cousin(s, (x) => age(s, x) >= 20)[0];
+        const amt = Math.round(15000 * s.idx.cpi);
+        return [
+          c("Ver", "Geri gelmeyebilir.", { cash: -amt, raw: true, kinBond: { id: k.id, v: 10 }, chance: { p: 0.6, win: { cash: amt, raw: true }, lose: { m: -2 }, winT: "Geri ödedi", winP: k.name + " sözünü tuttu; üstüne bir kutu baklava getirdi.", loseT: "Unutuldu", loseP: "Bayramda karşılaştınız; ikiniz de konuyu açmadınız." } }),
+          c("Kibarca reddet", "", { kinBond: { id: k.id, v: -8 } }),
+        ];
+      },
+    },
+    {
+      id: "kuzenBulusma",
+      weight: (s) => (cousin(s, (k) => Math.abs(age(s, k) - s.age) < 8 && k.city === s.city).length ? 0.6 : 0),
+      cooldown: 26,
+      room: "sokak",
+      title: "Kuzenlerle buluşma",
+      text: "Kuzen grubunda biri yazdı: \"Cumartesi kahvaltıya çıkalım mı? Çok oldu görüşmeyeli.\"",
+      choices: (s) => {
+        const list = cousin(s, (k) => Math.abs(age(s, k) - s.age) < 8 && k.city === s.city);
+        return [
+          c("Katıl", "₺650 · eski günler", { cost: 650, m: 4, stress: -3, people: 1, kinBondAll: list.map((k) => k.id) }),
+          c("Bu sefer gelemem", "", {}),
+        ];
+      },
+    },
+  );
+  HS.FX.kinBondAll = (s, ids) => ids.forEach((id) => HS.FX.kinBond(s, { id, v: 6 }));
   // Misafir olayı seçilirken kimin geleceği belirlenir
   HS.HOOKS.event.push((s, def) => {
+    if (def.id === "kuzenDugun") {
+      const k = cousin(s, (x) => age(s, x) >= 23 && !x.married)[0];
+      s.cuzPick = k ? k.id : null;
+    }
     if (def.id === "guestVisit") {
       const list = living(s).filter((k) => !["dede"].includes(k.rel) || k.city === s.city);
       const k = list.sort((a, b) => b.bond + r() * 40 - (a.bond + r() * 40))[0];

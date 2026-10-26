@@ -1,5 +1,5 @@
-// Zaman akışı: her ana karar 3-4 gün sürer (Pazartesi-Çarşamba, Perşembe-Pazar).
-// Ekonomi haftalık işlemeye devam eder; iki karar bir haftayı tamamlar.
+// Zaman akışı: her hafta 3-6 arası (rastgele) olay gelir; hepsi seçilince hafta kapanır.
+// Olaylar haftanın günlerine sırayla dağılır. Gelir, gider ve yaşlanma haftalık işler.
 // Her olaya bir gün, saat ve yer atanır: iş olayı mesai saatinde iş yerinde, yemek olayı
 // mutfakta, televizyon ya da aile olayı akşam salonda, uykusuzluk gece yatak odasında...
 // Çalışma düzeni mesleğe göre değişir: hafta içi 08:00-17:00, kafe ve dükkânda 6 gün,
@@ -45,7 +45,9 @@
   };
 
   function init(s) {
-    s.half = s.half || 0;
+    delete s.half;
+    s.evDone = s.evDone || 0;
+    s.weekPlan = s.weekPlan || 3 + ((r() * 4) | 0);
     s.shiftIdx = s.shiftIdx || 0;
     s.clock = s.clock || { day: 0, hour: 8, min: 0, room: "salon" };
   }
@@ -69,25 +71,22 @@
     if (sch && sch.days >= 6 && HS.addStress) HS.addStress(s, 0.6);
   });
 
-  // ---- Yarım hafta ilerleyişi ----
-  // Karar uygulandıktan sonra çağrılır: ilk yarıda yalnızca yeni olay gelir,
-  // ikinci yarıda hafta (maaş, gider, yaş) işlenir.
+  // ---- Haftalık plan ----
+  // Karar uygulandıktan sonra çağrılır. Haftanın planı dolmadıysa aynı haftada yeni olay
+  // gelir; dolduysa hafta (maaş, gider, yaş) işlenir ve yeni haftanın olay sayısı çekilir.
   HS.tick = function (s) {
-    const total = HS.freeSlots(s);
-    if (!s.half) {
-      s.half = 1;
-      s.free = Math.max(1, total - Math.ceil(total / 2)) + (s.free > 0 ? 0 : 0);
-      HS.HOOKS.half && HS.HOOKS.half.forEach((f) => f(s));
-      if (s.tour || s.mil === "serving") s.free = s.mil === "serving" ? 1 : 0;
+    s.evDone = (s.evDone || 0) + 1;
+    if (s.evDone < (s.weekPlan || 4)) {
       HS.nextEvent(s);
-      return { ok: true, half: true };
+      return { ok: true, mid: true };
     }
-    s.half = 0;
-    const res = HS.week(s);
-    if (s.alive) s.free = Math.ceil(HS.freeSlots(s) / 2);
-    return res;
+    s.evDone = 0;
+    s.weekPlan = 3 + ((r() * 4) | 0);
+    return HS.week(s);
   };
-  HS.HOOKS.half = HS.HOOKS.half || [];
+  HS.COOLDOWN_SCALE = 0.55;
+  HS.lateWeek = (s) => (s.evDone || 0) >= (s.weekPlan || 4) - 2;
+  HS.slotKey = (s) => s.weeks * 10 + (s.evDone || 0);
 
   // ---- Olayın zamanı ve yeri ----
   const ROOM = {
@@ -105,8 +104,15 @@
     const id = def.id;
     let room = def.room || ROOM_OF[id] || (def.jobs ? "is" : "salon");
     const sch = HS.schedule(s);
-    const weekend = s.half === 1 && r() < 0.5;
-    let day = s.half ? (weekend ? 5 + ((r() * 2) | 0) : 3 + ((r() * 2) | 0)) : (r() * 3) | 0;
+    // Olaylar haftaya sırayla yayılır: 1. olay hafta başında, son olay hafta sonunda.
+    const plan = s.weekPlan || 4,
+      i = s.evDone || 0;
+    const lo = Math.floor((i * 7) / plan),
+      hi = Math.max(lo, Math.floor(((i + 1) * 7) / plan) - 1);
+    let day = Math.min(6, lo + ((r() * (hi - lo + 1)) | 0));
+    if (def.weekend) day = 5 + ((r() * 2) | 0);
+    // Gün geriye gitmesin
+    if (i > 0 && s.clock && s.clock.wk === s.weeks) day = Math.max(day, s.clock.day);
     if (id === "satMesai") day = 5;
     let hour;
     if (room === "is") {
@@ -127,7 +133,7 @@
       // Gece vardiyasındaki biri gündüz evdedir
       if (sch && sch.shift && sch.shift.id === "gece" && room !== "is" && room !== "yatak") hour = between(14, 21);
     }
-    s.clock = { day, hour: Math.floor(hour) % 24, min: (Math.floor(r() * 12) * 5) % 60, room };
+    s.clock = { day, hour: Math.floor(hour) % 24, min: (Math.floor(r() * 12) * 5) % 60, room, wk: s.weeks };
   }
   HS.HOOKS.event = HS.HOOKS.event || [];
   HS.HOOKS.event.push(place);
@@ -137,7 +143,7 @@
   HS.EVENTS.push(
     {
       id: "satMesai",
-      weight: (s) => (s.half === 1 && ["office", "factory", "memur", "business"].includes(s.job) ? 1.6 : 0),
+      weight: (s) => (HS.lateWeek(s) && ["office", "factory", "memur", "business"].includes(s.job) ? 1.6 : 0),
       cooldown: 6,
       title: "Cumartesi mesaisi",
       text: (s) => (s.job === "factory" ? "Sipariş yetişmiyor; ustabaşı cumartesi herkesi fabrikada istiyor." : "Müdürün cuma akşamı yazdı: \"Yarın birkaç saat gelebilir misin? Teslim pazartesi.\""),
@@ -162,7 +168,8 @@
     },
     {
       id: "weekendRest",
-      weight: (s) => (s.half === 1 && s.job !== "none" ? 1 : 0),
+      weekend: true,
+      weight: (s) => (HS.lateWeek(s) && s.job !== "none" ? 1 : 0),
       cooldown: 4,
       room: "salon",
       title: (s) => (HS.isNight(s) ? "Cumartesi gecesi" : "Pazar sabahı"),

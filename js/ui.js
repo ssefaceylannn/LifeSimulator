@@ -34,7 +34,7 @@
     meSub = "ben",
     depMonths = 3,
     loanSel = { kind: "ihtiyac", frac: 0.5, months: 24 },
-    moneySub = "banka",
+    moneySub = "butce",
     lastWeekOpen = false,
     create = { look: "woman", skin: 1, hairColor: "kahve", hair: "long" },
     settings = { ...DEFAULTS },
@@ -242,7 +242,7 @@
       s.items, s.guest, s.visitKin, s.clock && s.clock.hour,
     ]);
     // Yeni olay geldiyse sahne olayın geçtiği yere geçer
-    const evKey = s.weeks * 2 + (s.half || 0) + ":" + (s.current && s.current.id);
+    const evKey = HS.slotKey(s) + ":" + (s.current && s.current.id);
     if (evKey !== s.evKey) {
       s.evKey = evKey;
       const room = s.clock && s.clock.room;
@@ -250,16 +250,6 @@
     }
     const views = Art.views(s);
     if (!views.some((v) => v.id === s.view)) s.view = "salon";
-    $("viewChips").innerHTML = views.map((v) => `<button class="view-chip${v.id === s.view ? " on" : ""}" data-v="${v.id}" role="tab" aria-selected="${v.id === s.view}">${esc(v.label)}</button>`).join("");
-    $("viewChips").querySelectorAll("[data-v]").forEach((b) => {
-      b.onclick = () => {
-        if (s.view === b.dataset.v) return;
-        s.view = b.dataset.v;
-        sfx("select");
-        save();
-        drawScene();
-      };
-    });
     // Gece görünümü yalnızca karakterin o an bulunduğu yerde
     const night = !!(s.clock && s.view === s.clock.room && HS.isNight(s));
     if (sig + s.view + night === sceneSig) return;
@@ -361,19 +351,21 @@
     if (s.partner) tags.push(s.partner.married ? "Evli" : "İlişkisi var");
     if (s.children.length) tags.push(s.children.length + " çocuk");
     const place = { salon: "evde", mutfak: "mutfakta", yatak: "yatak odasında", garaj: "garajda", is: s.edu === "ogrenci" && s.job === "none" ? "okulda" : "işte", sokak: "dışarıda" }[s.clock && s.clock.room] || "";
-    let html = `<article class="card story"><div class="story-meta"><span>${s.clock ? esc(HS.fmtTime(s.clock)) + " · " + place : seasonName}</span><span>${esc(tags.join(" · "))}</span></div><h3 id="storyTitle">${esc(ev.t)}</h3><p>${esc(ev.p)}</p></article>`;
+    let html = `<article class="card story"><div class="story-meta"><span>${s.clock ? esc(HS.fmtTime(s.clock)) + " · " + place : seasonName} · olay ${(s.evDone || 0) + 1}/${s.weekPlan || 4}</span><span>${esc(tags.join(" · "))}</span></div><h3 id="storyTitle">${esc(ev.t)}</h3><p>${esc(ev.p)}</p></article>`;
     html += `<div class="choice-list" id="choices">${ev.c
       .map(
         (c, i) =>
           `<button class="choice" data-c="${i}"${c.off ? " disabled" : ""}><span class="bullet">${String.fromCharCode(65 + i)}</span><span><b>${esc(c.label)}</b><small>${c.off ? needHtml(c.off) : esc(c.hint)}</small></span>${c.odds != null && !c.off ? `<span class="odds-tag" title="Başarı şansı">🎲 %${c.odds}</span>` : ""}</button>`,
       )
       .join("")}</div>`;
-    html += `<button class="advance" id="advanceBtn" disabled>${s.half ? "Perşembe-Pazar'ı yaşa" : "Pazartesi-Çarşamba'yı yaşa"} <span>→</span></button>`;
+    const last = (s.evDone || 0) + 1 >= (s.weekPlan || 4);
+    html += `<div class="week-dots" aria-label="Bu haftanın olayları">${Array.from({ length: s.weekPlan || 4 }, (_, i) => `<i class="${i < (s.evDone || 0) ? "done" : i === (s.evDone || 0) ? "now" : ""}"></i>`).join("")}<span>Bu hafta ${s.weekPlan || 4} olay</span></div>`;
+    html += `<button class="advance" id="advanceBtn" disabled>${last ? "Seç ve haftayı tamamla" : "Seç ve devam et"} <span>→</span></button>`;
     // Boş zaman
-    const total = Math.max(s.free, Math.ceil(HS.freeSlots(s) / 2));
+    const total = Math.max(s.free, HS.freeSlots(s));
     const done = s.flags.actDone || {};
     html += `<section class="card free"><div class="free-head"><h3>Boş zaman</h3><div class="dots">${Array.from({ length: total }, (_, i) => `<i class="${i < s.free ? "" : "used"}"></i>`).join("")}</div></div>`;
-    html += `<p class="fine">${s.tour ? "Turnedesin; boş zamanın yok." : s.mil === "serving" ? "Askerdesin; boş zamanın çok kısıtlı." : s.free ? (s.half ? "Perşembe-Pazar" : "Pazartesi-Çarşamba") + " arasında " + s.free + " boş zamanın var. İşten sonra ya da hafta sonu ne yapacaksın?" : "Bu günlerin boş zamanı bitti."}</p>`;
+    html += `<p class="fine">${s.tour ? "Turnedesin; boş zamanın yok." : s.mil === "serving" ? "Askerdesin; boş zamanın çok kısıtlı." : s.free ? "Bu hafta " + s.free + " boş zamanın var. İşten sonra ya da hafta sonu ne yapacaksın?" : "Bu haftanın boş zamanı bitti."}</p>`;
     html += `<div class="acts">${HS.ACTIVITIES.filter((a) => !a.when || a.when(s))
       .map((a) => `<button class="act${done[a.id] ? " done" : ""}" data-a="${a.id}"${done[a.id] || !s.free ? " disabled" : on(() => doActivity(a))}>${Art.icon(a.art, 32)}<b>${esc(a.label)}</b><small>${esc(done[a.id] ? "Yapıldı" : a.hint)}</small></button>`)
       .join("")}</div></section>`;
@@ -470,7 +462,8 @@
     sfx("advance");
     if (r.ended) return finish();
     tab = "life";
-    commute(() => {
+    // Hafta içinde yeni olay: animasyonsuz devam; hafta bitince işe gidiş-dönüş
+    (r.mid ? (f) => f() : commute)(() => {
       render();
       $("world").scrollTop = 0;
       react(s.mood - before);
@@ -485,7 +478,7 @@
     const goes = sch && (s.job !== "none" || s.edu === "ogrenci") && !s.tour && s.mil !== "serving" && s.job !== "crime";
     if (!settings.commute || reduced() || !goes) return next();
     // Az önce yaşanan günler: ilk yarı bittiyse Pzt-Çrş, ikinci yarı bittiyse Prş-Cuma
-    const day = s.half ? s.weeks % 3 : 3 + (s.weeks % 2);
+    const day = 0; // yeni haftanın pazartesisi
     const d = HS.DAYS[day];
     const hh = (h, m) => String(((h % 24) + 24) % 24).padStart(2, "0") + ":" + String(m).padStart(2, "0");
     const dest = s.edu === "ogrenci" && s.job === "none" ? "Okula" : s.company ? HS.ek(HS.co(s.company).name, "dat") : s.job === "factory" ? "Fabrikaya" : s.job === "music" ? "Sahneye" : "İşe";
@@ -748,7 +741,7 @@
         else {
           const k = n.kin;
           const a = HS.kinAge(s, k);
-          html += `<div class="node${k.alive ? "" : " dead"}">${head(HS.kinLook(s, k))}<b>${esc(k.name)}</b><small>${esc(HS.kinLabel(k))} · ${k.alive ? a : "vefat " + k.died}</small>${k.alive ? bar(k.bond) + `<small>${esc(k.city)}</small><div class="mini-row"><button class="mini"${HS.canApply(s, { callKin: k.id }) === true ? on(() => act({ callKin: k.id }, { done: k.name + " ile konuştun." })) : " disabled"}>Ara</button><button class="mini"${HS.canApply(s, { visit: k.id }) === true ? on(() => act({ visit: k.id }, { confirm: k.name + " ziyaret edilsin mi? " + (k.city === s.city ? "Yol ve hediye " : k.city + " yolu ") + money(HS.visitCost(s, k)) + "." })) : ` disabled title="${esc(HS.canApply(s, { visit: k.id }))}"`}>Ziyaret ${money(HS.visitCost(s, k))}</button></div>` : ""}</div>`;
+          html += `<div class="node${k.alive ? "" : " dead"}">${head(HS.kinLook(s, k))}<b>${esc(k.name)}</b><small>${esc(HS.kinDetail(s, k))} · ${k.alive ? a : "vefat " + k.died}</small>${k.alive ? bar(k.bond) + `<small>${esc(k.city)}</small><div class="mini-row"><button class="mini"${HS.canApply(s, { callKin: k.id }) === true ? on(() => act({ callKin: k.id }, { done: k.name + " ile konuştun." })) : " disabled"}>Ara</button><button class="mini"${HS.canApply(s, { visit: k.id }) === true ? on(() => act({ visit: k.id }, { confirm: k.name + " ziyaret edilsin mi? " + (k.city === s.city ? "Yol ve hediye " : k.city + " yolu ") + money(HS.visitCost(s, k)) + "." })) : ` disabled title="${esc(HS.canApply(s, { visit: k.id }))}"`}>Ziyaret ${money(HS.visitCost(s, k))}</button></div>` : ""}</div>`;
         }
       });
       html += `</div></div>`;
@@ -933,7 +926,8 @@
   // ---------- PARA ----------
   function moneyTab(s) {
     const cpi = s.idx.cpi;
-    let html = subTabs(moneySub, [["banka", "Banka"], ["yatirim", "Yatırım"], ["mulk", "Ev ve mülk"], ["arac", "Araç"]], (v) => (moneySub = v));
+    let html = subTabs(moneySub, [["butce", "Bütçe"], ["banka", "Banka"], ["yatirim", "Yatırım"], ["mulk", "Ev ve mülk"], ["arac", "Araç"]], (v) => (moneySub = v));
+    if (moneySub === "butce") return html + budgetPanel(s);
     if (moneySub === "banka") return html + bankPanel(s);
     if (moneySub === "yatirim") {
     // Yatırımlar
@@ -1016,6 +1010,29 @@
     }
     carRows.push(row(s.ins.health ? "Özel sağlık sigortasını iptal et" : "Özel sağlık sigortası yaptır", "Yıllık ~" + money(HS.COSTS.privateHealth * cpi) + " · sağlık olaylarında masraf azalır", { ins: { k: "health", on: !s.ins.health } }, { icon: "health-worker" }));
     html += rows(carRows);
+    return html;
+  }
+  function budgetPanel(s) {
+    const wb = HS.weeklyBudget(s);
+    let html = card(
+      "Haftalık bütçe",
+      `<div class="led in"><span>${s.retired ? "Emekli maaşı" : s.job !== "none" ? "Maaş (haftalık)" : "Düzenli gelir"}</span><b>+${money(wb.income)}</b></div>` +
+        wb.lines.map(([k, v]) => `<div class="led out"><span>${esc(k)}</span><b>−${money(v)}</b></div>`).join("") +
+        `<div class="led total"><span>Haftalık fark</span><b class="${wb.net >= 0 ? "pos" : "neg"}">${wb.net >= 0 ? "+" : "−"}${money(Math.abs(wb.net))}</b></div>` +
+        (wb.net < 0 && s.cash > 0 ? `<p class="fine">Bu gidişle nakdin yaklaşık ${Math.max(1, Math.floor(s.cash / -wb.net))} hafta yeter.</p>` : "") +
+        (s.housing === "aile" ? '<p class="fine">Aile evinde yaşıyorsun: kira yok, ev giderlerinin yalnızca bir kısmına katkı veriyorsun.</p>' : ""),
+    );
+    html += sectionTitle("Yaşam tarzı", "Tasarruf etmek istersen düşür; mutluluk ve stres biraz etkilenir");
+    for (const [k, def] of Object.entries(HS.STYLE)) {
+      const cur = (s.style || {})[k] ?? 1;
+      html += `<div class="style-row"><b>${esc(def.name)}</b><div class="seg mini-seg">${def.levels
+        .map((lv) => {
+          const test = { ...s, style: { ...s.style, [k]: lv.id } };
+          const w = HS.weeklyBudget(test).out;
+          return `<button class="${cur === lv.id ? "selected" : ""}"${on(() => act({ style: { k, lv: lv.id } }))}>${esc(lv.name)}<small>${money(w)}/hafta</small></button>`;
+        })
+        .join("")}</div><small class="fine">${esc(def.levels[cur].desc)}</small></div>`;
+    }
     return html;
   }
   function bankPanel(s) {
