@@ -259,26 +259,6 @@
       ],
     },
     {
-      id: "lottery",
-      weight: 0.4,
-      minAge: 18,
-      cooldown: 104,
-      title: "Yılbaşı biletinden ikramiye",
-      text: "Kurmaca piyangodan küçük bir ikramiye çıktı.",
-      choices: [
-        c("Bankaya koy", "Bir gün lazım olur.", (s) => ({
-          cash: 15000,
-          save: 15000 * s.idx.cpi,
-          theme: "security",
-        })),
-        c("Hemen harca", "Bir kerelik sevinç.", {
-          cash: 15000,
-          cost: 12000,
-          m: 8,
-        }),
-      ],
-    },
-    {
       id: "concert",
       weight: 0.8,
       cooldown: 40,

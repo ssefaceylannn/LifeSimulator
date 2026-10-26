@@ -210,7 +210,6 @@
     gez: { room: "sokak", stress: -6, cost: 650 },
     gonullu: { room: "sokak", stress: -3 },
     dinlen: { room: "yatak", stress: -7 },
-    piyango: { room: "sokak", stress: 0 },
     calis: { room: "yatak", stress: 2 },
   };
   for (const a of HS.ACTIVITIES) {

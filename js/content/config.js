@@ -21,7 +21,6 @@
     ["Haftalar", "weekStep", "Her turda geçen hafta (oyun hızı)", "Bir haftanın olayları bitince kaç hafta ilerlenir. 4 = yıllar dört kat hızlı geçer; aradaki haftalarda maaş, giderler ve yaş yine işlenir.", 2, 1, 8, 1],
     ["Haftalar", "fateScale", "Kader olayı sıklığı", "Kaza, hastalık, deprem gibi olayların sıklık çarpanı. 0 = hiç.", 1, 0, 5, 0.1],
     ["Para piyasası", "investUp", "Borsa/fon/kripto kazanma ihtimali (%)", "Her ay riskli yatırımların değer kazanma ihtimali.", 30, 0, 100, 5],
-    ["Para piyasası", "betLimit", "Haftalık en çok kupon", "Bahiste bir haftada yapılabilecek kupon sayısı.", 3, 0, 20, 1],
     ["Para piyasası", "bankRateScale", "Banka faiz çarpanı", "Kart, kredi ve mevduat faizleri.", 1, 0, 3, 0.05],
     ["Gelişim", "xpScale", "Deneyim hızı", "Seviye atlama hızı.", 1, 0.2, 5, 0.1],
     ["Gelişim", "levelLocks", "Lüks alımlarda seviye kilidi", "1 = spor araba, villa gibi alımlar seviye ister; 0 = istemez.", 1, 0, 1, 1],

@@ -66,20 +66,27 @@ jobs:
             printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n  <string name="game_services_project_id" translatable="false">%s</string>\n</resources>\n' "$PGS" > android/app/src/main/res/values/games-ids.xml
             sed -i 's#<application#<application#; s#</application>#    <meta-data android:name="com.google.android.gms.games.APP_ID" android:value="@string/game_services_project_id" />\n    </application>#' android/app/src/main/AndroidManifest.xml
           fi
-      - name: İmzalı AAB ve APK
+      - name: AAB ve APK (anahtar varsa imzalı, yoksa deneme imzalı)
         env:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASS: ${{ secrets.ANDROID_KEY_PASS }}
         run: |
-          echo "$KS_B64" | base64 -d > $RUNNER_TEMP/upload.jks
+          mkdir -p out
           cd android
-          SIGN="-Pandroid.injected.signing.store.file=$RUNNER_TEMP/upload.jks -Pandroid.injected.signing.store.password=$KS_PASS -Pandroid.injected.signing.key.alias=$KEY_ALIAS -Pandroid.injected.signing.key.password=$KEY_PASS"
-          ./gradlew --no-daemon bundleRelease assembleRelease $SIGN
-          mkdir -p ../out
-          cp app/build/outputs/bundle/release/app-release.aab ../out/HayatSimulatoru.aab
-          cp app/build/outputs/apk/release/app-release.apk ../out/HayatSimulatoru.apk
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > $RUNNER_TEMP/upload.jks
+            SIGN="-Pandroid.injected.signing.store.file=$RUNNER_TEMP/upload.jks -Pandroid.injected.signing.store.password=$KS_PASS -Pandroid.injected.signing.key.alias=$KEY_ALIAS -Pandroid.injected.signing.key.password=$KEY_PASS"
+            ./gradlew --no-daemon bundleRelease assembleRelease $SIGN
+            cp app/build/outputs/bundle/release/app-release.aab ../out/HayatSimulatoru.aab
+            cp app/build/outputs/apk/release/app-release.apk ../out/HayatSimulatoru.apk
+          else
+            # Yükleme anahtarı yok: telefona kurup denemek için hata ayıklama imzalı APK
+            ./gradlew --no-daemon assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk ../out/HayatSimulatoru-deneme.apk
+            echo "Not: Play Console'a yüklenecek imzalı .aab için ANDROID_KEYSTORE_* gizli değişkenlerini ekle." > ../out/OKU-BENI.txt
+          fi
           ls -la ../out
       - uses: actions/upload-artifact@v4
         with:

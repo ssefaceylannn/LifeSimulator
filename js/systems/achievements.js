@@ -30,7 +30,7 @@
     A("dunya", "Dünya vatandaşı", "10 ülke gör.", "airplane-departure", (s) => s.visited && s.visited.world.length >= 10),
     A("yildiz", "Yıldız", "Şöhretin 80'i geçsin.", "microphone", (s) => (s.fame || 0) >= 80),
     A("turne", "Yollarda", "Bir turneyi tamamla.", "stadium", (s) => (s.log || []).some((l) => /turnesini tamamladı/.test(l.text))),
-    A("bahis", "Sınırını bilen", "Kuponlar birikince destek alıp bahsi bırak.", "soccer-ball", (s) => !!s.flags.betQuit),
+    A("kumbara", "Kumbara", "Net değerin ₺500.000 (2026 fiyatıyla) geçsin.", "money-bag", (s) => HS.netWorth(s) / s.idx.cpi >= 500000),
     A("asker", "Tezkere", "Askerliğini tamamla.", "military-helmet", (s) => s.mil === "yapildi" || s.mil === "bedelli"),
     A("kedi", "Patili dost", "Bir kedi sahiplen.", "cat", (s) => !!s.flags.kedi),
     A("yuzyil", "Asırlık çınar", "90 yaşını gör.", "deciduous-tree", (s) => s.age >= 90),

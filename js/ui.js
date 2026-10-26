@@ -1097,18 +1097,6 @@
         return `<div class="inv">${Art.icon(d.icon, 30)}<div><b>${esc(d.name)}</b><small>Risk: ${esc(d.risk)} · ${esc(d.desc)}</small><small>Değer ${money(v)}${v > 1 ? ` · <span class="${pl >= 0 ? "pos" : "neg"}">${pl >= 0 ? "+" : "−"}${money(Math.abs(pl))}</span>` : ""}${last != null && v > 1 ? ` · geçen ay ${last >= 0 ? "▲" : "▼"}%${Math.abs(Math.round(last * 100))}` : ""}</small><div class="mini-row">${manual}${buy(0.1)}${buy(0.25)}${sell(0.5)}${sell(1)}</div></div></div>`;
       })
       .join("")}</div>`;
-    // Bahis
-    html += sectionTitle("Yasal bahis bayisi (kurmaca)", "18 yaş üstü · haftada en fazla " + HS.CFG.betLimit + " kupon · bilanço " + money(s.bets.net));
-    html += `<div class="amount-box"><label for="betAmt">Kupon tutarı (₺)</label><input id="betAmt" type="number" inputmode="numeric" min="1" step="50" placeholder="Örn. 750" value="${betAmt || ""}"><small>Yazıp aşağıdaki kuponlardan "Yazdığım tutarla oyna"ya bas</small></div>`;
-    const stakes = [100, 500, 2000, 10000].map((n) => Math.round(n * cpi));
-    html += `<div class="bets">${Object.entries(HS.BETS)
-      .map(([k, b]) => `<div class="bet"><b>${esc(b.name)}</b><small>Oran ${b.odds.toFixed(2)} · tutma ihtimali %${Math.round(b.p * 100)} · ${esc(b.desc)}</small><div class="mini-row"><button class="mini"${on(() => {
-        const v = Math.round(+$("betAmt").value || 0);
-        betAmt = v;
-        if (v <= 0) return toast("Önce bir tutar yaz.", "error");
-        act({ bet: { type: k, stake: v } });
-      })}>Yazdığım tutarla oyna</button>${stakes.map((st) => `<button class="mini"${HS.canApply(s, { bet: { type: k, stake: st } }) === true ? on(() => act({ bet: { type: k, stake: st } })) : " disabled"}>${money(st)}</button>`).join("")}</div></div>`)
-      .join("")}</div><p class="fine">Bu bölüm gerçek para içermeyen bir simülasyondur; gerçek bahis oynanamaz ve ödül verilmez. Bahis bağımlılık yapabilir. Oyundaki oranlar bayinin her zaman kazandığı biçimde ayarlıdır.</p>`;
       return html;
     }
     if (moneySub === "mulk") {
@@ -1574,7 +1562,7 @@
       premiumCard() +
       accountCard() +
       `<article class="card"><h3>Kayıtlar</h3><p class="fine">Kayıtlarını başka bir cihaza taşımak için kodu kopyala, diğer cihazda yapıştır.</p><button class="secondary" id="exportBtn">Kayıt kodunu kopyala</button><textarea id="importBox" rows="3" placeholder="Kayıt kodunu buraya yapıştır" aria-label="Kayıt kodu"></textarea><button class="secondary" id="importBtn">Kodu içe aktar</button><button class="secondary danger" id="wipeBtn">Bütün verileri sil</button></article>` +
-      `<article class="card"><h3>Hakkında</h3><p class="fine">Hayat Simülatörü · sürüm 1.0<br>Çizimler: Microsoft Fluent Emoji (MIT). Harita: Natural Earth verisi, react-turkey-map (MIT). Yazı tipleri: Baloo 2 ve Nunito (SIL OFL).<br>Ekonomi 2026 verileriyle kalibre edilmiştir; 2027 sonrası kurmacadır. Kişi, parti, şirket ve markalar hayal ürünüdür. Oyunda gerçek para kullanılmaz; yatırım ve bahis bölümleri tamamen sanaldır ve tavsiye değildir.</p></article>`;
+      `<article class="card"><h3>Hakkında</h3><p class="fine">Hayat Simülatörü · sürüm 1.0<br>Çizimler: Microsoft Fluent Emoji (MIT). Harita: Natural Earth verisi, react-turkey-map (MIT). Yazı tipleri: Baloo 2 ve Nunito (SIL OFL).<br>Ekonomi 2026 verileriyle kalibre edilmiştir; 2027 sonrası kurmacadır. Kişi, parti, şirket ve markalar hayal ürünüdür. Oyundaki para ve yatırımlar sanaldır, gerçek paraya çevrilemez ve tavsiye değildir.</p></article>`;
     $("settingsBody").querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => setSetting(b.dataset.k, !settings[b.dataset.k])));
     $("settingsBody").querySelectorAll("[data-speed]").forEach(
       (b) =>

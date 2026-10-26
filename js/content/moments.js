@@ -1669,16 +1669,6 @@
         c("Bu hafta yorgunum", "", { stress: 1 }),
       ],
     }),
-    A("piyango", "sokak", {
-      when: (s) => TR(s) && s.age >= 25,
-      title: "Bilet satan amca",
-      text: "Her gün aynı köşede duran bilet satıcısı amca bugün çok üzgün; satış yapamamış. \"Çeyrek al evladım, bereket getirsin.\"",
-      choices: [
-        c("Al", "₺400 · Şans %5", { cost: 400, chance: { p: 0.05, win: { cash: 20000, m: 6 }, lose: { m: 1 }, winT: "Amortiden fazlası!", winP: "Çeyrek bilet ikramiye çıktı; amcaya baklava götürdün.", loseT: "Çıkmadı", loseP: "Ama amcanın yüzü güldü." } }),
-        c("Bilet alma ama çay ısmarla", "₺40", { cost: 40, m: 2, people: 0.5 }),
-        c("Geç", "", {}),
-      ],
-    }),
     A("telefonEkran", "sokak", {
       when: (s) => has(s, "telefon") || has(s, "amiral"),
       title: "Örümcek ağı",

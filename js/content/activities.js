@@ -236,36 +236,5 @@
       fx: { h: 2, m: 1 },
       done: "Uzun bir uyku iyi geldi.",
     },
-    {
-      id: "piyango",
-      label: "Piyango bileti al",
-      art: "four-leaf-clover",
-      when: (s) => s.age >= 18,
-      hint: "₺100 · küçük bir umut",
-      fx: { cost: 100 },
-      done: "Bilet cüzdanında; çekiliş yakında.",
-      surprises: [
-        {
-          p: 0.004,
-          t: "BÜYÜK İKRAMİYE!",
-          text: "Numaraları üç kez kontrol ettin. Gerçekten tuttu.",
-          fx: {
-            cash: 1000000,
-            m: 20,
-            log: "Piyangodan büyük ikramiye kazandı.",
-          },
-          art: "★",
-          kind: "win",
-        },
-        {
-          p: 0.04,
-          t: "Amorti ve biraz fazlası",
-          text: "Küçük bir ikramiye çıktı.",
-          fx: { cash: 2000, m: 3 },
-          art: "✓",
-          kind: "win",
-        },
-      ],
-    },
   ];
 })(globalThis.HS || (globalThis.HS = {}));

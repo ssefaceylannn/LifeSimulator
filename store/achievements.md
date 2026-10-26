@@ -33,7 +33,7 @@ Sıralama tablosu: **hs_networth**, "En yüksek servet", tamsayı, büyük olan 
 | hs_dunya | Dünya vatandaşı | 10 ülke gör. |
 | hs_yildiz | Yıldız | Şöhretin 80'i geçsin. |
 | hs_turne | Yollarda | Bir turneyi tamamla. |
-| hs_bahis | Sınırını bilen | Kuponlar birikince destek alıp bahsi bırak. |
+| hs_kumbara | Kumbara | Net değerin ₺500.000 (2026 fiyatıyla) geçsin. |
 | hs_asker | Tezkere | Askerliğini tamamla. |
 | hs_kedi | Patili dost | Bir kedi sahiplen. |
 | hs_yuzyil | Asırlık çınar | 90 yaşını gör. |

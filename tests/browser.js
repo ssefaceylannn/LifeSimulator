@@ -167,17 +167,15 @@ const assert = (c, m) => {
   });
   assert(await p.$("#sceneArt .hs-car"), "araba garajda yok");
   await shot(p, "05-garaj");
-  // Yatırım ve bahis
+  // Yatırım
   await p.click(".tab[data-tab=money]");
   await sub("Yatırım");
   await p.fill("#invAmt", "1234");
   await p.click('#panel .inv:has-text("Hisse senedi") .mini:has-text("Tutarı al")');
   assert(Math.abs((await p.evaluate(() => HS.ui.active.invCost.borsa)) - 1234) < 1, "elle yazılan tutarla alım olmadı");
   assert((await p.evaluate(() => HS.invVal(HS.ui.active, "borsa"))) > 0, "borsa alımı olmadı");
-  await p.fill("#betAmt", "750");
-  await p.click('#panel .bet:has-text("Tek maç") .mini:has-text("Yazdığım tutarla")');
-  while (await p.isVisible("#event")) await p.click("#eventContinue");
-  assert((await p.evaluate(() => HS.ui.active.bets.n)) === 1, "bahis oynanmadı");
+  // Mağaza için riskli içerik yok: bahis bayisi kaldırıldı
+  assert(!(await p.$("#betAmt")) && !/bahis/i.test(await p.textContent("#panel")), "bahis bölümü hâlâ var");
   // Banka: kart, vadeli, kredi, fatura
   await p.evaluate(() => {
     const s = HS.ui.active;

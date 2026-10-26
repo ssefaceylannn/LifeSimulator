@@ -1,5 +1,8 @@
 # Mağaza Uyumluluk Denetimi (App Store + Google Play)
 
+> **Güncelleme (27 Ekim 2026):** Yaş sınırını 13+'ya indirmek için **bahis bayisi, piyango (etkinlik, olay, an), yasa dışı bahis hikâyesi ve bahisle ilgili başarım tamamen kaldırıldı**; kaçak depo hikâyesindeki sigara parfüme çevrildi. Oyunda artık hiçbir kumar (gerçek ya da simüle) yok. Aşağıdaki 3-5. bölümlerdeki "simüle kumar" maddeleri geçersizdir; güncel yaş anketi cevapları `store/app-store.md` ve `store/play-store.md` dosyalarındadır (App Store 13+, Google Play PEGI 7-12 / Teen civarı).
+
+
 Tarih: 26 Ekim 2026 · Kapsam: `js/content/*.js` (stories-fame.js hariç; o dosya ayrıca yazılıyor), `js/systems/*.js`, `js/ui.js` metinleri, `index.html`.
 Testler: `node tests/simulate.js 40` ve `node tests/variety.js 6` düzenlemelerden sonra geçti.
 

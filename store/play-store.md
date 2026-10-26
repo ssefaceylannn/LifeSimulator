@@ -18,8 +18,8 @@ Play Console › Uygulama › "Mağaza girişi" ve "Uygulama içeriği" sayfalar
 - **Gizlilik politikası:** yukarıdaki URL
 - **Reklamlar:** **Evet, uygulama reklam içerir** (Google AdMob)
 - **Uygulama erişimi:** Tüm işlevler özel erişim gerektirmez
-- **İçerik derecelendirmesi (IARC):** `STORE-COMPLIANCE.md` › bölüm 5. Simüle kumar: Evet; gerçek para: Hayır.
-- **Hedef kitle:** 18 ve üzeri (simüle kumar nedeniyle). "Uygulama çocukları cezbedebilir mi?" Hayır.
+- **İçerik derecelendirmesi (IARC):** Şiddet: Hayır · Cinsellik: Hayır · Küfür: Hayır · Uyuşturucu/alkol/tütün: Hayır · Kumar (gerçek ya da simüle): **Hayır** · Kullanıcı etkileşimi: Hayır · Konum paylaşımı: Hayır · Dijital satın alma: **Evet** · Reklam: **Evet**. Beklenen sonuç: PEGI 7-12 / ESRB Everyone 10+ – Teen.
+- **Hedef kitle:** 13-15, 16-17 ve 18+ yaş grupları (13 yaş altını seçme; seçersen Aileler politikası ve çocuklara uygun reklam kuralları devreye girer). "Uygulama çocukları cezbedebilir mi?" Hayır.
 - **Veri güvenliği (Data safety):** (AdMob nedeniyle)
   - Veri topluyor musunuz? **Evet**. Paylaşıyor musunuz? **Evet** (reklam ağıyla).
   - Toplanan: **Cihaz veya diğer kimlikler** (reklam kimliği), **Uygulama etkinliği › Uygulama etkileşimleri**, **Uygulama bilgileri ve performans › Kilitlenme günlükleri, Teşhis**, **Konum › Yaklaşık konum** (IP).
@@ -30,7 +30,7 @@ Play Console › Uygulama › "Mağaza girişi" ve "Uygulama içeriği" sayfalar
 - **Ödeme profili:** Para kazanma için Play Console › Ayarlar › Ödeme profili (satıcı hesabı) ve banka bilgisi gerekir.
 - **Haber uygulaması / COVID / finans / sağlık uygulaması:** Hayır. Bu bir oyun; finans bölümleri kurmacadır.
 - **Devlet uygulaması:** Hayır
-- **Kumar:** Gerçek parayla kumar yok. Simüle kumar içerik derecelendirmesinde beyan edildi.
+- **Kumar:** Yok (ne gerçek ne simüle).
 
 ## Play Games Services (hesap bağlama)
 1. Play Console › Uygulama › Play Games Services › Kurulum ve yönetim › Yapılandırma › "Yeni oyun oluştur".

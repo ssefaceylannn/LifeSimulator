@@ -427,7 +427,7 @@
           return [
             c("İzin iste, kanalı resmîleştir", "Şans " + pct(p), { chance: { p, win: { fame: 2, ...(s.company ? { perf: 3 } : {}), ...(team(s) ? { rel: { yonetici: 5 } } : {}), end: "resmi" }, lose: { ...(s.company ? { perf: -6 } : {}), ...(team(s) ? { rel: { yonetici: -10 } } : {}), stress: 6, m: -4, end: "ihtar" }, winT: "\"Kurum tanıtımına da katkı olur\"", winP: "Hatta işveren hesabında paylaşıldın.", loseT: "Yazılı ihtar", loseP: "\"Bir daha olursa tutanak tutulur.\"" } }),
             c("Kanalı kapat", "Şöhret − · huzur", { fame: -2, m: -3, end: "kapatti" }),
-            c("İstifa et, tam zamanlı içerik üret", "Kumar gibi · özgüven +", { resign: "notice", fame: 3, esteem: 4, stress: 5, flag: "icerikUretici", end: "tamZaman" }),
+            c("İstifa et, tam zamanlı içerik üret", "Riskli · özgüven +", { resign: "notice", fame: 3, esteem: 4, stress: 5, flag: "icerikUretici", end: "tamZaman" }),
           ];
         },
       },
@@ -811,7 +811,7 @@
     },
   });
 
-  // 5) Kaçak sigara ve kayıtsız telefon deposu
+  // 5) Kaçak parfüm ve kayıtsız telefon deposu
   HS.story("f_depo", {
     when: (s) => local(s) && (fate(s, 7, 40) || s.job === "crime") && (s.job === "none" || s.job === "factory" || s.job === "crime"),
     minAge: 19,
@@ -828,7 +828,7 @@
       fark: {
         gap: 3,
         title: "Yırtılan koli",
-        text: (s, h) => "Bir koli yere düşüp yırtıldı: bandrolsüz sigara paketleri. Diğer odada kutusundan çıkarılmış, kaydı olmayan yüzlerce telefon. Depo şefi bir telefonu sana uzattı: \"Al, hediye. Aramızda.\"",
+        text: (s, h) => "Bir koli yere düşüp yırtıldı: faturasız, gümrükten kaçırılmış parfüm kutuları. Diğer odada kutusundan çıkarılmış, kaydı olmayan yüzlerce telefon. Depo şefi bir telefonu sana uzattı: \"Al, hediye. Aramızda.\"",
         choices: (s, h) => [
           c("Devam et, sorgulama", h.tl(10000) + " · risk +", { cash: 10000, risk: 1, m: -3, go: "baskin" }),
           c("Son yevmiyeni al, bir daha gitme", "Kurtuluş", { m: 2, end: "birakti" }),
@@ -984,40 +984,4 @@
     },
   });
 
-  // 10) Yasa dışı bahis "kupon" grubu ve hesap kiralama tuzağı
-  HS.story("f_bahis", {
-    when: (s) => local(s) && (fate(s, 11, 35) || (done(s, "l_kripto") !== undefined && done(s, "l_kripto") !== "girmedi" && fate(s, 13, 60)) || s.debt > 60000 * s.idx.cpi),
-    minAge: 18,
-    maxAge: 60,
-    weight: (s) => 0.25 + (done(s, "l_kripto") !== undefined && done(s, "l_kripto") !== "girmedi" ? 0.2 : 0),
-    room: "salon",
-    title: "\"VIP kupon\" grubu",
-    text: (s, h) => (done(s, "l_kripto") !== undefined && done(s, "l_kripto") !== "girmedi" ? "Kripto sinyal grubundan sonra aynı uygulamada yeni bir davet: " : "Bir mesajlaşma grubuna habersizce eklendin: ") + "\"Şike bilgisi, %100 tutan kupon. Aylık üyelik " + h.tl(2500) + ", yasa dışı sitede oynanıyor, kimse bilmez.\" Grupta kazanç ekran görüntüleri dönüyor.",
-    choices: (s, h) => [
-      c("Gruptan çık, numarayı engelle", "Finans + · huzur", { sk: { finans: 1 }, m: 1, end: "reddetti" }),
-      c("Grubu şikâyet et", "Özgüven +", { esteem: 2, flag: "ihbarci", end: "ihbar" }),
-      c("Üye ol, bir bakayım", h.tl(2500) + " · risk", { cost: 2500, risk: 1, go: "hesap" }),
-    ],
-    steps: {
-      hesap: {
-        gap: 2,
-        title: "Kupon yattı, teklif geldi",
-        text: (s, h) => "\"Garanti\" kupon ilk maçta yattı. Grup yöneticisi özelden yazdı: \"Zararını çıkaralım. Banka hesabını bize kirala, ayda " + h.tl(10000) + ". Sadece para girip çıkacak.\"",
-        choices: (s, h) => [
-          c("Hayır, gruptan çık", "Ders alındı", { m: -3, sk: { finans: 1 }, end: "kaybetti" }),
-          c("Polise her şeyi anlat", "Risk azalır", { risk: -1, esteem: 3, flag: "ihbarci", end: "ihbar" }),
-          c("Hesabını kirala", h.tl(10000) + " · ağır risk", { cash: 10000, risk: 2, m: -4, go: "masak" }),
-        ],
-      },
-      masak: {
-        gap: 4,
-        title: "Hesabın donduruldu",
-        text: "Bankadan mesaj: \"Hesabınız şüpheli işlem nedeniyle bloke edilmiştir.\" Ertesi gün emniyetten ifadeye çağrıldın: hesabından yasa dışı bahis paraları geçmiş.",
-        choices: [
-          c("Avukat tut, ifade ver", "Avukat parası · moral −−", { cost: 25000, m: -8, stress: 6, end: "ifade" }),
-          c("Her şeyi anlat, etkin pişmanlık", "Risk azalır", { cost: 5000, risk: -1, m: -5, esteem: 1, end: "ifade" }),
-        ],
-      },
-    },
-  });
 })(globalThis.HS || (globalThis.HS = {}));

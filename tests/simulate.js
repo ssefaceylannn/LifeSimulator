@@ -116,7 +116,6 @@ for (let n = 0; n < N; n++) {
         s.visa && s.visa.stage === "onay" ? { visaMove: 1 } : null,
         { invest: { k: HS.pick(Object.keys(HS.INVEST)), amt: Math.round(s.cash * 0.1) } },
         { divest: { k: HS.pick(Object.keys(HS.INVEST)), frac: 0.5 } },
-        { bet: { type: HS.pick(Object.keys(HS.BETS)), stake: Math.round(200 * cpi) } },
         { course: HS.pick(HS.COURSES).id },
         { tour: HS.pick(Object.keys(HS.TOURS)) },
         { trip: HS.pick(HS.HOME_CITIES) },

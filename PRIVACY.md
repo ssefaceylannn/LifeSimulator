@@ -30,10 +30,10 @@ Satın almalar Apple App Store ya da Google Play üzerinden yapılır. Ödeme bi
 Analiz aracı, konum izni, kişi listesi, kamera, mikrofon ve geliştiriciye ait sunucu yoktur. Yazı tipleri uygulamanın içindedir. Oyun internete bağlanmadan da çalışır; çevrimdışıyken reklam çıkmaz.
 
 ## Çocuklar
-Oyun, sanal bahis ve şans oyunu içerdiği için çocuklara yönelik değildir.
+Oyun 13 yaş ve üzeri içindir; 13 yaşından küçük çocuklara yönelik değildir ve onlardan bilerek veri toplanmaz.
 
 ## Simülasyon
-Oyundaki para, yatırım, bahis ve piyango tamamen sanaldır. Gerçek para kullanılmaz ve gerçek ödül verilmez.
+Oyundaki para ve yatırımlar tamamen sanaldır. Gerçek para kullanılmaz ve gerçek ödül verilmez.
 
 ## İletişim
 Soru ve silme talepleri için: [DESTEK E-POSTA ADRESİ — yayından önce yazılacak]

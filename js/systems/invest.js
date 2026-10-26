@@ -1,4 +1,4 @@
-// Yatırımlar ve yasal bahis.
+// Yatırımlar.
 // Riskli araçlar (fon, hisse, kripto) her ay %30 ihtimalle değer kazanır, %70 ihtimalle kaybeder;
 // kazanç ayları kayıp aylarından büyüktür, ortalamada aşağı yukarı başa baş gider ama çok oynaktır.
 // Altın ve döviz TL'nin değer kaybını kabaca izler, daha sakindir. Bunlar kurmaca modeldir; yatırım tavsiyesi değildir.
@@ -82,65 +82,7 @@
     }
   });
 
-  // ---------------- Yasal bahis (kurmaca bayi) ----------------
-  HS.BETS = {
-    tek: { name: "Tek maç sonucu", odds: 1.85, p: 0.5, desc: "Bir maçın sonucunu tahmin et." },
-    cifte: { name: "Çifte şans", odds: 1.3, p: 0.72, desc: "İki sonuçtan biri tutarsa kazanırsın." },
-    kombine: { name: "4 maçlık kombine", odds: 11, p: 0.075, desc: "Dört tahminin de tutmalı." },
-    skor: { name: "Skor tahmini", odds: 7.5, p: 0.11, desc: "Maçın tam skorunu bil." },
-  };
-  const TEAMS = ["Kartallar SK", "Boğaziçi Gençlik", "Ege Yıldızları", "Başkent Spor", "Karadeniz Fırtına", "Toros Ovası", "Marmara Martıları", "Anadolu Kartalları"];
-  HS.CAN.bet = (s, v) => {
-    if (s.age < 18) return "18 yaşından küçükler bahis oynayamaz.";
-    if (s.cash < v.stake) return "Bu kadar nakit yok.";
-    const thisWeek = s.bets.recent.filter((w) => w === s.weeks).length;
-    const lim = HS.CFG ? HS.CFG.betLimit : 3;
-    if (thisWeek >= lim) return "Bu hafta bahis sınırına ulaştın (" + lim + ").";
-    return true;
-  };
-  HS.FX.bet = (s, v) => {
-    const b = HS.BETS[v.type];
-    s.cash -= v.stake;
-    s.bets.n++;
-    s.bets.recent.push(s.weeks);
-    s.bets.recent = s.bets.recent.filter((w) => s.weeks - w < 12);
-    const t1 = TEAMS[(r() * TEAMS.length) | 0];
-    let t2 = TEAMS[(r() * TEAMS.length) | 0];
-    if (t2 === t1) t2 = TEAMS[(TEAMS.indexOf(t1) + 3) % TEAMS.length];
-    const won = r() < b.p;
-    if (won) {
-      const pay = v.stake * b.odds;
-      s.cash += pay;
-      s.bets.won++;
-      s.bets.net += pay - v.stake;
-      s.mood = clamp(s.mood + 4, 0, 100);
-    } else {
-      s.bets.net -= v.stake;
-      s.mood = clamp(s.mood - 2, 0, 100);
-    }
-    s.scenes.push({
-      t: won ? "Kupon tuttu!" : "Kupon yattı",
-      p: t1 + " – " + t2 + " · " + b.name + " (oran " + b.odds.toFixed(2) + "). " + (won ? HS.money(v.stake * b.odds) + " kazandın." : HS.money(v.stake) + " kaybettin.") + " Toplam bahis bilançon: " + HS.money(s.bets.net) + ".",
-      art: won ? "★" : "✕",
-      kind: won ? "win" : "lose",
-      odds: Math.round(b.p * 100),
-    });
-  };
-
   HS.EVENTS.push(
-    {
-      id: "betAddiction",
-      priority: 45,
-      cooldown: 26,
-      when: (s) => s.bets && s.bets.recent.length >= 10,
-      title: "Kuponlar birikiyor",
-      text: (s) => "Son üç ayda " + s.bets.recent.length + " kupon yaptın. Bahis bilançon " + HS.money(s.bets.net) + ". Uyumadan önce oranlara bakmadan duramıyorsun.",
-      choices: [
-        { label: "Destek hattını ara ve bırak", hint: "Bir süre bahis yok; huzur geri gelir.", fx: { m: 4, flag: "betQuit", theme: "care", betReset: 1 } },
-        { label: "Sınır koy", hint: "Ayda bir kupon.", fx: { m: 1, betReset: 1 } },
-        { label: "Kayıpları çıkaracağım", hint: "Sık görülen bir tuzak.", fx: { m: -4, risk: 0.25 } },
-      ],
-    },
     {
       id: "hotTip",
       weight: (s) => (s.cash > 30000 * s.idx.cpi ? 0.8 : 0),

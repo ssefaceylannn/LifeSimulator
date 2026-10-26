@@ -49,7 +49,7 @@ HAYATIN ANI DEFTERİ
 • Yavaş, normal, hızlı ya da çok hızlı oyna. İnternet gerekmez.
 • İstersen Game Center ile hayatlarını yedekle, başarımlarını topla.
 
-Ücretsiz oynanır; reklam içerir. Reklamsız sürüm, Premium ve oyun parası uygulama içinden satın alınabilir. Oyundaki para, yatırım ve bahis sanaldır; gerçek paraya çevrilemez, gerçek ödül verilmez.
+Ücretsiz oynanır; reklam içerir. Reklamsız sürüm, Premium ve oyun parası uygulama içinden satın alınabilir. Oyundaki para ve yatırımlar sanaldır; gerçek paraya çevrilemez.
 
 ## Anahtar kelimeler (100, virgülle, boşluksuz)
 hayat,simülasyon,yaşam,kariyer,aile,türkiye,karar,hikaye,ömür,evlilik,meslek,yks,üniversite,ev,para
@@ -81,11 +81,11 @@ Game Center ve iCloud Apple'ın hizmetleridir, beyan edilmez.
 Her ürüne Türkçe ad, açıklama ve inceleme için bir ekran görüntüsü (`store/screenshots/ios/05-para.png` olabilir) ekle. İlk sürümle birlikte **incelemeye gönder** (sürüm sayfasında "In-App Purchases" bölümünden seç).
 
 ## Yaş derecelendirmesi
-`STORE-COMPLIANCE.md` › bölüm 4'teki cevaplar. Bahis sekmesi nedeniyle "Simulated Gambling: Frequent" seçilir ve sonuç **18+** olur.
+`STORE-COMPLIANCE.md` › bölüm 4'teki cevaplar. Sanal kumar kaldırıldı. Cevaplar: Simulated Gambling **None**, Mature/Suggestive Themes **Infrequent/Mild**, Medical/Treatment **Infrequent/Mild**, diğerleri None; Advertising: Yes; In-App Purchases: Yes. Beklenen sonuç: **13+**.
 
 ## İnceleme bilgileri (App Review Information)
 - **Oturum açma gerekli mi?** Hayır.
-- **Not:** "Tek kişilik, çevrimdışı bir hayat simülasyonu. Hesap gerekmez. Game Center isteğe bağlıdır (Ayarlar › Hesap). Oyundaki para, yatırım ve bahis sanaldır; gerçek paraya çevrilemez. Uygulama içi satın almaları sandbox hesabıyla deneyebilirsiniz; Ayarlar › Premium bölümünde 'Satın alımları geri yükle' düğmesi var."
+- **Not:** "Tek kişilik, çevrimdışı bir hayat simülasyonu. Hesap gerekmez. Game Center isteğe bağlıdır (Ayarlar › Hesap). Oyundaki para ve yatırımlar sanaldır; gerçek paraya çevrilemez. Uygulama içi satın almaları sandbox hesabıyla deneyebilirsiniz; Ayarlar › Premium bölümünde 'Satın alımları geri yükle' düğmesi var."
 - **İletişim:** ad, telefon, e-posta (seninki)
 
 ## Ekran görüntüleri
