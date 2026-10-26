@@ -120,36 +120,39 @@
     return o;
   }
 
-  // Sevimli gözler: küçük, iri irisli, yumuşak kapaklı; gülerken alt kapak hafifçe kalkar.
+  // Gözler: doğal badem biçimi, görünür göz akı, ortada iris, üstte kirpik çizgisi ve
+  // göz kapağı kıvrımı. Ne iri (çizgi film korkutucu) ne çekik.
   function eyes(p, d, id, c) {
-    const rx = (d.kid ? 5.6 : 5.0) - (d.age > 50 ? 0.3 : 0) - d.fat * 0.3;
-    const ry = rx * (p.mood === -1 ? 1.0 : 1.12);
-    const ey = 47.5;
+    const rx = (d.kid ? 6.2 : 6.0) - (d.age > 50 ? 0.3 : 0) - d.fat * 0.4;
+    const ry = rx * (d.kid ? 0.82 : 0.72) * (p.mood === 1 ? 0.92 : 1);
+    const ey = 46.5;
     let o = "";
     for (const s of [-1, 1]) {
-      const ex = 60 + s * 10.5;
+      const ex = 60 + s * 11;
       const cid = `${id}e${s > 0 ? "r" : "l"}`;
-      const ir = rx * 0.9;
-      o += `<clipPath id="${cid}"><ellipse cx="${n1(ex)}" cy="${n1(ey)}" rx="${n1(rx)}" ry="${n1(ry)}"/></clipPath>`;
-      o += `<ellipse cx="${n1(ex)}" cy="${n1(ey)}" rx="${n1(rx)}" ry="${n1(ry)}" fill="#fff"/>`;
+      // Badem: iç köşe biraz aşağıda, dış köşe biraz yukarıda
+      const inX = ex - s * rx,
+        outX = ex + s * rx,
+        inY = ey + 0.6,
+        outY = ey - 0.4;
+      const shape = `M${n1(inX)} ${n1(inY)}C${n1(ex - s * rx * 0.5)} ${n1(ey - ry * 1.35)} ${n1(ex + s * rx * 0.55)} ${n1(ey - ry * 1.4)} ${n1(outX)} ${n1(outY)}C${n1(ex + s * rx * 0.5)} ${n1(ey + ry * 1.05)} ${n1(ex - s * rx * 0.5)} ${n1(ey + ry * 1.1)} ${n1(inX)} ${n1(inY)}Z`;
+      const ir = ry * 0.98;
+      o += `<clipPath id="${cid}"><path d="${shape}"/></clipPath>`;
+      o += `<path d="${shape}" fill="#fbf8f5"/>`;
       o += `<g clip-path="url(#${cid})">`;
-      o += `<circle cx="${n1(ex)}" cy="${n1(ey + 0.5)}" r="${n1(ir)}" fill="url(#${id}i)"/>`;
-      o += `<circle cx="${n1(ex)}" cy="${n1(ey + 0.5)}" r="${n1(ir * 0.55)}" fill="#1a110d"/>`;
-      // Üst kapak gölgesi: bakışı yumuşatır
-      o += `<ellipse cx="${n1(ex)}" cy="${n1(ey - ry + 0.6)}" rx="${n1(rx + 1)}" ry="${n1(ry * 0.42)}" fill="${c.shade}"/>`;
-      // Gülerken alt kapak (yanak) gözün altını örter
-      if (p.mood === 1) o += `<ellipse cx="${n1(ex)}" cy="${n1(ey + ry + 1.4)}" rx="${n1(rx + 1.5)}" ry="${n1(ry * 0.62)}" fill="${c.skin}"/>`;
+      o += `<circle cx="${n1(ex)}" cy="${n1(ey - 0.2)}" r="${n1(ir)}" fill="url(#${id}i)"/>`;
+      o += `<circle cx="${n1(ex)}" cy="${n1(ey - 0.2)}" r="${n1(ir * 0.45)}" fill="#1a110d"/>`;
+      o += `<path d="${shape}" fill="none" stroke="#000" stroke-opacity=".08" stroke-width="2.4"/>`;
       o += `</g>`;
-      o += `<circle cx="${n1(ex - ir * 0.3)}" cy="${n1(ey - ir * 0.2)}" r="${n1(ir * 0.36)}" fill="#fff"/>`;
-      o += `<circle cx="${n1(ex + ir * 0.34)}" cy="${n1(ey + ir * 0.38)}" r="${n1(ir * 0.15)}" fill="#fff" opacity=".85"/>`;
-      // Kirpik çizgisi (kapak gölgesinin altında, yumuşak bir yay)
-      const ly = ey - ry * 0.16;
-      o += `<path d="M${n1(ex - rx - 0.3)} ${n1(ly + 0.8)}Q${n1(ex)} ${n1(ly - ry * 0.95)} ${n1(ex + rx + 0.3)} ${n1(ly + 0.8)}" stroke="#3a2620" stroke-width="${d.w ? 1.7 : 1.3}" fill="none" stroke-linecap="round"/>`;
-      if (d.w) {
-        const ox = ex + s * (rx + 0.1);
-        o += `<path d="M${n1(ox - s * 0.4)} ${n1(ly + 0.2)}q${s * 1.4} -0.6 ${s * 2.2} -2.2" stroke="#3a2620" stroke-width="1.1" stroke-linecap="round" fill="none"/>`;
-      }
-      if (d.age >= 50) o += `<path d="M${n1(ex - rx * 0.7)} ${n1(ey + ry + 1.4)}q${n1(rx * 0.7)} 2 ${n1(rx * 1.4)} 0" stroke="${c.deep}" stroke-width=".9" fill="none" opacity="${n1(Math.min(0.45, (d.age - 45) / 40))}"/>`;
+      o += `<circle cx="${n1(ex - s * ir * 0.35)}" cy="${n1(ey - ir * 0.4)}" r="${n1(ir * 0.28)}" fill="#fff"/>`;
+      // Üst kirpik çizgisi
+      o += `<path d="M${n1(inX - s * 0.3)} ${n1(inY - 0.2)}C${n1(ex - s * rx * 0.5)} ${n1(ey - ry * 1.38)} ${n1(ex + s * rx * 0.55)} ${n1(ey - ry * 1.43)} ${n1(outX + s * 0.5)} ${n1(outY - 0.2)}" stroke="#2e1d17" stroke-width="${d.w ? 1.8 : 1.4}" fill="none" stroke-linecap="round"/>`;
+      if (d.w) o += `<path d="M${n1(outX)} ${n1(outY - 0.3)}l${s * 1.8} -1.4M${n1(outX - s * 1.4)} ${n1(outY - 1.6)}l${s * 1.4} -1.6" stroke="#2e1d17" stroke-width="1" stroke-linecap="round"/>`;
+      // Göz kapağı kıvrımı
+      o += `<path d="M${n1(ex - s * rx * 0.75)} ${n1(ey - ry * 1.15)}Q${n1(ex + s * rx * 0.1)} ${n1(ey - ry * 1.95)} ${n1(ex + s * rx * 0.95)} ${n1(ey - ry * 1.05)}" stroke="${c.deep}" stroke-width=".9" fill="none" opacity=".45"/>`;
+      // Alt kapak (ince)
+      o += `<path d="M${n1(ex - s * rx * 0.6)} ${n1(ey + ry * 0.95)}Q${n1(ex)} ${n1(ey + ry * 1.25)} ${n1(ex + s * rx * 0.7)} ${n1(ey + ry * 0.8)}" stroke="${c.deep}" stroke-width=".7" fill="none" opacity="${p.mood === 1 ? 0.55 : 0.3}"/>`;
+      if (d.age >= 50) o += `<path d="M${n1(ex - rx * 0.7)} ${n1(ey + ry + 2)}q${n1(rx * 0.7)} 2 ${n1(rx * 1.4)} 0" stroke="${c.deep}" stroke-width=".9" fill="none" opacity="${n1(Math.min(0.45, (d.age - 45) / 40))}"/>`;
       if (d.age >= 48) o += `<path d="M${n1(ex + s * (rx + 2))} ${n1(ey - 1)}l${s * 2.6} -1.2M${n1(ex + s * (rx + 2))} ${n1(ey + 1.5)}l${s * 2.6} 0.7" stroke="${c.deep}" stroke-width=".8" opacity="${n1(Math.min(0.5, (d.age - 44) / 40))}"/>`;
     }
     return `<g class="hs-eyes">${o}</g>`;
