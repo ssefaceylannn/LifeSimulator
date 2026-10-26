@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#f3eee7" />
+    <title>Hayat Simülatörü</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <button class="icon-btn" id="backBtn">←</button>
+        <div class="wordmark">hayat<span>simülatörü</span></div>
+        <button class="icon-btn" id="menuBtn">▤</button>
+      </header>
+      <section id="home" class="screen">
+        <div class="hero">
+          <div class="hero-orb">☼</div>
+          <div class="kicker">BİR HAYAT. BİNLERCE KÜÇÜK KARAR.</div>
+          <h1>Kendine bir<br /><em>hayat kur.</em></h1>
+          <p>18 yaşında, cebinde 10.000 TL. Gerisi senin hikâyen.</p>
+          <button class="primary" id="newLife">YENİ HAYAT <span>→</span></button
+          ><button class="secondary" id="continueLife">KAYITLARI GÖR</button>
+        </div>
+        <div class="home-note">
+          ◷ Her karar bir haftayı değiştirir.<br />2026 fiyat tabanı · yıllık
+          TÜFE %29,73<br />Her hayat başka bir yere varır.
+        </div>
+      </section>
+      <section id="create" class="screen hidden">
+        <div class="section-kicker">YENİ BİR BAŞLANGIÇ</div>
+        <h2>Bu hayatın<br /><em>kimin?</em></h2>
+        <div class="form">
+          <label>AD<input id="firstName" maxlength="18" value="Deniz" /></label
+          ><label
+            >SOYAD<input id="lastName" maxlength="22" value="Yılmaz" /></label
+          ><label
+            >ŞEHİR<select id="birthCity">
+              <option>İstanbul</option>
+              <option>Ankara</option>
+              <option>İzmir</option>
+              <option>Bursa</option>
+              <option>Adana</option>
+              <option>Trabzon</option>
+              <option>Diyarbakır</option>
+            </select></label
+          ><label
+            >GÖRÜNÜM
+            <div class="look-picker">
+              <button data-look="woman" class="look selected">♀ Kadın</button
+              ><button data-look="man" class="look">♂ Erkek</button
+              ><button data-look="neutral" class="look">✳ Diğer</button>
+            </div></label
+          >
+        </div>
+        <p class="smallprint">
+          Her hayat ayrı kaydedilir. Dilediğinde aralarında geçebilirsin.
+        </p>
+        <button class="primary" id="beginLife">
+          HAYATIMA BAŞLA <span>→</span>
+        </button>
+      </section>
+      <section id="world" class="screen hidden">
+        <div class="world-top">
+          <div>
+            <div class="section-kicker" id="dateLabel">İSTANBUL · 2026</div>
+            <h2 id="personName">Deniz Yılmaz</h2>
+          </div>
+          <button class="pill" id="slotPill">HAYAT 1</button>
+        </div>
+        <div class="character-wrap">
+          <div class="room-glow"></div>
+          <div class="room-window">
+            <div class="window-moon">☾</div>
+            <div class="window-city">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </div>
+          <div class="character" id="character">
+            <div class="char-hair"></div>
+            <div class="char-head">
+              <div class="eyes">· ·</div>
+              <div class="nose"></div>
+              <div class="mouth"></div>
+            </div>
+            <div class="char-neck"></div>
+            <div class="char-body"></div>
+            <div class="char-arm left"></div>
+            <div class="char-arm right"></div>
+            <div class="char-legs"></div>
+          </div>
+          <div class="room-prop" id="roomProp">▤<small>ODA</small></div>
+          <div class="age-tag" id="ageTag">18 YAŞ</div>
+        </div>
+        <div class="life-stats">
+          <div><span>NAKİT</span><b id="cashStat">₺10.000</b></div>
+          <div><span>SAĞLIK</span><b id="healthStat">♡ 82</b></div>
+          <div><span>MUTLULUK</span><b id="moodStat">☼ 65</b></div>
+        </div>
+        <article class="story-card">
+          <div class="story-date">
+            <span id="weekLabel">1. HAFTA</span
+            ><span id="weather">☁ SERİN</span>
+          </div>
+          <h3 id="storyTitle"></h3>
+          <p id="storyText"></p>
+          <div class="story-tags" id="storyTags"></div>
+        </article>
+        <div class="choice-list" id="choices"></div>
+        <button class="advance" id="advanceBtn">
+          BU HAFTAYI GEÇ <span>→</span>
+        </button>
+        <div class="tabbar">
+          <button class="tab active" data-tab="life">
+            ⌂<small>HAYAT</small></button
+          ><button class="tab" data-tab="work">▣<small>İŞ</small></button
+          ><button class="tab" data-tab="city">⌖<small>ŞEHİR</small></button
+          ><button class="tab" data-tab="people">
+            ♡<small>İLİŞKİLER</small></button
+          ><button class="tab" data-tab="things">
+            ▤<small>EŞYALAR</small>
+          </button>
+        </div>
+      </section>
+      <section id="records" class="screen hidden">
+        <div class="section-kicker">KAYITLI HAYATLAR</div>
+        <h2>Her biri<br /><em>başka bir yol.</em></h2>
+        <div id="recordList" class="record-list"></div>
+        <button class="primary" id="recordNew">
+          YENİ HAYAT AÇ <span>＋</span></button
+        ><button class="secondary" id="endCurrent">BU HAYATI SONLANDIR</button
+        ><button class="secondary" id="recordBack">GERİ DÖN</button>
+      </section>
+      <section id="event" class="event-screen hidden">
+        <div class="event-art" id="eventArt">✦</div>
+        <div class="section-kicker">BİR HAYAT ANI</div>
+        <h2 id="eventTitle"></h2>
+        <p id="eventText"></p>
+        <button class="primary" id="eventContinue">
+          DEVAM ET <span>→</span>
+        </button>
+      </section>
+      <div class="toast hidden" id="toast"></div>
+    </main>
+    <script src="game.js"></script>
+  </body>
+</html>

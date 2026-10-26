@@ -1,0 +1,19 @@
+{
+  "name": "Hayat Simülatörü",
+  "short_name": "Hayat",
+  "description": "Her haftası kararlarınla şekillenen bir yaşam hikâyesi.",
+  "lang": "tr",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f3eee7",
+  "theme_color": "#f3eee7",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
