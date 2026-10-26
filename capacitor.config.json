@@ -1,0 +1,6 @@
+{
+  "appId": "com.hayatsimulatoru.oyun",
+  "appName": "Hayat Simülatörü",
+  "webDir": "www",
+  "ios": { "contentInset": "never", "backgroundColor": "#f4f8fd" }
+}
