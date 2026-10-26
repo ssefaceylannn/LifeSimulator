@@ -15,11 +15,13 @@
   HS.EVENTS.push(
     // ---------- Mutfak ----------
     E("dishes", "mutfak", {
+      // Makinesi olan evde bulaşık dağı olmaz; makine alındıktan sonra bu soru bir daha gelmez.
+      when: (s) => !(s.items || []).includes("bulasik") && !HS.inStory(s, "h_bulasik"),
       title: "Bulaşık dağı",
       text: (s) => (s.partner ? "Lavabo taştı. " + s.partner.name + " sana bakıyor, sen ona." : "Lavabo taştı; son temiz çatal da kullanıldı."),
       choices: (s) => [
         c("Hemen yıka", "Stres biraz azalır.", { stress: -2, m: -1, bond: s.partner ? 3 : 0 }),
-        c("Bulaşık makinesi al", "₺18.000", { cost: 18000, stress: -4, m: 2 }),
+        s.housing === "aile" ? null : c("Bulaşık makinesi al", "₺21.000 · bir daha bu dert yok", { cost: 21000, itemGive: "bulasik", stress: -4, m: 2 }),
         c("Yarına bırak", "Mutfak kokmaya başlar.", { stress: 3, bond: s.partner ? -3 : 0 }),
       ],
     }),

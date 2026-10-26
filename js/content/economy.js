@@ -73,9 +73,9 @@
       prop: "OFİS",
       icon: "▣",
       need: (s) =>
-        s.edu === "universite" || s.skill >= 14
+        s.edu === "universite" || (s.skill >= 14 && s.age >= 20 && s.worked)
           ? true
-          : "Üniversite diploması ya da 14 beceri gerekir.",
+          : "Üniversite diploması ya da (20 yaş üstü) en az 14 beceri ve iş tecrübesi gerekir.",
     },
     teacher: {
       name: "Öğretmen",

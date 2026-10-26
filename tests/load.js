@@ -50,6 +50,12 @@ module.exports = function load() {
     "js/systems/exam.js",
     "js/systems/calendar.js",
     "js/systems/realism.js",
+    "js/systems/stories.js",
+    "js/systems/internship.js",
+    "js/content/stories-home.js",
+    "js/content/stories-life.js",
+    "js/content/stories-work.js",
+    "js/content/moments.js",
     "js/systems/achievements.js",
   ])
     vm.runInContext(

@@ -478,7 +478,7 @@
     if (fx.job && fx.job !== "none") {
       const j = HS.JOBS[fx.job];
       if (s.retired) return "Emekli oldun.";
-      if (s.edu === "ogrenci" && !j.student)
+      if (s.edu === "ogrenci" && !j.student && !(s.major && s.major.id === "acik"))
         return "Öğrenciyken yalnızca yarı zamanlı iş.";
       if (j.need) {
         const r = j.need(s);
@@ -638,7 +638,15 @@
     if (fx.edu === "ogrenci") {
       s.edu = "ogrenci";
       s.eduWeeks = 0;
-      if (s.job !== "none" && !HS.JOBS[s.job].student) s.job = "none";
+      // Örgün öğrenim tam zamanlı işle yürümez: iş bırakılır (açıköğretim hariç).
+      const distance = s.major && s.major.id === "acik";
+      if (s.job !== "none" && !HS.JOBS[s.job].student && !distance) {
+        note(s, HS.JOBS[s.job].name + " işinden okul için ayrıldı.");
+        scene(s, "İşten ayrıldın", "Örgün eğitim tam zamanlı işle yürümüyor. Okul için işinden ayrıldın; öğrenciyken yarı zamanlı (kafe, müzik) çalışabilirsin.", "✎");
+        s.job = "none";
+        s.jobLevel = 0;
+        s.company = null;
+      }
       note(s, "Üniversiteye başladı.");
       scene(
         s,
@@ -1015,13 +1023,26 @@
     if (last !== undefined) {
       if (def.once) return false;
       // Haftada birden çok olay geldiği için bekleme süreleri ölçeklenir (js/systems/time.js).
+      // Aynı soru tekrar gelmesin: her görülüşte bekleme süresi katlanır (süreç olayları hariç).
       if (s.weeks - last < (def.cooldown ?? 52) * (HS.COOLDOWN_SCALE || 1)) return false;
+      // Aynı soru kısa sürede tekrar gelmesin: sıradan olaylar n. görülüşünden sonra
+      // en az n×2 yıl bekler (süreç ve öncelikli olaylar hariç).
+      if (!def.repeat && (!def.priority || def.nag)) {
+        const n = (s.seenN && s.seenN[def.id]) || 1;
+        if (s.weeks - last < (def.nag ? 40 : 104) * n) return false;
+      }
     }
     try {
       return !def.when || !!def.when(s, ctx(s));
     } catch (e) {
       return false;
     }
+  }
+  // Yenilik: hiç görülmemiş olaylar öne çıkar, görülenler her seferinde daha da geri düşer.
+  function novelty(s, d) {
+    if (d.repeat) return 1;
+    const n = (s.seenN && s.seenN[d.id]) || 0;
+    return n === 0 ? 2.5 : Math.pow(0.12, n);
   }
   function chooseEvent(s) {
     const all = HS.EVENTS;
@@ -1037,7 +1058,7 @@
       const v = Math.max(
         0,
         typeof d.weight === "function" ? d.weight(s) : (d.weight ?? 1),
-      ) * (/^fate/.test(d.id) && HS.CFG ? HS.CFG.fateScale : 1);
+      ) * (/^fate/.test(d.id) && HS.CFG ? HS.CFG.fateScale : 1) * novelty(s, d);
       total += v;
       return v;
     });
@@ -1045,9 +1066,12 @@
     for (let i = 0; i < pool.length; i++) if ((r -= w[i]) < 0) return pool[i];
     return HS.FALLBACK_EVENT;
   }
-  function nextEvent(s) {
-    const def = s.weeks === 0 && s.seen[HS.INTRO_EVENT.id] === undefined ? HS.INTRO_EVENT : chooseEvent(s);
+  HS.chooseEvent = chooseEvent;
+  function nextEvent(s, picked) {
+    const def = picked || (s.weeks === 0 && s.seen[HS.INTRO_EVENT.id] === undefined ? HS.INTRO_EVENT : chooseEvent(s));
     s.seen[def.id] = s.weeks;
+    s.seenN = s.seenN || {};
+    s.seenN[def.id] = (s.seenN[def.id] || 0) + 1;
     (HS.HOOKS.event || []).forEach((f) => f(s, def));
     s.current = materialize(def, s);
     return s.current;

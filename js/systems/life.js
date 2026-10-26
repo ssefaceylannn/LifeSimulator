@@ -136,6 +136,8 @@
     klima: { name: "Klima", price: 38000, icon: "high-voltage", fx: { m: 2 }, desc: "Yazın serin; elektrik faturası artar.", room: "salon" },
     yatak: { name: "Ortopedik yatak", price: 26000, icon: "bed", fx: { h: 2 }, desc: "Daha iyi uyku: stres azalır.", room: "yatak" },
     koltuk: { name: "Tasarım koltuk takımı", price: 95000, icon: "couch-and-lamp", lv: 5, fx: { m: 4 }, desc: "Salonun havası değişir.", room: "salon" },
+    bulasik: { name: "Bulaşık makinesi", price: 21000, icon: "cook", fx: { stress: -3, m: 2 }, desc: "Lavabo taşmaz; ev işi stresi azalır.", room: "mutfak" },
+    camasir: { name: "Çamaşır makinesi", price: 23000, icon: "t-shirt", fx: { stress: -2, m: 1 }, desc: "Kendi evine geçince şart.", room: "mutfak" },
     kitap: { name: "Kitaplık ve kitaplar", price: 7500, icon: "books", fx: { m: 1 }, desc: "\"Kitap oku\" etkinliğini açar.", room: "salon" },
     kolye: { name: "Pırlanta kolye (hediye)", price: 120000, icon: "gem-stone", lv: 5, fx: { bond: 12, m: 4 }, desc: "Partnerine hediye: bağ çok güçlenir.", gift: true },
     parfum: { name: "Parfüm", price: 3800, icon: "wrapped-gift", fx: { m: 2, people: 1 }, desc: "Tükenir; birkaç ayda bir alınır.", consumable: true },
@@ -170,6 +172,13 @@
     HS.apply(s, { ...it.fx, noTheme: true });
     if (it.gift) s.scenes.push({ t: "Hediye", p: s.partner.name + " kutuyu açınca bir süre konuşamadı.", art: "♡", kind: "win" });
   };
+  // Hikâyeler eşyayı (parasını ayrıca cost ile ödeterek) verir
+  HS.FX.itemGive = (s, k) => {
+    if (!HS.ITEMS[k] || s.items.includes(k)) return;
+    s.items.push(k);
+    s.itemAt[k] = s.weeks;
+  };
+  HS.FX.itemLose = (s, k) => (s.items = s.items.filter((x) => x !== k));
   HS.FX.itemSell = (s, k) => {
     const v = HS.ITEMS[k].price * s.idx.cpi * Math.max(0.15, 0.6 - (s.weeks - (s.itemAt[k] || 0)) / 520);
     s.items = s.items.filter((x) => x !== k);

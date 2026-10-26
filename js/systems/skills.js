@@ -49,7 +49,7 @@
   // Meslek basamakları: unvan, maaş çarpanı ve bir üst basamağa geçiş şartları
   const L = (title, mult, req = {}, weeks = 0) => ({ title, mult, req, weeks });
   HS.LADDERS = {
-    office: [L("Stajyer", 0.75), L("Uzman yardımcısı", 1, { tablolama: 12, bilgisayar: 15 }, 26), L("Uzman", 1.35, { tablolama: 28, sunum: 22, iletisim: 25 }, 104), L("Kıdemli uzman", 1.8, { proje: 40, sunum: 40, ingilizce: 35 }, 156), L("Müdür", 2.6, { liderlik: 55, muzakere: 45, proje: 55 }, 208)],
+    office: [L("Ofis asistanı", 0.75), L("Uzman yardımcısı", 1, { tablolama: 12, bilgisayar: 15 }, 26), L("Uzman", 1.35, { tablolama: 28, sunum: 22, iletisim: 25 }, 104), L("Kıdemli uzman", 1.8, { proje: 40, sunum: 40, ingilizce: 35 }, 156), L("Müdür", 2.6, { liderlik: 55, muzakere: 45, proje: 55 }, 208)],
     cafe: [L("Komi", 0.95), L("Barista", 1.05, { barista: 15 }, 12), L("Kıdemli barista", 1.2, { barista: 35, servis: 25 }, 52), L("Vardiya sorumlusu", 1.45, { servis: 40, iletisim: 35, disiplin: 30 }, 104), L("Mağaza müdürü", 1.9, { isletme: 45, finans: 30, iletisim: 45 }, 156)],
     factory: [L("Çırak", 0.9), L("Operatör", 1, { makine: 15 }, 12), L("Usta", 1.25, { makine: 35, isguvenligi: 25 }, 104), L("Formen", 1.55, { kalite: 40, disiplin: 40, iletisim: 30 }, 156), L("Üretim şefi", 2.1, { liderlik: 40, kalite: 55, bilgisayar: 30 }, 208)],
     music: [L("Sokak müzisyeni", 0.6), L("Bar müzisyeni", 1, { enstruman: 18 }, 12), L("Sahne sanatçısı", 1.6, { enstruman: 35, sahne: 30 }, 52), L("Tanınan sanatçı", 2.8, { beste: 40, sahne: 50, produksiyon: 25 }, 104), L("Yıldız", 5, { beste: 60, sahne: 65, iletisim: 45 }, 156)],

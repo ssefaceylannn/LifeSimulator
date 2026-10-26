@@ -72,6 +72,9 @@
   };
   HS.coStages = (x) => STAGES[x.stages];
   // Toplam kabul şansı: genel başvuru şansı, şirketin seçiciliği
+  // Seçici şirketler (yüksek puan ya da çok aşamalı mülakat) beyaz yaka kadrolarına lise
+  // mezunu almaz. Lise mezunu ofis işi ancak küçük ve orta ölçekli işverenlerde mümkündür.
+  HS.coNeedsDegree = (x, job) => ["office", "teacher", "nurse"].includes(job) && (x.stars >= 3.8 || x.stages >= 3);
   HS.coChance = (s, x, job) => clamp(HS.appChance(s, job) * (1.35 - x.stars * 0.13) + (x.stars < 3.3 ? 0.08 : 0), 0.04, 0.95);
   const relevant = (s, job) => (HS.Skills.PRACTICE[job] || []).reduce((a, k) => a + HS.Skills.get(s, k), 0) / Math.max(1, (HS.Skills.PRACTICE[job] || []).length);
 
@@ -83,7 +86,8 @@
     if ((s.apps || []).some((a) => a.co === v.co)) return "Bu şirkete zaten başvurdun.";
     if ((s.apps || []).length >= 3) return "Aynı anda en fazla 3 başvuru.";
     const j = HS.JOBS[v.job];
-    if (s.edu === "ogrenci" && !j.student) return "Öğrenciyken yalnızca yarı zamanlı iş.";
+    if (s.edu === "ogrenci" && !j.student && !(s.major && s.major.id === "acik")) return "Öğrenciyken yalnızca yarı zamanlı iş. (Staj için okulun yaz stajı dönemini bekle.)";
+    if (HS.coNeedsDegree(x, v.job) && s.edu !== "universite") return "Bu şirket " + (HS.JOBS[v.job].name || "").toLocaleLowerCase("tr-TR") + " kadroları için üniversite diploması şartı arıyor.";
     if (j.need) {
       const n = j.need(s);
       if (n !== true) return n;
@@ -391,7 +395,7 @@
   function better(s) {
     if (!s.company) return null;
     const cur = CO(s.company);
-    return HS.coRanking().find((x) => x.jobs.includes(s.job) && HS.coScore(x) > HS.coScore(cur) + 5 && !(s.apps || []).some((a) => a.co === x.id) && x.cities);
+    return HS.coRanking().find((x) => x.jobs.includes(s.job) && HS.coScore(x) > HS.coScore(cur) + 5 && !(s.apps || []).some((a) => a.co === x.id) && x.cities && !(HS.coNeedsDegree(x, s.job) && s.edu !== "universite"));
   }
 })(globalThis.HS || (globalThis.HS = {}));
 

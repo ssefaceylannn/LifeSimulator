@@ -79,7 +79,9 @@
   }
   // Soru çözme etkinliği: arayüz soruyu gösterir, param = verilen cevap
   HS.pickQuestion = (s) => {
-    const asked = (s.exam && s.exam.asked) || [];
+    let asked = (s.exam && s.exam.asked) || [];
+    // Bütün sorular bittiyse liste baştan başlar
+    if (asked.length >= HS.QUESTIONS.length && s.exam) asked = s.exam.asked = [];
     const pool = HS.QUESTIONS.map((q, i) => i).filter((i) => !asked.includes(i));
     const i = (pool.length ? pool : HS.QUESTIONS.map((q, j) => j))[(r() * (pool.length || HS.QUESTIONS.length)) | 0];
     const q = HS.QUESTIONS[i];
@@ -90,7 +92,7 @@
     const q = HS.QUESTIONS[v.i];
     const ok = v.ans === q.a;
     if (s.exam) {
-      s.exam.asked = (s.exam.asked || []).concat(v.i).slice(-40);
+      s.exam.asked = (s.exam.asked || []).concat(v.i); // hiçbir soru tekrar sorulmaz (hepsi bitince başa döner)
       s.exam.qOk = (s.exam.qOk || 0) + (ok ? 1 : 0);
       s.exam.qAll = (s.exam.qAll || 0) + 1;
     }

@@ -77,8 +77,13 @@
   HS.tick = function (s) {
     s.evDone = (s.evDone || 0) + 1;
     if (s.evDone < (s.weekPlan || 4)) {
-      HS.nextEvent(s);
-      return { ok: true, mid: true };
+      // Haftada yeni bir konu kalmadıysa hafta erken kapanır: aynı "boş akşam"
+      // sorusuyla hafta doldurulmaz (sakin hafta).
+      const def = HS.chooseEvent(s);
+      if (def !== HS.FALLBACK_EVENT) {
+        HS.nextEvent(s, def);
+        return { ok: true, mid: true };
+      }
     }
     s.evDone = 0;
     s.weekPlan = HS.rollWeek();
@@ -165,7 +170,7 @@
       weight: (s) => (["factory", "nurse"].includes(s.job) ? 0.8 : 0),
       cooldown: 12,
       title: "Vardiya değişimi rica",
-      text: "Bir iş arkadaşın bu hafta vardiyanı değiştirmek istiyor; çocuğu hastaymış.",
+      text: (s, h) => h.pick([HS.castName(s, "isArk") + " bu hafta vardiyanı değiştirmek istiyor; çocuğu hastaymış.", HS.castName(s, "isArk") + " kardeşinin nişanı için cumartesi vardiyanı istiyor.", "Yeni gelen bir arkadaş, okul kaydı için vardiya değişikliği rica ediyor.", HS.castName(s, "isArk") + " hastane randevusu almış; vardiyanı devralmanı istiyor."]),
       choices: [
         c("Kabul et", "Arkadaşlık +, yorgunluk +", { people: 2, stress: 3, h: -1 }),
         c("Kibarca reddet", "Kendi düzenini koru.", { stress: -1, people: -1 }),
@@ -175,15 +180,21 @@
       id: "weekendRest",
       weekend: true,
       weight: (s) => (HS.lateWeek(s) && s.job !== "none" ? 1 : 0),
-      cooldown: 4,
+      cooldown: 7,
       room: "salon",
       title: (s) => (HS.isNight(s) ? "Cumartesi gecesi" : "Pazar sabahı"),
-      text: "Hafta boyu koşturdun. Nihayet kendine ait birkaç saat var.",
-      choices: (s) => [
-        c("Kanepeye uzan, dizi izle", "Stres −, kilo biraz +", { stress: -6, m: 3, kg: 0.1 }),
-        c("Uzun bir kahvaltı hazırla", "Mutfakta keyif. Market masrafı.", { cost: 450, m: 4, stress: -4, bond: s.partner ? 3 : 0 }),
-        c("Ev işlerini bitir", "Haftaya temiz başla.", { stress: -2, m: -1, h: 1 }),
-      ],
+      text: (s, h) => h.pick(["Hafta boyu koşturdun. Nihayet kendine ait birkaç saat var.", "Alarm kurmadan uyandın; bu duyguyu özlemişsin.", "Haftanın yorgunluğu omuzlarında. Bugün senin günün.", "Mesai bitti, hafta sonu başladı. Plan yok, sadece sen varsın."]),
+      choices: (s, h) =>
+        HS.FALLBACK_EVENT.choices(s, h)
+          .slice(0, 2)
+          .concat([
+            h.pick([
+              c("Kanepeye uzan, dizi izle", "Stres −, kilo biraz +", { stress: -6, m: 3, kg: 0.1 }),
+              c("Uzun bir kahvaltı hazırla", "Mutfakta keyif. Market masrafı.", { cost: 450, m: 4, stress: -4, bond: s.partner ? 3 : 0 }),
+              c("Öğlene kadar uyu", "Uykusuzluk −", { sleep: -6, stress: -3, m: 1 }),
+              c("Şehir dışına günübirlik kaç", "₺1.200 · yol, manzara", { cost: 1200, m: 6, stress: -6, people: 0.5 }),
+            ]),
+          ]),
     },
   );
 })(globalThis.HS || (globalThis.HS = {}));
