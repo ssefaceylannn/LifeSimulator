@@ -301,16 +301,30 @@
     $("nameCancel").onclick = () => $("nameModal").classList.add("hidden");
   }
 
+  // Oyun içi onay penceresi (tarayıcının confirm() penceresi bazı
+  // gömülü görüntüleyicilerde engellendiği için kullanılmıyor).
+  function ask(text, onYes, yesLabel = "EVET") {
+    $("confirmText").textContent = text;
+    $("confirmYes").textContent = yesLabel;
+    $("confirmModal").classList.remove("hidden");
+    $("confirmYes").onclick = () => {
+      $("confirmModal").classList.add("hidden");
+      onYes();
+    };
+    $("confirmNo").onclick = () => $("confirmModal").classList.add("hidden");
+  }
+
   // ---------- Sekmeler ----------
   // Sekme eylemleri haftayı ilerletmez; bazıları haftada bir kez yapılabilir.
-  function act(fx, opt = {}) {
+  function act(fx, opt = {}, confirmed = false) {
     const s = active;
     if (opt.weekly) {
       s.flags.tabUse = s.flags.tabUse || {};
       if (s.flags.tabUse[opt.weekly] === s.weeks)
         return toast("Bunu bu hafta zaten yaptın.");
     }
-    if (opt.confirm && !confirm(opt.confirm)) return;
+    if (opt.confirm && !confirmed)
+      return ask(opt.confirm, () => act(fx, opt, true));
     const r = HS.quickAction(s, fx);
     if (r !== true) return toast(r);
     if (opt.weekly) s.flags.tabUse[opt.weekly] = s.weeks;
@@ -826,16 +840,16 @@
     box.querySelectorAll("[data-del]").forEach((b) => {
       b.onclick = () => {
         const s = saves.find((x) => x.id === b.dataset.del);
-        if (
-          !confirm(
-            s.first + " " + s.last + " kaydı silinsin mi? Bu geri alınamaz.",
-          )
-        )
-          return;
-        saves = saves.filter((x) => x !== s);
-        if (active === s) active = null;
-        persist();
-        records();
+        ask(
+          s.first + " " + s.last + " kaydı silinsin mi? Bu geri alınamaz.",
+          () => {
+            saves = saves.filter((x) => x !== s);
+            if (active === s) active = null;
+            persist();
+            records();
+          },
+          "SİL",
+        );
       };
     });
     $("endCurrent").classList.toggle("hidden", !(active && active.alive));
@@ -904,16 +918,16 @@
       page("home");
     };
     $("endCurrent").onclick = () => {
-      if (
-        active?.alive &&
-        confirm(
-          "Bu hayatı burada sonlandırıp anı defterine kaydetmek istiyor musun?",
-        )
-      ) {
-        HS.endLife(active, "chosen");
-        save();
-        memoir(true);
-      }
+      if (!active?.alive) return;
+      ask(
+        "Bu hayatı burada sonlandırıp anı defterine kaydetmek istiyor musun?",
+        () => {
+          HS.endLife(active, "chosen");
+          save();
+          memoir(true);
+        },
+        "SONLANDIR",
+      );
     };
     document.querySelectorAll(".look").forEach((b) => {
       b.onclick = () => {

@@ -23,7 +23,11 @@ const assert = (c, m) => {
     const p = await ctx.newPage();
     p.on("pageerror", (e) => errors.push(e.message));
     p.on("console", (m) => m.type() === "error" && errors.push(m.text()));
-    p.on("dialog", (d) => d.accept());
+    // Oyun tarayıcı diyaloğu kullanmamalı (gömülü görüntüleyiciler engelliyor).
+    p.on("dialog", (d) => {
+      errors.push("tarayıcı diyaloğu açıldı: " + d.message());
+      d.dismiss();
+    });
     await p.goto("file://" + ROOT + "/index.html");
     return p;
   }
@@ -76,7 +80,7 @@ const assert = (c, m) => {
   // Haftaları oyna
   async function playWeeks(n) {
     for (let w = 0; w < n; w++) {
-      if (await p.isVisible("#event")) await p.click("#eventContinue");
+      while (await p.isVisible("#event")) await p.click("#eventContinue");
       if (await p.isVisible("#memoir")) return "ended";
       const opts = await p.$$("#choices .choice:not([disabled])");
       assert(
@@ -174,6 +178,8 @@ const assert = (c, m) => {
   // Hayatı sonlandır → anı defteri
   await p.click("#menuBtn");
   await p.click("#endCurrent");
+  assert(await p.isVisible("#confirmModal"), "onay penceresi açılmadı");
+  await p.click("#confirmYes");
   assert(await p.isVisible("#memoir"), "anı defteri açılmadı");
   const memo = await p.textContent("#memoirBody");
   assert(memo.length > 300 && !/undefined|NaN/.test(memo), "anı metni hatalı");
@@ -211,7 +217,7 @@ const assert = (c, m) => {
     await q.click("#beginLife");
     await noOverflow(q, w + "px dünya");
     for (let i = 0; i < 15; i++) {
-      if (await q.isVisible("#event")) await q.click("#eventContinue");
+      while (await q.isVisible("#event")) await q.click("#eventContinue");
       const o = await q.$$("#choices .choice:not([disabled])");
       await o[0].click();
       await q.click("#advanceBtn");

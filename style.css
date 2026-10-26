@@ -35,7 +35,7 @@ button {
 }
 .app {
   width: min(100%, 480px);
-  height: 100svh;
+  height: 100%;
   background: var(--paper);
   position: relative;
   overflow: hidden;
