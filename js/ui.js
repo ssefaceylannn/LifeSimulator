@@ -1,75 +1,77 @@
-// Arayüz: ekranlar, sahne, sekmeler, boş zaman, kayıtlar ve anı defteri.
+// Arayüz: ekranlar, sahne, sekmeler, harita, ayarlar, ses, kayıtlar ve anı defteri.
 (function (HS) {
   "use strict";
   const $ = (id) => document.getElementById(id);
   const SAVE_KEY = "hayatSimulatuoruSavesV1"; // eski sürümle aynı anahtar: kayıtlar korunur
   const PROFILE_KEY = "hayatSimEndingProfilesV2";
-  const PAGES = ["home", "create", "world", "records", "memoir"];
+  const SET_KEY = "hayatSimSettingsV1";
+  const ACH_KEY = "hayatSimAchievementsV1";
+  const PAGES = ["home", "create", "world", "records", "memoir", "settings"];
   const money = HS.money;
   const Art = HS.Art;
-  const esc = (t) =>
-    String(t).replace(
-      /[&<>"']/g,
-      (x) =>
-        ({
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#39;",
-        })[x],
-    );
-  const reduced = () =>
-    window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const esc = (t) => String(t).replace(/[&<>"']/g, (x) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[x]);
+  const reduced = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const pct = (v) => "%" + Math.round(v * 100);
+  const lc = (t) => String(t).toLocaleLowerCase("tr-TR");
 
   const TABS = [
     { id: "life", label: "HAYAT", icon: "house" },
     { id: "work", label: "İŞ", icon: "briefcase" },
-    { id: "style", label: "STİL", icon: "t-shirt" },
-    { id: "people", label: "İNSANLAR", icon: "people-hugging" },
-    { id: "city", label: "ŞEHİR", icon: "office-building" },
+    { id: "skills", label: "BECERİ", icon: "brain" },
+    { id: "me", label: "BEN", icon: "t-shirt" },
+    { id: "world", label: "DÜNYA", icon: "world-map" },
     { id: "money", label: "PARA", icon: "money-bag" },
   ];
-  const HAIRS = {
-    short: "Kısa",
-    long: "Uzun",
-    curly: "Kıvırcık",
-    bun: "Topuz",
-    shaved: "Kazınmış",
-  };
+  const HAIRS = { short: "Kısa", long: "Uzun", curly: "Kıvırcık", bun: "Topuz", braid: "Örgü", shaved: "Kazınmış" };
+  const DEFAULTS = { music: true, sfx: true, vibration: true, volume: 0.8, commute: true, text: "normal" };
 
   let saves = [],
     active = null,
     selected = -1,
     tab = "life",
     sceneSig = "",
-    create = { look: "woman", skin: 1, hairColor: "kahve", hair: "long" };
+    mapSel = null,
+    lastWeekOpen = false,
+    create = { look: "woman", skin: 1, hairColor: "kahve", hair: "long" },
+    settings = { ...DEFAULTS },
+    H = []; // panel tıklama işleyicileri
 
-  // ---------- Kayıt ----------
+  // ---------- Depolama ----------
+  const store = {
+    get(k, d) {
+      try {
+        const v = JSON.parse(localStorage.getItem(k));
+        return v ?? d;
+      } catch {
+        return d;
+      }
+    },
+    set(k, v) {
+      try {
+        localStorage.setItem(k, JSON.stringify(v));
+        return true;
+      } catch {
+        return false;
+      }
+    },
+  };
   function load() {
-    try {
-      saves = JSON.parse(localStorage.getItem(SAVE_KEY) || "[]");
-      if (!Array.isArray(saves)) saves = [];
-    } catch {
-      saves = [];
-    }
+    saves = store.get(SAVE_KEY, []);
+    if (!Array.isArray(saves)) saves = [];
     saves = saves
       .filter((s) => s && s.id)
       .map((s) => {
         try {
           return HS.migrate(s);
-        } catch {
+        } catch (e) {
           return null;
         }
       })
       .filter(Boolean);
+    settings = { ...DEFAULTS, ...store.get(SET_KEY, {}) };
   }
   function persist() {
-    try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(saves));
-    } catch {
-      toast("Cihazda kayıt alanı kalmamış olabilir.");
-    }
+    if (!store.set(SAVE_KEY, saves)) toast("Cihazda kayıt alanı kalmamış olabilir.");
   }
   function save() {
     if (!active) return;
@@ -78,24 +80,19 @@
     else saves[i] = active;
     persist();
   }
-  function profiles() {
-    try {
-      const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || "[]");
-      return Array.isArray(p) ? p : [];
-    } catch {
-      return [];
-    }
-  }
   function addProfile(key) {
-    const p = profiles();
+    const p = store.get(PROFILE_KEY, []);
     if (!p.includes(key)) {
       p.push(key);
-      try {
-        localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
-      } catch {}
+      store.set(PROFILE_KEY, p);
     }
     return p.length;
   }
+
+  // ---------- Ses ----------
+  const sfx = (n) => HS.Audio && HS.Audio.play(n);
+  const buzz = (n) => HS.Audio && HS.Audio.vibrate(n);
+  HS.onAchievement = () => sfx("levelup");
 
   // ---------- Gezinme ----------
   function page(id) {
@@ -105,95 +102,66 @@
     $("menuBtn").style.visibility = id === "world" ? "visible" : "hidden";
     $(id).scrollTop = 0;
   }
-  function toast(t) {
+  function toast(t, kind) {
     $("toast").textContent = t;
     $("toast").classList.remove("hidden");
+    if (kind === "error") {
+      sfx("error");
+      buzz("error");
+    }
     clearTimeout(toast.timer);
-    toast.timer = setTimeout(() => $("toast").classList.add("hidden"), 2600);
+    toast.timer = setTimeout(() => $("toast").classList.add("hidden"), 2800);
   }
-  function ask(text, onYes, yesLabel = "Evet") {
+  function ask(text, onYes, yesLabel = "Evet", extra = "") {
     $("confirmText").textContent = text;
+    $("confirmExtra").innerHTML = extra;
     $("confirmYes").textContent = yesLabel;
     $("confirmModal").classList.remove("hidden");
+    sfx("notify");
     $("confirmYes").onclick = () => {
       $("confirmModal").classList.add("hidden");
       onYes();
     };
     $("confirmNo").onclick = () => $("confirmModal").classList.add("hidden");
   }
+  function pickFrom(title, items, cb, kicker = "SEÇ") {
+    $("pickKicker").textContent = kicker;
+    $("pickTitle").textContent = title;
+    $("pickList").innerHTML = items
+      .map((it, i) => `<button class="choice" data-p="${i}"><span class="bullet">${it.icon ? Art.icon(it.icon, 24) : i + 1}</span><span><b>${esc(it.label)}</b><small>${esc(it.hint || "")}</small></span></button>`)
+      .join("");
+    $("pickModal").classList.remove("hidden");
+    $("pickList").querySelectorAll("[data-p]").forEach((b) => {
+      b.onclick = () => {
+        $("pickModal").classList.add("hidden");
+        cb(items[+b.dataset.p]);
+      };
+    });
+    $("pickCancel").onclick = () => $("pickModal").classList.add("hidden");
+  }
 
   // ---------- Ana ekran ve oluşturma ----------
   function homeScene() {
-    const demo = HS.newLife({
-      first: "",
-      last: "",
-      city: "İstanbul",
-      look: "woman",
-    });
+    const demo = HS.newLife({ first: "", last: "", city: "İstanbul", look: "woman" });
     demo.week = 24;
     demo.car = "scooter";
     demo.partner = { name: "Bora", bond: 80, married: false };
-    $("homeScene").innerHTML = Art.scene(demo);
+    $("homeScene").innerHTML = Art.scene(demo, "salon");
   }
   function renderCreate() {
-    const p = {
-      gender: create.look,
-      skin: create.skin,
-      hair: create.hair,
-      hairColor: create.hairColor,
-      age: 18,
-      outfit: "gunluk",
-      mood: 1,
-    };
-    $("preview").innerHTML =
-      `<svg viewBox="0 0 120 220">${Art.person(p)}</svg>`;
-    $("lookPicker")
-      .querySelectorAll("button")
-      .forEach((b) =>
-        b.classList.toggle("selected", b.dataset.look === create.look),
-      );
-    $("skinPicker").innerHTML = Art.SKINS.map(
-      (c, i) =>
-        `<button style="background:${c}" data-i="${i}" class="${i === create.skin ? "selected" : ""}" aria-label="Ten rengi ${i + 1}"></button>`,
-    ).join("");
+    const p = { gender: create.look, skin: create.skin, hair: create.hair, hairColor: create.hairColor, age: 18, outfit: "gunluk", mood: 1, fat: 0.3, mus: 0.25 };
+    $("preview").innerHTML = `<svg viewBox="0 0 120 220">${Art.person(p)}</svg>`;
+    $("lookPicker").querySelectorAll("button").forEach((b) => b.classList.toggle("selected", b.dataset.look === create.look));
+    $("skinPicker").innerHTML = Art.SKINS.map((c, i) => `<button style="background:${c}" data-i="${i}" class="${i === create.skin ? "selected" : ""}" aria-label="Ten rengi ${i + 1}"></button>`).join("");
     $("hairColorPicker").innerHTML = Object.entries(Art.HAIR_COLORS)
-      .map(
-        ([k, c]) =>
-          `<button style="background:${c}" data-k="${k}" class="${k === create.hairColor ? "selected" : ""}" aria-label="${Art.HAIR_NAMES[k]}"></button>`,
-      )
+      .map(([k, c]) => `<button style="background:${c}" data-k="${k}" class="${k === create.hairColor ? "selected" : ""}" aria-label="${Art.HAIR_NAMES[k]}"></button>`)
       .join("");
-    const hairs =
-      create.look === "man"
-        ? ["short", "curly", "long", "shaved"]
-        : ["long", "bun", "curly", "short"];
+    const hairs = create.look === "man" ? ["short", "curly", "long", "shaved"] : ["long", "braid", "bun", "curly", "short"];
     if (!hairs.includes(create.hair)) create.hair = hairs[0];
-    $("hairPicker").innerHTML = hairs
-      .map(
-        (h) =>
-          `<button data-h="${h}" class="${h === create.hair ? "selected" : ""}">${HAIRS[h]}</button>`,
-      )
-      .join("");
-    $("skinPicker")
-      .querySelectorAll("button")
-      .forEach(
-        (b) =>
-          (b.onclick = () => ((create.skin = +b.dataset.i), renderCreate())),
-      );
-    $("hairColorPicker")
-      .querySelectorAll("button")
-      .forEach(
-        (b) =>
-          (b.onclick = () => (
-            (create.hairColor = b.dataset.k),
-            renderCreate()
-          )),
-      );
-    $("hairPicker")
-      .querySelectorAll("button")
-      .forEach(
-        (b) =>
-          (b.onclick = () => ((create.hair = b.dataset.h), renderCreate())),
-      );
+    $("hairPicker").innerHTML = hairs.map((h) => `<button data-h="${h}" class="${h === create.hair ? "selected" : ""}">${HAIRS[h]}</button>`).join("");
+    $("skinPicker").querySelectorAll("button").forEach((b) => (b.onclick = () => ((create.skin = +b.dataset.i), renderCreate())));
+    $("hairColorPicker").querySelectorAll("button").forEach((b) => (b.onclick = () => ((create.hairColor = b.dataset.k), renderCreate())));
+    $("hairPicker").querySelectorAll("button").forEach((b) => (b.onclick = () => ((create.hair = b.dataset.h), renderCreate())));
   }
   function begin() {
     const first = $("firstName").value.trim() || "Deniz",
@@ -214,19 +182,20 @@
     showScenes();
   }
 
-  // ---------- Dünya ----------
+  // ---------- Dünya ekranı ----------
   function render() {
     const s = active;
     if (!s) return;
     $("personName").textContent = s.first + " " + s.last;
+    $("titleLine").textContent =
+      (s.retired ? "Emekli" : s.mil === "serving" ? "Er (askerde)" : s.edu === "ogrenci" && s.job === "none" ? "Üniversite öğrencisi" : s.job === "none" ? "İş arıyor" : HS.Skills.title(s)) +
+      (s.company ? " · " + HS.co(s.company).name : "") +
+      (s.tour ? " · turnede" : "");
     $("slotPill").textContent = "HAYAT " + (saves.indexOf(s) + 1);
     $("ageTag").textContent = s.age + " YAŞ";
     $("weekLabel").textContent = s.year + " · " + s.week + ". hafta";
-    $("dateLabel").textContent =
-      HS.upper(s.city) +
-      (HS.CITIES[s.city]?.country
-        ? " · " + HS.upper(HS.CITIES[s.city].country)
-        : "");
+    const city = HS.CITIES[s.city] || {};
+    $("dateLabel").textContent = HS.upper(s.city) + (city.country ? " · " + HS.upper(city.country) : "");
     $("cashStat").textContent = money(s.cash);
     $("healthStat").textContent = Math.round(s.health);
     $("moodStat").textContent = Math.round(s.mood);
@@ -234,69 +203,46 @@
     $("moodBar").style.width = s.mood + "%";
     const parts = [];
     if (s.savings > 1) parts.push("Banka " + money(s.savings));
-    if (s.fund > 1) parts.push("Fon " + money(s.fund));
+    const inv = HS.invTotal(s);
+    if (inv > 1) parts.push("Yatırım " + money(inv));
     if (s.debt > 1) parts.push('<b class="neg">Borç ' + money(s.debt) + "</b>");
     if (s.mortgage) parts.push("Kredi " + money(s.mortgage.left));
     $("moneyLine").innerHTML = parts.join(" · ") || "Henüz birikim yok";
     drawScene();
-    $("tabbar").innerHTML = TABS.map(
-      (t) =>
-        `<button class="tab${t.id === tab ? " active" : ""}" data-tab="${t.id}" aria-label="${t.label}">${Art.icon(t.icon, 24)}<small>${t.label}</small></button>`,
-    ).join("");
-    $("tabbar")
-      .querySelectorAll(".tab")
-      .forEach((b) => {
-        b.onclick = () => {
-          tab = b.dataset.tab;
-          render();
-          $("world").scrollTop = 0;
-        };
-      });
-    $("panel").classList.toggle("hidden", tab !== "life");
-    $("tabPanel").classList.toggle("hidden", tab === "life");
-    if (tab === "life") {
-      renderEvent();
-      renderFree();
-    } else renderTab(tab);
+    $("tabbar").innerHTML = TABS.map((t) => `<button class="tab${t.id === tab ? " active" : ""}" data-tab="${t.id}" aria-label="${t.label}">${Art.icon(t.icon, 24)}<small>${t.label}</small></button>`).join("");
+    $("tabbar").querySelectorAll(".tab").forEach((b) => {
+      b.onclick = () => {
+        tab = b.dataset.tab;
+        mapSel = null;
+        render();
+        $("world").scrollTop = 0;
+      };
+    });
+    renderPanel();
   }
-  // Sahne yalnızca görünür bir şey değişince yeniden çizilir; animasyonlar kesilmesin.
   function drawScene() {
     const s = active;
     const sig = JSON.stringify([
-      s.city,
-      s.week,
-      s.age,
-      s.job,
-      s.housing,
-      s.homeType,
-      s.homeV,
-      s.car,
-      s.carColor,
-      s.outfit,
-      s.hair,
-      s.hairColor,
-      s.beard,
-      s.thinning,
-      s.transplanted,
-      s.mood >= 62 ? 1 : s.mood < 35 ? -1 : 0,
-      s.partner && [s.partner.bond >= 55, s.partner.married],
-      s.children.map(
-        (k) =>
-          k.name +
-          (s.year - k.born < 4
-            ? 0
-            : s.year - k.born < 11
-              ? 1
-              : s.year - k.born < 18
-                ? 2
-                : 3),
-      ),
-      s.flags.kedi,
-      s.edu,
+      s.city, s.week, s.age, s.job, s.housing, s.homeType, s.homeV, s.car, s.carColor, s.outfit, s.hair, s.hairColor, s.beard, s.thinning, s.transplanted,
+      s.mood >= 62 ? 1 : s.mood < 35 ? -1 : 0, s.partner && [s.partner.bond >= 55, s.partner.married],
+      s.children.map((k) => k.name + (s.year - k.born < 4 ? 0 : s.year - k.born < 11 ? 1 : s.year - k.born < 18 ? 2 : 3)),
+      s.flags.kedi, s.edu, s.body && Math.round(s.body.w), s.body && Math.round(s.body.mus / 5),
     ]);
-    if (sig === sceneSig) return;
-    sceneSig = sig;
-    $("sceneArt").innerHTML = Art.scene(s);
+    const views = Art.views(s);
+    if (!views.some((v) => v.id === s.view)) s.view = "salon";
+    $("viewChips").innerHTML = views.map((v) => `<button class="view-chip${v.id === s.view ? " on" : ""}" data-v="${v.id}" role="tab" aria-selected="${v.id === s.view}">${esc(v.label)}</button>`).join("");
+    $("viewChips").querySelectorAll("[data-v]").forEach((b) => {
+      b.onclick = () => {
+        if (s.view === b.dataset.v) return;
+        s.view = b.dataset.v;
+        sfx("select");
+        save();
+        drawScene();
+      };
+    });
+    if (sig + s.view === sceneSig) return;
+    sceneSig = sig + s.view;
+    $("sceneArt").innerHTML = Art.scene(s, s.view);
   }
   function react(delta) {
     if (Math.abs(delta) < 3) return;
@@ -307,99 +253,160 @@
     setTimeout(() => el.classList.remove("react-up", "react-down"), 1300);
   }
 
-  function renderEvent() {
-    const s = active,
-      ev = s.current;
-    const seasonName = {
-      kis: "Kış",
-      ilkbahar: "İlkbahar",
-      yaz: "Yaz",
-      sonbahar: "Sonbahar",
-    }[Art.season(s)];
-    $("seasonLabel").textContent = seasonName;
-    const tags = [
-      s.retired
-        ? "Emekli"
-        : s.edu === "ogrenci"
-          ? "Öğrenci"
-          : HS.JOBS[s.job].name,
-    ];
-    if (s.partner) tags.push(s.partner.married ? "Evli" : "İlişkisi var");
-    if (s.children.length) tags.push(s.children.length + " çocuk");
-    $("tagsLine").textContent = tags.join(" · ");
-    $("storyTitle").textContent = ev.t;
-    $("storyText").textContent = ev.p;
-    selected = -1;
-    const box = $("choices");
-    box.innerHTML = "";
-    ev.c.forEach((c, i) => {
-      const b = document.createElement("button");
-      b.className = "choice";
-      b.disabled = !!c.off;
-      b.innerHTML =
-        '<span class="bullet">' +
-        String.fromCharCode(65 + i) +
-        "</span><span><b>" +
-        esc(c.label) +
-        "</b><small>" +
-        esc(c.off ? "🔒 " + c.off : c.hint) +
-        "</small></span>" +
-        (c.odds != null && !c.off
-          ? '<span class="odds-tag" title="Başarı şansı">🎲 %' +
-            c.odds +
-            "</span>"
-          : "");
-      b.onclick = () => {
-        selected = i;
-        box
-          .querySelectorAll(".choice")
-          .forEach((x, j) => x.classList.toggle("selected", j === i));
-        $("advanceBtn").disabled = false;
-      };
-      box.append(b);
-    });
-    $("advanceBtn").disabled = true;
+  // ---------- Panel yardımcıları ----------
+  const on = (fn) => {
+    H.push(fn);
+    return ` data-h="${H.length - 1}"`;
+  };
+  const card = (title, body, cls = "") => `<article class="card ${cls}">${title ? `<h3>${title}</h3>` : ""}${body ? `<div class="card-body">${body}</div>` : ""}</article>`;
+  const sectionTitle = (t, sub) => `<div class="section-title">${t}${sub ? `<small>${sub}</small>` : ""}</div>`;
+  const bar = (v, cls = "") => `<i class="bar inline ${cls}"><i style="width:${Math.max(0, Math.min(100, v))}%"></i></i>`;
+  // Eylem satırı: fx uygulanabilir değilse kilitli görünür
+  function row(label, hint, fx, opt = {}) {
+    let off = opt.off || null;
+    if (!off) {
+      const c = HS.canApply(active, fx);
+      if (c !== true) off = c;
+    }
+    if (!off && opt.weekly && active.flags.tabUse?.[opt.weekly] === active.weeks) off = "Bu hafta yapıldı.";
+    const icon = opt.icon ? Art.icon(opt.icon, 24) : "•";
+    return `<button class="choice"${off ? " disabled" : on(() => act(fx, opt))}><span class="bullet">${icon}</span><span><b>${esc(label)}</b><small>${esc(off ? "🔒 " + off : hint)}</small></span>${opt.badge ? `<span class="odds-tag">${esc(opt.badge)}</span>` : ""}</button>`;
+  }
+  const rows = (arr) => `<div class="choice-list">${arr.filter(Boolean).join("")}</div>`;
+  function act(fx, opt = {}, confirmed = false) {
+    const s = active;
+    if (opt.weekly) {
+      s.flags.tabUse = s.flags.tabUse || {};
+      if (s.flags.tabUse[opt.weekly] === s.weeks) return toast("Bunu bu hafta zaten yaptın.", "error");
+    }
+    if (opt.confirm && !confirmed) return ask(opt.confirm, () => act(fx, opt, true), opt.yes || "Evet", opt.extra || "");
+    const before = s.mood,
+      cash0 = s.cash;
+    const r = HS.quickAction(s, fx);
+    if (r !== true) return toast(r, "error");
+    if (opt.weekly) s.flags.tabUse[opt.weekly] = s.weeks;
+    if (s.cash < cash0 - 1) sfx("buy");
+    else if (s.cash > cash0 + 1) sfx("coin");
+    else sfx("select");
+    if (opt.done) toast(opt.done);
+    save();
+    render();
+    react(s.mood - before);
+    showScenes();
   }
 
-  function renderFree() {
+  function renderPanel() {
+    H = [];
     const s = active;
+    let html = "";
+    if (tab === "life") html = lifeTab(s);
+    else if (tab === "work") html = workTab(s);
+    else if (tab === "skills") html = skillsTab(s);
+    else if (tab === "me") html = meTab(s);
+    else if (tab === "world") html = worldTab(s);
+    else html = moneyTab(s);
+    if (tab !== "life") html += '<p class="fine center">Bu sekmedeki işlemler haftayı ilerletmez; boş zaman harcayanlar belirtilmiştir.</p>';
+    $("panel").innerHTML = html;
+    $("panel").onclick = (e) => {
+      const el = e.target.closest("[data-h]");
+      if (el && !el.disabled) {
+        sfx("tap");
+        buzz("tap");
+        H[+el.dataset.h]();
+      }
+    };
+    if (tab === "life") bindChoices();
+  }
+
+  // ---------- HAYAT ----------
+  function lifeTab(s) {
+    const ev = s.current;
+    const seasonName = { kis: "Kış", ilkbahar: "İlkbahar", yaz: "Yaz", sonbahar: "Sonbahar" }[Art.season(s)];
+    const tags = [];
+    if (s.partner) tags.push(s.partner.married ? "Evli" : "İlişkisi var");
+    if (s.children.length) tags.push(s.children.length + " çocuk");
+    let html = `<article class="card story"><div class="story-meta"><span>${seasonName}</span><span>${esc(tags.join(" · "))}</span></div><h3 id="storyTitle">${esc(ev.t)}</h3><p>${esc(ev.p)}</p></article>`;
+    html += `<div class="choice-list" id="choices">${ev.c
+      .map(
+        (c, i) =>
+          `<button class="choice" data-c="${i}"${c.off ? " disabled" : ""}><span class="bullet">${String.fromCharCode(65 + i)}</span><span><b>${esc(c.label)}</b><small>${esc(c.off ? "🔒 " + c.off : c.hint)}</small></span>${c.odds != null && !c.off ? `<span class="odds-tag" title="Başarı şansı">🎲 %${c.odds}</span>` : ""}</button>`,
+      )
+      .join("")}</div>`;
+    html += `<button class="advance" id="advanceBtn" disabled>Bu haftayı yaşa <span>→</span></button>`;
+    // Boş zaman
     const total = Math.max(s.free, HS.freeSlots(s));
-    $("freeDots").innerHTML = Array.from(
-      { length: total },
-      (_, i) => `<i class="${i < s.free ? "" : "used"}"></i>`,
-    ).join("");
-    $("freeHint").textContent = s.free
-      ? "Haftanı yaşamadan önce " +
-        s.free +
-        " boş zamanın var. Her etkinlik haftada bir kez yapılır."
-      : "Bu haftanın boş zamanı bitti. Kararını verip haftayı yaşayabilirsin.";
     const done = s.flags.actDone || {};
-    $("acts").innerHTML = HS.ACTIVITIES.filter((a) => !a.when || a.when(s))
-      .map(
-        (a) =>
-          `<button class="act${done[a.id] ? " done" : ""}" data-a="${a.id}"${done[a.id] || !s.free ? " disabled" : ""}>${Art.icon(a.art, 32)}<b>${esc(a.label)}</b><small>${esc(done[a.id] ? "Yapıldı" : a.hint)}</small></button>`,
-      )
-      .join("");
-    $("acts")
-      .querySelectorAll("[data-a]")
-      .forEach((b) => {
-        b.onclick = () => {
-          const before = active.mood;
-          const r = HS.doActivity(active, b.dataset.a);
-          if (!r.ok) return toast(r.reason);
-          save();
-          render();
-          react(active.mood - before);
-          if (r.text && !active.scenes.length) toast(r.text);
-          showScenes();
-        };
-      });
-    $("appsLine").innerHTML = (s.apps || [])
-      .map(
-        (a) =>
-          `<span class="app-chip">${esc(HS.JOBS[a.job].name)} · %${Math.round(a.p * 100)} · ${Math.max(0, a.due - s.weeks)} hafta</span>`,
-      )
-      .join("");
+    html += `<section class="card free"><div class="free-head"><h3>Boş zaman</h3><div class="dots">${Array.from({ length: total }, (_, i) => `<i class="${i < s.free ? "" : "used"}"></i>`).join("")}</div></div>`;
+    html += `<p class="fine">${s.tour ? "Turnedesin; boş zamanın yok." : s.mil === "serving" ? "Askerdesin; boş zamanın çok kısıtlı." : s.free ? "Haftanı yaşamadan önce " + s.free + " boş zamanın var. Kurslar her hafta bir boş zaman kullanır." : "Bu haftanın boş zamanı bitti."}</p>`;
+    html += `<div class="acts">${HS.ACTIVITIES.filter((a) => !a.when || a.when(s))
+      .map((a) => `<button class="act${done[a.id] ? " done" : ""}" data-a="${a.id}"${done[a.id] || !s.free ? " disabled" : on(() => doActivity(a))}>${Art.icon(a.art, 32)}<b>${esc(a.label)}</b><small>${esc(done[a.id] ? "Yapıldı" : a.hint)}</small></button>`)
+      .join("")}</div></section>`;
+    // Süren işler
+    const proc = processes(s);
+    if (proc.length) html += card("Süren işler", '<div id="procList">' + proc.map((p) => `<div class="proc">${p}</div>`).join("") + "</div>");
+    // Geçen hafta
+    if (s.lastWeek) {
+      const lw = s.lastWeek;
+      const sum = (a) => a.reduce((x, y) => x + y[1], 0);
+      const lines = []
+        .concat(lw.in.map(([k, v]) => `<div class="led in"><span>${esc(k)}</span><b>+${money(v)}</b></div>`))
+        .concat(lw.out.map(([k, v]) => `<div class="led out"><span>${esc(k)}</span><b>−${money(v)}</b></div>`));
+      html += `<article class="card"><button class="collapse"${on(() => ((lastWeekOpen = !lastWeekOpen), renderPanel()))}><h3>Geçen haftanın dökümü</h3><span>${lw.cash >= 0 ? "+" : "−"}${money(Math.abs(lw.cash))} ${lastWeekOpen ? "▴" : "▾"}</span></button>${lastWeekOpen ? `<div class="ledger">${lines.join("") || '<p class="fine">Kayıt yok.</p>'}<div class="led total"><span>Toplam</span><b>${money(sum(lw.in) - sum(lw.out))}</b></div></div>` : ""}</article>`;
+    }
+    return html;
+  }
+  function processes(s) {
+    const out = [];
+    (s.apps || []).forEach((a) => {
+      const x = a.co && HS.co(a.co);
+      out.push(`${Art.icon("envelope", 20)} ${esc(x ? x.name : HS.JOBS[a.job].name)} başvurusu · ${a.offer ? "teklif bekleniyor" : x ? "aşama " + (a.stage + 1) + "/" + x.stages : "sonuç bekleniyor"} · ${Math.max(0, a.due - s.weeks)} hafta`);
+    });
+    if (s.visa) {
+      const st = { evrak: "evrak hazırlığı", randevu: "randevu bekleniyor (" + Math.max(0, s.visa.apptAt - s.weeks) + " hafta)", degerlendirme: "değerlendirmede", onay: "onaylandı, taşınma bekliyor", red: "reddedildi" }[s.visa.stage];
+      out.push(`${Art.icon("passport-control", 20)} ${esc(s.visa.country)} göç dosyası: ${st}`);
+    }
+    if (s.license === "kurs" || s.license === "direksiyon") out.push(`${Art.icon("oncoming-automobile", 20)} Ehliyet: ${s.license === "kurs" ? "kurs" : "direksiyon sınavı"} (${Math.max(0, s.licenseAt - s.weeks)} hafta)`);
+    (s.courses || []).forEach((c) => {
+      const d = HS.COURSES.find((x) => x.id === c.id);
+      out.push(`${Art.icon("books", 20)} ${esc(d.name)} · ${c.left} hafta kaldı`);
+    });
+    if (s.tour) out.push(`${Art.icon("stadium", 20)} ${HS.TOURS[s.tour.k].name} · ${Math.max(0, s.tour.until - s.weeks)} hafta`);
+    if (s.mil === "serving") out.push(`${Art.icon("military-helmet", 20)} Askerlik · ${Math.max(0, s.milUntil - s.weeks)} hafta`);
+    (s.props || []).filter((p) => p.seeking).forEach((p) => out.push(`${Art.icon("key", 20)} ${esc(p.city)} mülkü için kiracı aranıyor`));
+    return out;
+  }
+  function bindChoices() {
+    const box = $("choices");
+    box.querySelectorAll("[data-c]").forEach((b) => {
+      b.onclick = () => {
+        selected = +b.dataset.c;
+        sfx("select");
+        box.querySelectorAll(".choice").forEach((x, j) => x.classList.toggle("selected", j === selected));
+        $("advanceBtn").disabled = false;
+      };
+    });
+    selected = -1;
+    $("advanceBtn").onclick = advance;
+  }
+  function doActivity(a, param) {
+    if (a.pick === "skill" && !param) {
+      const vis = HS.Skills.visible(active);
+      return pickFrom(
+        "Hangi beceriye çalışacaksın?",
+        vis.map((k) => ({ label: HS.SKILLS[k].name, hint: "Şu an " + Math.round(HS.Skills.get(active, k)), icon: HS.SKILLS[k].icon, k })),
+        (it) => doActivity(a, it.k),
+        "KENDİ KENDİNE ÇALIŞ",
+      );
+    }
+    const before = active.mood;
+    const r = HS.doActivity(active, a.id, param);
+    if (!r.ok) return toast(r.reason, "error");
+    sfx("select");
+    save();
+    render();
+    react(active.mood - before);
+    if (r.text && !active.scenes.length) toast(r.text);
+    showScenes();
   }
 
   function advance() {
@@ -409,22 +416,45 @@
     doChoose();
   }
   function doChoose(name) {
-    const before = active.mood;
-    const r = HS.choose(active, selected, name);
-    if (r.ok === false) {
-      toast(r.reason);
-      return;
-    }
+    const s = active;
+    const before = s.mood;
+    const r = HS.choose(s, selected, name);
+    if (r.ok === false) return toast(r.reason, "error");
     save();
+    sfx("advance");
     if (r.ended) return finish();
     tab = "life";
-    render();
-    $("world").scrollTop = 0;
-    react(active.mood - before);
-    showScenes();
+    commute(() => {
+      render();
+      $("world").scrollTop = 0;
+      react(s.mood - before);
+      showScenes();
+    });
+  }
+  // Sabah işe gidiş animasyonu (ayarlardan kapatılabilir; dokununca geçer)
+  function commute(next) {
+    const s = active;
+    const goes = s.job !== "none" || s.edu === "ogrenci";
+    if (!settings.commute || reduced() || !goes || s.tour || s.mil === "serving" || s.weeks % 4 !== 1) return next();
+    const days = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma"];
+    const hour = s.job === "cafe" || s.job === "factory" ? "06:" + (40 + (s.weeks % 15)) : s.job === "music" ? "19:30" : "08:" + (10 + (s.weeks % 40));
+    const dest = s.edu === "ogrenci" && s.job === "none" ? "Okula" : s.company ? HS.co(s.company).name + "'e" : "İşe";
+    $("commuteArt").innerHTML = Art.commute(s);
+    $("commuteText").textContent = days[s.weeks % 5] + " " + hour + " · " + dest + " gidiyorsun";
+    const el = $("commute");
+    el.classList.remove("hidden");
+    let done = false;
+    const end = () => {
+      if (done) return;
+      done = true;
+      el.classList.add("hidden");
+      next();
+    };
+    el.onclick = end;
+    setTimeout(end, 2300);
   }
 
-  // Ara sahneler sırayla gösterilir; şanslı sonuçlarda kısa bir bekleyiş olur.
+  // Ara sahneler: şanslı sonuçlarda kısa bir bekleyiş
   function showScenes(after) {
     const s = active;
     if (!s || !s.scenes.length) {
@@ -433,10 +463,11 @@
     }
     const sc = s.scenes.shift();
     save();
-    const card = $("eventCard");
-    card.className = "event-card" + (sc.kind ? " " + sc.kind : "");
+    const cardEl = $("eventCard");
+    cardEl.className = "event-card" + (sc.kind ? " " + sc.kind : "");
     $("eventOdds").classList.toggle("hidden", sc.odds == null);
     $("eventOdds").textContent = sc.odds != null ? "🎲 Şans %" + sc.odds : "";
+    $("eventExtra").innerHTML = sc.ach ? `<div class="ach-pop">${Art.icon(HS.ACHIEVEMENTS.find((a) => a.id === sc.ach).icon, 56)}</div>` : "";
     $("event").classList.remove("hidden");
     const reveal = () => {
       $("suspense").classList.add("hidden");
@@ -445,15 +476,23 @@
       $("eventText").textContent = sc.p || "";
       $("eventArt").classList.remove("hidden");
       $("eventContinue").classList.remove("hidden");
-      if (sc.kind) card.className = "event-card " + sc.kind;
+      if (sc.kind) cardEl.className = "event-card " + sc.kind;
+      if (sc.kind === "win") {
+        sfx(sc.ach ? "levelup" : "win");
+        buzz("win");
+      } else if (sc.kind === "lose") {
+        sfx("lose");
+        buzz("lose");
+      } else sfx("notify");
     };
     if (sc.odds != null && !reduced()) {
-      card.className = "event-card";
+      cardEl.className = "event-card";
       $("eventArt").classList.add("hidden");
       $("eventTitle").textContent = "Sonuç bekleniyor…";
       $("eventText").textContent = "";
       $("eventContinue").classList.add("hidden");
       $("suspense").classList.remove("hidden");
+      sfx("dice");
       setTimeout(reveal, 1100);
     } else reveal();
     $("eventContinue").onclick = () => {
@@ -468,657 +507,392 @@
     setTimeout(() => $("nameInput").focus(), 50);
     $("nameOk").onclick = () => {
       const v = $("nameInput").value.trim();
-      if (!v) return toast("Bir isim yaz.");
+      if (!v) return toast("Bir isim yaz.", "error");
       $("nameModal").classList.add("hidden");
       cb(v);
     };
     $("nameCancel").onclick = () => $("nameModal").classList.add("hidden");
   }
 
-  // ---------- Sekmeler ----------
-  // Sekme eylemleri haftayı ilerletmez; useFree olanlar bir boş zaman harcar.
-  function act(fx, opt = {}, confirmed = false) {
-    const s = active;
-    if (opt.weekly) {
-      s.flags.tabUse = s.flags.tabUse || {};
-      if (s.flags.tabUse[opt.weekly] === s.weeks)
-        return toast("Bunu bu hafta zaten yaptın.");
-    }
-    if (opt.confirm && !confirmed)
-      return ask(opt.confirm, () => act(fx, opt, true), opt.yes);
-    const before = s.mood;
-    const r = HS.quickAction(s, fx);
-    if (r !== true) return toast(r);
-    if (opt.weekly) s.flags.tabUse[opt.weekly] = s.weeks;
-    if (opt.done) toast(opt.done);
-    save();
-    render();
-    react(s.mood - before);
-    showScenes();
-  }
-  function row(label, hint, fx, opt = {}) {
-    let off = opt.off || null;
-    if (!off) {
-      const c = HS.canApply(active, fx);
-      if (c !== true) off = c;
-    }
-    if (
-      !off &&
-      opt.weekly &&
-      active.flags.tabUse?.[opt.weekly] === active.weeks
-    )
-      off = "Bu hafta yapıldı.";
-    return { label, hint, fx, opt, off, icon: opt.icon };
-  }
-  const bar = (v) =>
-    '<i class="bar inline"><i style="width:' + Math.round(v) + '%"></i></i>';
-  function rowsHtml(rows, start = 0) {
-    return (
-      '<div class="choice-list">' +
-      rows
-        .filter(Boolean)
-        .map(
-          (r, i) =>
-            `<button class="choice" data-r="${start + i}"${r.off ? " disabled" : ""}><span class="bullet">${r.icon ? Art.icon(r.icon, 24) : i + 1}</span><span><b>${esc(r.label)}</b><small>${esc(r.off ? "🔒 " + r.off : r.hint)}</small></span></button>`,
-        )
-        .join("") +
-      "</div>"
-    );
-  }
-
-  function renderTab(t) {
-    const box = $("tabPanel");
-    const all = []; // tüm satırlar (data-r indeksleri)
-    const sec = (title, body, rows) => {
-      const list = rows.filter(Boolean);
-      const html =
-        `<article class="card"><h3>${esc(title)}</h3>${body ? "<p>" + body + "</p>" : ""}</article>` +
-        (list.length ? rowsHtml(list, all.length) : "");
-      all.push(...list);
-      return html;
-    };
-    const s = active,
-      E = HS.ECONOMY,
-      cpi = s.idx.cpi,
-      M = HS.WEEKS_PER_MONTH;
+  // ---------- İŞ ----------
+  function workTab(s) {
+    const cpi = s.idx.cpi,
+      M = HS.WEEKS_PER_MONTH,
+      b = HS.budget(s);
     let html = "";
-
-    if (t === "work") {
-      const b = HS.budget(s);
-      const lines = [
-        s.retired
-          ? "Emeklisin. Aylık emekli maaşın " + money(HS.pension(s)) + "."
-          : s.job === "none"
-            ? "Şu an çalışmıyorsun."
-            : esc(HS.JOBS[s.job].name) +
-              " · kademe " +
-              (s.jobLevel + 1) +
-              "/3 · " +
-              Math.floor(s.jobWeeks / 52) +
-              " yıl " +
-              (s.jobWeeks % 52) +
-              " hafta",
-        "Eğitim: " +
-          {
-            lise: "lise",
-            ogrenci:
-              "üniversite öğrencisi (%" +
-              Math.min(100, Math.round((s.eduWeeks / 208) * 100)) +
-              ")",
-            universite: "üniversite mezunu",
-            yarim: "üniversiteyi yarıda bıraktı",
-          }[s.edu] +
-          " · Beceri " +
-          Math.round(s.skill),
-        "Aylık: gelir " +
-          money(b.income * M) +
-          " · yaşam " +
-          money(b.living * M) +
-          (b.rent ? " · kira " + money(b.rent * M) : "") +
-          (b.kids ? " · çocuk " + money(b.kids * M) : "") +
-          (b.mortgage ? " · kredi " + money(b.mortgage * M) : ""),
-      ];
-      html += sec("İş ve eğitim", lines.join("<br>"), []);
-      if (!s.retired) {
-        const jobs = [
-          "cafe",
-          "factory",
-          "music",
-          "office",
-          "teacher",
-          "nurse",
-          "memur",
-        ].filter((j) => j !== s.job);
-        html += `<div class="section-title">İş başvurusu</div><p class="fine">Başvuru bir boş zaman harcar. Sonuç 1-3 hafta içinde gelir; bazı işlerde mülakat olur. Uygun kıyafet şansı artırır.</p>`;
-        html += sec(
-          "",
-          "",
-          jobs.map((j) =>
-            row(
-              HS.JOBS[j].name,
-              "Aylık " +
-                (HS.JOBS[j].volatile ? "ort. " : "") +
-                money(HS.wage(s, j, 0)) +
-                " · kabul şansı %" +
-                Math.round(HS.appChance(s, j) * 100) +
-                (HS.outfitFits(s, j) ? " · kıyafetin uygun" : ""),
-              { apply: j, useFree: 1 },
-              { done: "Başvurun gönderildi. Sonucu bekle." },
-            ),
-          ),
-        ).replace(/<article class="card"><h3><\/h3><\/article>/, "");
-        const shop = HS.JOBS.business;
-        html += sec("Kendi işin", "", [
-          s.job !== "business"
-            ? row(
-                "Dükkân aç",
-                "Sermaye " +
-                  money(shop.startup * cpi) +
-                  " · kazanç ay ay değişir.",
-                { job: "business" },
-                {
-                  confirm: "Dükkân açmak için sermaye ödeyeceksin. Emin misin?",
-                  done: "Dükkânın açıldı!",
-                },
-              )
-            : null,
-          s.job !== "none"
-            ? row(
-                "İşten ayrıl",
-                "Gelirin kesilir.",
-                { job: "none" },
-                { confirm: "İşinden ayrılmak istediğine emin misin?" },
-              )
-            : null,
-        ]).replace(
-          /<article class="card"><h3>Kendi işin<\/h3><\/article>/,
-          '<div class="section-title">Kendi işin</div>',
-        );
-      }
-    } else if (t === "style") {
-      const outs = Object.entries(Art.OUTFITS).filter(
-        ([k, o]) => !(o.type === "dress" && s.look === "man"),
-      );
-      const P = Art.fromState(s);
-      html += `<article class="card"><h3>Gardırop</h3><p>Giydiğin kıyafet sahnede görünür. İşine uygun kıyafet başvurularda ve terfide şansını artırır.</p></article><div class="outfits">`;
-      outs.forEach(([k, o]) => {
-        const owned = s.outfits.includes(k);
-        const on = s.outfit === k;
-        const fits =
-          s.job !== "none" && HS.outfitFits({ ...s, outfit: k }, s.job);
-        html += `<button class="outfit${on ? " on" : ""}" data-o="${k}"><svg viewBox="0 0 120 220">${Art.person({ ...P, outfit: k, mood: 1 })}</svg><b>${esc(o.name)}</b><small${fits ? ' class="fit"' : ""}>${on ? "Giyiliyor" : owned ? "Giy" : money(o.price * cpi)}${fits ? " · işe uygun" : ""}</small></button>`;
+    let info;
+    if (s.retired) info = "Emeklisin. Aylık emekli maaşın " + money(HS.pension(s)) + ".";
+    else if (s.job === "none") info = s.mil === "serving" ? "Askerdesin." : "Şu an çalışmıyorsun.";
+    else info = `<b>${esc(HS.Skills.title(s))}</b> · ${esc(HS.JOBS[s.job].name)} · ${Math.floor(s.jobWeeks / 52)} yıl ${s.jobWeeks % 52} hafta<br>Aylık net ${money(HS.wage(s))}`;
+    if (s.company) {
+      const x = HS.co(s.company);
+      info += `<br>${Art.icon("office-building", 18)} ${esc(x.name)} · ${x.stars.toFixed(1)}★ · ${esc(x.sector)}<br>Performans ${bar(s.perf)} ${Math.round(s.perf)}/100${s.mobbing ? ' · <b class="neg">mobbing sürüyor</b>' : ""}`;
+    }
+    info += `<br>Aylık: gelir ${money(b.income * M)} · yaşam ${money(b.living * M)}${b.rent ? " · kira " + money(b.rent * M) : ""}${b.kids ? " · çocuk " + money(b.kids * M) : ""}`;
+    html += card("İş", info);
+    // Kariyer basamakları
+    const lad = HS.Skills.ladder(s);
+    if (lad && s.job !== "none") {
+      let l = "";
+      lad.forEach((st, i) => {
+        const cur = i === s.jobLevel,
+          next = i === s.jobLevel + 1;
+        if (i > s.jobLevel + 1) {
+          l += `<div class="ladder locked"><span>${i + 1}</span><b>???</b><small>Önceki basamağa ulaşınca görünür</small></div>`;
+          return;
+        }
+        const m = next ? HS.Skills.missing(s) : null;
+        const req = Object.entries(st.req)
+          .map(([k, v]) => {
+            const ok = HS.Skills.get(s, k) >= v;
+            return `<span class="req ${ok ? "ok" : ""}">${ok ? "✓" : "✗"} ${esc(HS.SKILLS[k].name)} ${Math.round(HS.Skills.get(s, k))}/${v}</span>`;
+          })
+          .join("");
+        l += `<div class="ladder ${cur ? "cur" : i < s.jobLevel ? "past" : ""}"><span>${i + 1}</span><b>${esc(st.title)}</b><small>Maaş ×${st.mult}${next && m.weeksLeft ? " · " + m.weeksLeft + " hafta daha kıdem" : ""}</small>${next ? `<div class="reqs">${req || '<span class="req ok">Şart yok</span>'}</div>` : ""}</div>`;
       });
-      html += "</div>";
-      const hairs =
-        s.look === "man"
-          ? ["short", "curly", "long", "shaved"]
-          : ["long", "bun", "curly", "short", "shaved"];
-      html += sec(
-        "Berber ve kuaför",
-        "Saç: " +
-          HAIRS[s.hair] +
-          (s.beard ? " · sakallı" : "") +
-          (s.thinning && !s.transplanted ? " · seyrelmiş" : "") +
-          (s.transplanted ? " · ekimli" : ""),
-        [
-          ...hairs
-            .filter((h) => h !== s.hair)
-            .map((h) =>
-              row(
-                HAIRS[h] + " saç",
-                "Kuaför " + money(E.haircut * (h === "curly" ? 2.4 : 1) * cpi),
-                { hair: h, cost: E.haircut * (h === "curly" ? 2.4 : 1) },
-                { weekly: "barber", icon: "barber-pole" },
-              ),
-            ),
-          s.look === "man"
-            ? row(
-                s.beard ? "Sakalı kestir" : "Sakal bırak",
-                "Berber " + money(E.beard * cpi),
-                { beard: !s.beard, cost: E.beard },
-                { weekly: "beard", icon: "barber-pole" },
-              )
-            : null,
-          ...Object.keys(Art.HAIR_COLORS)
-            .filter((k) => k !== s.hairColor)
-            .map((k) =>
-              row(
-                "Saçı boyat: " + Art.HAIR_NAMES[k],
-                "Boya " + money(1500 * cpi),
-                { hairColor: k, cost: 1500 },
-                { weekly: "dye", icon: "scissors" },
-              ),
-            ),
-          s.look === "man" && !s.transplanted
-            ? row(
-                "Saç ekimi",
-                "Kalıcı işlem, " + money(E.transplant * cpi) + ".",
-                { transplant: true, m: 3 },
-                {
-                  confirm: "Saç ekimi yaptırmak istiyor musun?",
-                  done: "Saç ekimi tamamlandı.",
-                },
-              )
-            : null,
-        ],
-      );
-    } else if (t === "people") {
-      let body = "";
-      if (s.partner)
-        body +=
-          esc(s.partner.name) +
-          (s.partner.married ? " · eşin" : " · partnerin") +
-          bar(s.partner.bond) +
-          "<br>";
-      else
-        body +=
-          "Şu an bir ilişkin yok." +
-          (s.exes ? " Geçmişte " + s.exes + " ayrılık." : "") +
-          "<br>";
-      s.children.forEach(
-        (k) =>
-          (body +=
-            esc(k.name) +
-            " · " +
-            (s.year - k.born) +
-            " yaş" +
-            bar(k.bond) +
-            "<br>"),
-      );
-      body +=
-        "Yakın çevre: " +
-        Math.round(s.people) +
-        " kişi. Arkadaşlık ve aile ziyaretleri HAYAT sekmesindeki boş zaman etkinliklerinden yapılır.";
-      html += sec("Yakınların", body, [
-        s.partner && !s.partner.married
-          ? row(
-              "Evlenme teklif et",
-              "Yüzük ve akşam yemeği " + money(12000 * cpi),
-              {
-                cost: 12000,
-                chance: {
-                  p: Math.min(0.95, Math.max(0.1, s.partner.bond / 100 + 0.1)),
-                  win: { marry: true, m: 10 },
-                  lose: { bond: -12, m: -8 },
-                  winT: s.partner.name + " evet dedi!",
-                  winP: "Restoranda herkes alkışladı. Nikâh tarihini konuşmaya başladınız.",
-                  loseT: "Henüz hazır değil",
-                  loseP:
-                    s.partner.name +
-                    " biraz daha zamana ihtiyacı olduğunu söyledi. Ortam biraz buruk.",
-                },
-              },
-              { weekly: "propose", icon: "ring" },
-            )
-          : null,
-        s.partner
-          ? row(
-              s.partner.married ? "Boşan" : "Ayrıl",
-              "İlişkiyi bitir.",
-              { breakup: true, m: -8, cost: s.partner.married ? 20000 : 0 },
-              {
-                confirm: "Bu ilişkiyi bitirmek istediğine emin misin?",
-                icon: "wedding",
-              },
-            )
-          : null,
-        !s.flags.kedi
-          ? row(
-              "Bir kedi sahiplen",
-              "Mama ve veteriner " + money(3000 * cpi),
-              { cost: 3000, m: 6, flag: "kedi", log: "Bir kedi sahiplendi." },
-              { icon: "cat" },
-            )
-          : null,
-      ]);
-    } else if (t === "city") {
-      const city = HS.CITIES[s.city];
-      const sc = HS.SCENARIOS[s.scenario];
-      const pct = (k) => "%" + Math.round(HS.rate(s, k) * 100);
-      html += sec(
-        s.city + (city.country ? " · " + city.country : ""),
-        "Ortalama daire kirası " +
-          money(HS.rentFull(s)) +
-          "/ay" +
-          (city.est ? " (tahmini)" : "") +
-          " · 70 m² daire " +
-          money(HS.homePrice(s, "daire")) +
-          ".<br>" +
-          s.year +
-          " oranları (" +
-          (s.year <= E.startYear
-            ? "TÜİK Eylül 2026"
-            : "kurmaca senaryo: " + sc.name) +
-          "): genel " +
-          pct("cpi") +
-          ", gıda " +
-          pct("food") +
-          ", ulaşım " +
-          pct("transport") +
-          ", konut " +
-          pct("housing") +
-          "." +
-          (s.policy !== "neutral"
-            ? "<br>Kurmaca politika: " +
-              {
-                transit: "toplu ulaşım desteği",
-                enterprise: "küçük işletme indirimi",
-                housing: "kira sınırı",
-                family: "aile desteği",
-              }[s.policy] +
-              "."
-            : ""),
-        [],
-      );
-      if (!city.country) {
-        html += `<div class="section-title">Başka bir ile taşın</div><div class="move-row"><select id="moveSelect" aria-label="Taşınılacak il">${HS.HOME_CITIES.filter(
-          (c) => c !== s.city,
-        )
-          .map(
-            (c) =>
-              `<option value="${esc(c)}">${esc(c)} · kira ${money(HS.CITIES[c].rent * s.idx.housing)}</option>`,
-          )
-          .join(
-            "",
-          )}</select><button id="moveBtn">Taşın</button></div><p class="fine">Taşınma ${money(15000 * cpi)}. İşinden ayrılırsın; evin varsa kiraya geçersin.</p>`;
-      }
-      html += sec("Dünya", "", [
-        !s.assets.passport
-          ? row(
-              "Pasaport çıkar",
-              "Harç ve defter " + money(E.passport * cpi) + ".",
-              { passport: 1 },
-              { done: "Pasaportun hazır.", icon: "airplane" },
-            )
-          : null,
-        !city.country
-          ? row(
-              "Berlin’e göç et",
-              "Yol ve ilk masraf " + money(30000 * cpi) + ". İşini bırakırsın.",
-              { emigrate: "Berlin", cost: 30000, people: -5 },
-              {
-                confirm: "Yurt dışına taşınmak istiyor musun?",
-                icon: "airplane",
-              },
-            )
-          : row(
-              HS.ek(s.birthCity, "dat") + " geri dön",
-              "Dönüş " + money(20000 * cpi) + ".",
-              { returnHome: true, cost: 20000 },
-              {
-                confirm: "Memleketine dönmek istiyor musun?",
-                icon: "airplane",
-              },
-            ),
-      ]);
-    } else {
-      const b = HS.budget(s);
-      html += sec(
-        "Para ve varlıklar",
-        "Nakit " +
-          money(s.cash) +
-          " · Banka " +
-          money(s.savings) +
-          " · Fon " +
-          money(s.fund) +
-          " · Borç " +
-          money(s.debt) +
-          (s.mortgage
-            ? "<br>Konut kredisi " +
-              money(s.mortgage.left) +
-              " (haftalık " +
-              money(s.mortgage.weekly) +
-              ")"
-            : "") +
-          "<br>Barınma: " +
-          {
-            aile: "aile evi",
-            kira: "kiralık (tek başına)",
-            "kira-paylasim": "kiralık (ev arkadaşıyla)",
-            ev: (
-              HS.HOME_TYPES[s.homeType]?.name || "kendi evin"
-            ).toLocaleLowerCase("tr-TR"),
-          }[s.housing] +
-          " · Net değer " +
-          money(HS.netWorth(s)) +
-          "<br><small>Mevduat ve fon getirisi kurmacadır; fon değer kaybedebilir.</small>",
-        [
-          row(
-            "Bankaya yatır (%25)",
-            money(s.cash * 0.25) + " mevduata.",
-            { save: Math.round(s.cash * 0.25) },
-            { off: s.cash < 400 ? "Nakit yok." : null, icon: "bank" },
-          ),
-          s.savings > 1
-            ? row(
-                "Bankadan çek (%50)",
-                money(s.savings * 0.5) + " nakde.",
-                { withdraw: 0.5 },
-                { icon: "bank" },
-              )
-            : null,
-          row(
-            "Fona yatır (%25)",
-            money(s.cash * 0.25) + " endeks fonuna.",
-            { fund: Math.round(s.cash * 0.25) },
-            { off: s.cash < 400 ? "Nakit yok." : null, icon: "money-bag" },
-          ),
-          s.fund > 1
-            ? row(
-                "Fonu sat (%50)",
-                money(s.fund * 0.5) + " nakde.",
-                { sellFund: 0.5 },
-                { icon: "money-bag" },
-              )
-            : null,
-          s.debt > 1
-            ? row(
-                "Borcu öde",
-                "Nakdin kadarını kapat.",
-                { payDebt: 1 },
-                { icon: "money-bag" },
-              )
-            : null,
-        ],
-      );
-      // Araçlar
-      const cars = Object.entries(Art.CARS);
-      html += sec(
-        "Araç",
-        s.car
-          ? "Şu an: " +
-              Art.CARS[s.car].name +
-              " · ikinci el değeri " +
-              money(HS.carPrice(s) * 0.55)
-          : "Aracın yok. Araç yol masrafını değiştirir ve evinin önünde görünür.",
-        [
-          ...cars
-            .filter(([k]) => k !== s.car)
-            .map(([k, c]) =>
-              row(
-                (s.car ? "Takasla: " : "Al: ") + c.name,
-                money(HS.carPrice(s, k)) +
-                  (s.car
-                    ? " (eskisi " + money(HS.carPrice(s) * 0.55) + " düşülür)"
-                    : ""),
-                { buy: "car", model: k, trade: !!s.car },
-                { confirm: c.name + " almak istiyor musun?", icon: c.art },
-              ),
-            ),
-          s.car
-            ? row(
-                "Aracı boyat",
-                "Yeni renk " + money(18000 * cpi),
-                { cost: 18000, carColor: ((s.carColor || 0) + 1) % 6 },
-                { icon: Art.CARS[s.car].art },
-              )
-            : null,
-          s.car
-            ? row(
-                "Aracı sat",
-                "İkinci el " + money(HS.carPrice(s) * 0.55),
-                { sell: "car" },
-                {
-                  confirm: "Aracını satmak istiyor musun?",
-                  icon: Art.CARS[s.car].art,
-                },
-              )
-            : null,
-        ],
-      );
-      // Ev
-      const homeRows = [];
-      if (!s.assets.house)
-        Object.entries(HS.HOME_TYPES).forEach(([k, h]) => {
-          homeRows.push(
-            row(
-              h.name + " · peşin",
-              money(HS.homePrice(s, k)),
-              { buy: "house", homeType: k },
-              {
-                confirm: h.name + " peşin almak istiyor musun?",
-                icon: k === "daire" ? "office-building" : "house-with-garden",
-              },
-            ),
-          );
-          homeRows.push(
-            row(
-              h.name + " · kredili",
-              "%30 peşinat " + money(HS.homePrice(s, k) * 0.3) + ", 15 yıl",
-              { buy: "house", homeType: k, mortgage: true },
-              {
-                confirm: h.name + " için konut kredisi çekmek istiyor musun?",
-                icon: k === "daire" ? "office-building" : "house-with-garden",
-              },
-            ),
-          );
-        });
-      else
-        homeRows.push(
-          row(
-            "Evi sat",
-            "Değer " +
-              money(HS.homePrice(s)) +
-              (s.mortgage ? " (kredi düşülür)" : ""),
-            { sell: "house" },
-            {
-              confirm: "Evini satmak istiyor musun? Kiraya geçeceksin.",
-              icon: "house",
-            },
-          ),
-        );
-      if (s.housing === "aile") {
-        homeRows.push(
-          row(
-            "Ev arkadaşıyla kiraya çık",
-            "Depozito " + money(HS.rentFull(s)) + ", kiranın yarısı senden.",
-            { rent: "kira-paylasim" },
-            { icon: "office-building" },
-          ),
-        );
-        homeRows.push(
-          row(
-            "Tek başına kiraya çık",
-            "Depozito + ilk ay " + money(HS.rentFull(s) * 2) + ".",
-            { rent: "kira" },
-            { icon: "office-building" },
-          ),
-        );
-      }
-      if (s.housing.startsWith("kira"))
-        homeRows.push(
-          row(
-            "Aile evine dön",
-            "Kira biter.",
-            { moveHome: 1, m: -3 },
-            { confirm: "Aile evine dönmek istiyor musun?", icon: "house" },
-          ),
-        );
-      homeRows.push(
-        !s.assets.land
-          ? row(
-              "Arsa al",
-              "Yaklaşık " + money(HS.landPrice(s)),
-              { buy: "land" },
-              { confirm: "Arsa almak istiyor musun?", icon: "national-park" },
-            )
-          : row(
-              "Arsayı sat",
-              "Değer " + money(HS.landPrice(s)),
-              { sell: "land" },
-              {
-                confirm: "Arsanı satmak istiyor musun?",
-                icon: "national-park",
-              },
-            ),
-      );
-      html += sec("Ev ve arsa", "", homeRows).replace(
-        /<article class="card"><h3>Ev ve arsa<\/h3><\/article>/,
-        '<div class="section-title">Ev ve arsa</div>',
+      html += card("Kariyer basamakları", l);
+    }
+    if (!s.retired && s.mil !== "serving") {
+      // Şirket sıralaması ve başvurular
+      html += sectionTitle("En iyi işverenler", "Kurmaca şirketler · 2026 sıralaması");
+      const myJobs = ["office", "cafe", "factory", "nurse", "teacher", "memur"].filter((j) => !HS.JOBS[j].need || HS.JOBS[j].need(s) === true);
+      const list = HS.coRanking();
+      html += `<div class="co-list">${list
+        .map((x, i) => {
+          const jobs = x.jobs.filter((j) => myJobs.includes(j));
+          const here = HS.coIn(x, s.city);
+          const apply = jobs
+            .map((j) => {
+              const fx = { coApply: { co: x.id, job: j, relocate: !here } };
+              const c = HS.canApply(s, fx);
+              return `<button class="mini"${c === true ? on(() => act(fx, { done: "Başvurun gönderildi.", confirm: x.name + " · " + HS.JOBS[j].name + " başvurusu gönderilsin mi? " + x.stages + " aşamalı mülakat var." + (here ? "" : " İşe alınırsan " + x.cities[0] + " şubesine taşınırsın (masrafı şirket öder).") })) : ` disabled title="${esc(c)}"`}>${esc(HS.JOBS[j].name)} · %${Math.round(HS.coChance(s, x, j) * 100)}</button>`;
+            })
+            .join("");
+          return `<div class="co${s.company === x.id ? " mine" : ""}"><div class="co-rank">${i + 1}</div><div class="co-main"><b>${esc(x.name)}</b><small>${x.stars.toFixed(1)}★ · ${esc(x.sector)} · maaş ×${x.mult} · ${x.stages} aşama · ${x.cities ? esc(x.cities.slice(0, 3).join(", ")) + (x.cities.length > 3 ? "…" : "") : "her ilde"}</small><small>${esc(x.perk)}${x.mobbing > 0.3 ? " · yönetim sert" : ""}</small>${apply ? `<div class="mini-row">${apply}</div>` : `<small class="neg">Uygun pozisyon yok (diploma ya da beceri gerekir)</small>`}</div></div>`;
+        })
+        .join("")}</div>`;
+      // Şirket dışı işler
+      const other = [];
+      if (s.job !== "music") other.push(row("Müzisyen olarak başla", "Bar ve mekânlara başvur · şans %" + Math.round(HS.appChance(s, "music") * 100) + " · 1 boş zaman", { apply: "music", useFree: 1 }, { icon: "guitar", done: "Başvurun gönderildi." }));
+      if (s.job !== "business") other.push(row("Dükkân aç", "Sermaye " + money(HS.JOBS.business.startup * cpi) + " · kazanç ay ay değişir.", { job: "business" }, { icon: "convenience-store", confirm: "Dükkân açmak için sermaye ödeyeceksin. Emin misin?" }));
+      if (s.job !== "none") other.push(row("İstifa et", "Gelirin kesilir.", { job: "none", leaveCompany: 1 }, { icon: "warning", confirm: "İşinden istifa etmek istediğine emin misin?" }));
+      html += sectionTitle("Diğer yollar") + rows(other);
+    }
+    // Müzisyen: şöhret ve turneler
+    if (s.job === "music" || (s.fame || 0) > 5) {
+      let m = `Şöhret ${bar(s.fame || 0)} ${Math.round(s.fame || 0)}/100 · aylık dinlenme geliri ~${money(Math.pow(s.fame || 0, 2) * 18 * cpi)}`;
+      html += card("Sahne", m);
+      html += rows(
+        Object.entries(HS.TOURS).map(([k, t]) =>
+          row(t.name, t.weeks + " hafta · organizasyon " + money(t.cost * cpi) + " · en az " + t.fame + " şöhret" + (t.schengen ? " · Schengen vizesi" : ""), { tour: k }, { icon: "stadium", confirm: t.name + "ne çıkılsın mı? " + t.weeks + " hafta boyunca boş zamanın olmayacak." }),
+        ),
       );
     }
-    html += '<p class="fine">Bu sekmedeki işlemler haftayı ilerletmez.</p>';
-    box.innerHTML = html;
-    box.querySelectorAll("[data-r]").forEach((b) => {
-      b.onclick = () => {
-        const r = all[+b.dataset.r];
-        act(r.fx, r.opt);
-      };
+    return html;
+  }
+
+  // ---------- BECERİ ----------
+  function skillsTab(s) {
+    let html = "";
+    const m = s.job !== "none" ? HS.Skills.missing(s) : null;
+    if (m) html += card("Sıradaki basamak: " + esc(m.step.title), m.miss.length ? "Eksikler: " + m.miss.map(([k, v]) => esc(HS.SKILLS[k].name) + " " + Math.round(HS.Skills.get(s, k)) + "/" + v).join(", ") + (m.weeksLeft ? " · " + m.weeksLeft + " hafta kıdem" : "") : m.weeksLeft ? m.weeksLeft + " hafta kıdem kaldı." : "Bütün şartları taşıyorsun; terfi teklifi yakında gelebilir.");
+    const cats = [["genel", "Genel"], ["dil", "Diller"]];
+    const jobCats = Object.keys(HS.LADDERS);
+    jobCats.forEach((j) => cats.push([j, HS.JOBS[j].name]));
+    cats.forEach(([cat, name]) => {
+      const list = Object.entries(HS.SKILLS).filter(([k, d]) => d.cat === cat);
+      const open = cat === "genel" || cat === "dil" || (s.skSeen && s.skSeen[cat]);
+      if (!open) {
+        html += `<article class="card skill-cat locked"><h3>${esc(name)} becerileri</h3><p class="fine">??? · ${list.length} gizli beceri. Bu alanda çalışınca ya da bir kursa yazılınca açılır.</p></article>`;
+        return;
+      }
+      html += `<article class="card skill-cat"><h3>${esc(name)}${cat === s.job ? ' <span class="pill">mesleğin</span>' : ""}</h3>${list
+        .map(([k, d]) => {
+          const v = HS.Skills.get(s, k);
+          return `<div class="skill">${Art.icon(d.icon, 26)}<span>${esc(d.name)}</span>${bar(v, "sk")}<b>${Math.round(v)}</b></div>`;
+        })
+        .join("")}</article>`;
     });
-    box.querySelectorAll("[data-o]").forEach((b) => {
-      b.onclick = () => {
-        const k = b.dataset.o;
-        if (active.outfit === k) return;
-        if (active.outfits.includes(k)) act({ wear: k });
-        else
-          act(
-            { outfitBuy: k },
-            {
-              confirm:
-                Art.OUTFITS[k].name +
-                " " +
-                money(Art.OUTFITS[k].price * active.idx.cpi) +
-                " karşılığında alınsın mı?",
-              yes: "Satın al",
-            },
-          );
-      };
-    });
-    const mb = $("moveBtn");
-    if (mb)
-      mb.onclick = () => {
-        const c = $("moveSelect").value;
-        act(
-          { moveCity: c, cost: 15000 },
-          { confirm: c + " iline taşınmak istiyor musun?" },
+    html += sectionTitle("Kurslar", "Her hafta bir boş zaman kullanır");
+    html += rows(
+      HS.COURSES.map((c) => {
+        const run = (s.courses || []).find((x) => x.id === c.id);
+        return run
+          ? row(c.name + " (devam ediyor)", run.left + " hafta kaldı · " + HS.SKILLS[c.skill].name, { dropCourse: c.id }, { icon: "books", confirm: "Kursu bırakmak istiyor musun? Ücret iade edilmez." })
+          : row(c.name, c.weeks + " hafta · " + money(c.cost * s.idx.cpi) + " · " + HS.SKILLS[c.skill].name + " +" + Math.round(c.weeks * c.gain), { course: c.id }, { icon: HS.SKILLS[c.skill].icon });
+      }),
+    );
+    return html;
+  }
+
+  // ---------- BEN ----------
+  function meTab(s) {
+    const E = HS.ECONOMY,
+      cpi = s.idx.cpi;
+    let html = "";
+    const b = s.body;
+    html += card(
+      "Beden",
+      `Boy ${Math.round(b.h)} cm · Kilo ${b.w.toFixed(1)} kg · BKİ ${HS.Body.bmi(s).toFixed(1)} (${esc(HS.Body.label(s))})<br>Kas ${bar(b.mus)} ${Math.round(b.mus)}/100 · ${esc(HS.Body.muscleLabel(s))}<br><small class="fine">Koşu, spor salonu ve sağlıklı beslenme HAYAT sekmesindeki boş zaman etkinliklerindedir. Yaş, iş, stres ve araba kullanmak kiloyu etkiler.</small>`,
+    );
+    // İlişkiler
+    let rel = "";
+    if (s.partner) rel += esc(s.partner.name) + (s.partner.married ? " · eşin" : " · partnerin") + bar(s.partner.bond) + "<br>";
+    else rel += "Şu an bir ilişkin yok." + (s.exes ? " Geçmişte " + s.exes + " ayrılık." : "") + "<br>";
+    s.children.forEach((k) => (rel += esc(k.name) + " · " + (s.year - k.born) + " yaş" + bar(k.bond) + "<br>"));
+    rel += "Yakın çevre: " + Math.round(s.people) + " kişi.";
+    html += card("Yakınların", rel);
+    html += rows([
+      s.partner && !s.partner.married
+        ? row("Evlenme teklif et", "Yüzük ve akşam yemeği " + money(12000 * cpi), { cost: 12000, chance: { p: Math.min(0.95, Math.max(0.1, s.partner.bond / 100 + 0.1)), win: { marry: true, m: 10 }, lose: { bond: -12, m: -8 }, winT: s.partner.name + " evet dedi!", winP: "Restoranda herkes alkışladı.", loseT: "Henüz hazır değil", loseP: s.partner.name + " biraz daha zamana ihtiyacı olduğunu söyledi." } }, { weekly: "propose", icon: "ring" })
+        : null,
+      s.partner ? row(s.partner.married ? "Boşan" : "Ayrıl", s.partner.married ? "Boşanmada birikimlerin yarısı paylaşılır." : "İlişkiyi bitir.", { breakup: true, m: -8, cost: s.partner.married ? 20000 : 0, divorceSplit: s.partner.married ? 1 : 0 }, { confirm: "Bu ilişkiyi bitirmek istediğine emin misin?", icon: "warning" }) : null,
+      !s.flags.kedi ? row("Bir kedi sahiplen", "Mama ve veteriner " + money(3000 * cpi), { cost: 3000, m: 6, flag: "kedi", log: "Bir kedi sahiplendi." }, { icon: "cat" }) : null,
+    ]);
+    // Gardırop
+    const P = Art.fromState(s);
+    html += sectionTitle("Gardırop", "İşe uygun kıyafet başvuru ve terfi şansını artırır");
+    html += `<div class="outfits">${Object.entries(Art.OUTFITS)
+      .filter(([k, o]) => !(o.type === "dress" && s.look === "man") && (!o.hidden || s.outfits.includes(k)))
+      .map(([k, o]) => {
+        const owned = s.outfits.includes(k);
+        const onIt = s.outfit === k;
+        const fits = s.job !== "none" && HS.outfitFits({ ...s, outfit: k }, s.job);
+        const handler = onIt ? "" : owned ? on(() => act({ wear: k })) : on(() => act({ outfitBuy: k }, { confirm: o.name + " " + money(o.price * cpi) + " karşılığında alınsın mı?", yes: "Satın al" }));
+        return `<button class="outfit${onIt ? " on" : ""}"${handler}><svg viewBox="0 0 120 220">${Art.person({ ...P, outfit: k, mood: 1 })}</svg><b>${esc(o.name)}</b><small${fits ? ' class="fit"' : ""}>${onIt ? "Giyiliyor" : owned ? "Giy" : money(o.price * cpi)}${fits ? " · işe uygun" : ""}</small></button>`;
+      })
+      .join("")}</div>`;
+    const hairs = s.look === "man" ? ["short", "curly", "long", "shaved"] : ["long", "braid", "bun", "curly", "short", "shaved"];
+    html += sectionTitle("Berber ve kuaför");
+    html += rows([
+      ...hairs.filter((h) => h !== s.hair).map((h) => row(HAIRS[h] + " saç", "Kuaför " + money(E.haircut * (h === "curly" ? 2.4 : 1) * cpi), { hair: h, cost: E.haircut * (h === "curly" ? 2.4 : 1) }, { weekly: "barber", icon: "barber-pole" })),
+      s.look === "man" ? row(s.beard ? "Sakalı kestir" : "Sakal bırak", "Berber " + money(E.beard * cpi), { beard: !s.beard, cost: E.beard }, { weekly: "beard", icon: "barber-pole" }) : null,
+      ...Object.keys(Art.HAIR_COLORS).filter((k) => k !== s.hairColor).map((k) => row("Saçı boyat: " + Art.HAIR_NAMES[k], "Boya " + money(1500 * cpi), { hairColor: k, cost: 1500 }, { weekly: "dye", icon: "scissors" })),
+      s.look === "man" && !s.transplanted ? row("Saç ekimi", "Kalıcı işlem, " + money(E.transplant * cpi) + ".", { transplant: true, m: 3 }, { confirm: "Saç ekimi yaptırmak istiyor musun?", icon: "barber-pole" }) : null,
+    ]);
+    // Başarımlar ve grafik
+    html += sectionTitle("Başarımlar", (s.ach || []).length + "/" + HS.ACHIEVEMENTS.length);
+    html += `<div class="ach-grid">${achGrid(s)}</div>`;
+    html += sectionTitle("Hayatının grafiği", "Net değer (2026 TL ile)");
+    html += `<div class="chart">${chart(s)}</div>`;
+    return html;
+  }
+  function achGrid(s) {
+    return HS.ACHIEVEMENTS.map((a) => {
+      const got = (s.ach || []).includes(a.id);
+      return `<div class="ach${got ? " got" : ""}" title="${esc(a.desc)}">${got ? Art.icon(a.icon, 34) : '<span class="q">?</span>'}<small>${esc(got ? a.name : "???")}</small></div>`;
+    }).join("");
+  }
+  function chart(s) {
+    const h = (s.hist || []).concat([{ age: s.age, net: Math.round(HS.netWorth(s) / s.idx.cpi) }]);
+    if (h.length < 2) return '<p class="fine">Grafik bir yıl sonra oluşur.</p>';
+    const W = 320,
+      Hh = 120,
+      pad = 24;
+    const xs = h.map((p) => p.age),
+      ys = h.map((p) => p.net);
+    const x0 = Math.min(...xs),
+      x1 = Math.max(...xs),
+      y0 = Math.min(0, ...ys),
+      y1 = Math.max(1, ...ys);
+    const X = (v) => pad + ((v - x0) / Math.max(1, x1 - x0)) * (W - pad - 6);
+    const Y = (v) => Hh - 16 - ((v - y0) / Math.max(1, y1 - y0)) * (Hh - 26);
+    const pts = h.map((p) => X(p.age).toFixed(1) + "," + Y(p.net).toFixed(1)).join(" ");
+    const short = (n) => (Math.abs(n) >= 1e6 ? (n / 1e6).toFixed(1) + " Mn" : Math.abs(n) >= 1e3 ? Math.round(n / 1e3) + " B" : Math.round(n));
+    return `<svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Net değer grafiği"><path d="M${pad} ${Y(0)}H${W - 6}" stroke="var(--line)" stroke-dasharray="3 3"/><polygon points="${pts} ${X(x1)},${Y(y0)} ${X(x0)},${Y(y0)}" fill="var(--blue)" opacity=".12"/><polyline points="${pts}" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linejoin="round"/><circle cx="${X(h[h.length - 1].age)}" cy="${Y(h[h.length - 1].net)}" r="4" fill="var(--blue)"/><text x="2" y="${Y(y1) + 4}" font-size="9" fill="var(--muted)">₺${short(y1)}</text><text x="2" y="${Y(y0) + 3}" font-size="9" fill="var(--muted)">₺${short(y0)}</text><text x="${pad}" y="${Hh - 2}" font-size="9" fill="var(--muted)">${x0} yaş</text><text x="${W - 40}" y="${Hh - 2}" font-size="9" fill="var(--muted)">${x1} yaş</text></svg>`;
+  }
+
+  // ---------- DÜNYA ----------
+  function worldTab(s) {
+    const cpi = s.idx.cpi;
+    const city = HS.CITIES[s.city] || {};
+    const sc = HS.SCENARIOS[s.scenario];
+    const rate = (k) => "%" + Math.round(HS.rate(s, k) * 100);
+    let html = card(
+      esc(s.city) + (city.country ? " · " + esc(city.country) : ""),
+      "Ortalama daire kirası " + money(HS.rentFull(s)) + "/ay" + (city.est ? " (tahmini)" : "") + " · 70 m² daire " + money(HS.homePrice(s, "daire")) + "<br>" +
+        s.year + " oranları (" + (s.year <= HS.ECONOMY.startYear ? "TÜİK Eylül 2026" : "kurmaca senaryo: " + esc(sc.name)) + "): genel " + rate("cpi") + ", gıda " + rate("food") + ", ulaşım " + rate("transport") + ", konut " + rate("housing") +
+        "<br>Gezdiğin iller: <b>" + s.visited.tr.length + "/81</b> · ülkeler: <b>" + s.visited.world.length + "</b>",
+    );
+    // Harita
+    if (HS.TR_MAP) {
+      const cur = city.plaka;
+      const paths = Object.entries(HS.TR_MAP.prov)
+        .map(([pl, p]) => {
+          const n = +pl;
+          const cls = n === cur ? "here" : mapSel === n ? "sel" : s.visited.tr.includes(n) ? "seen" : (s.props || []).some((x) => HS.CITIES[x.city]?.plaka === n) ? "own" : "";
+          return `<path d="${p.d}" class="${cls}"${on(() => ((mapSel = n), renderPanel()))}><title>${esc(p.n)}</title></path>`;
+        })
+        .join("");
+      const label = cur ? `<circle cx="${HS.TR_MAP.prov[cur].x}" cy="${HS.TR_MAP.prov[cur].y}" r="7" class="pin"/>` : "";
+      html += `<div class="map"><svg viewBox="${HS.TR_MAP.viewBox}" role="img" aria-label="Türkiye haritası">${paths}${label}</svg><div class="legend"><span class="lg here"></span>Yaşadığın <span class="lg seen"></span>Gördüğün <span class="lg own"></span>Mülkün <span class="lg sel"></span>Seçili</div></div>`;
+      if (mapSel) {
+        const name = HS.TR_MAP.prov[mapSel].n;
+        const c = HS.CITIES[name];
+        const mc = HS.moveCost(s, name);
+        html += card(
+          esc(name),
+          `Kira ${money(c.rent * s.idx.housing)}/ay${c.est ? " (tahmini)" : ""} · m² ${money(c.sqm * s.idx.housing)} · ${HS.km(s.city, name)} km<br>Taşınma: nakliye ${money(mc.nakliye)}, depozito ${money(mc.deposit)}, emlakçı ${money(mc.agent)}, ilk kira ${money(mc.first)} = <b>${money(mc.total)}</b>${mc.own ? " (orada evin var)" : ""}`,
         );
-      };
+        if (name !== s.city && !city.country)
+          html += rows([
+            row(HS.ek(name, "dat") + " taşın", "Toplam " + money(mc.total) + (s.job !== "none" ? " · işinden ayrılırsın" : ""), { moveCity: name }, { icon: "delivery-truck", confirm: HS.ek(name, "dat") + " taşınmak istiyor musun? Toplam masraf " + money(mc.total) + "." + (s.job !== "none" ? " İşinden ayrılacaksın." : "") }),
+            row(HS.ek(name, "dat") + " 3 günlük gezi", money(HS.tripCost(s, name)) + " · 2 boş zaman", { trip: name }, { icon: "airplane-departure" }),
+          ]);
+      }
+    }
+    // Pasaport ve göç
+    html += sectionTitle("Pasaport ve yurt dışı");
+    const items = [];
+    if (!s.assets.passport) items.push(row("Pasaport çıkar (10 yıllık)", "Harç ve defter " + money(HS.COSTS.passport10 * cpi), { passport: 1 }, { icon: "passport-control", done: "Pasaportun hazır." }));
+    items.push(row(s.schengenUntil > s.weeks ? "Schengen vizen geçerli" : "Schengen vizesine başvur", s.schengenUntil > s.weeks ? Math.round((s.schengenUntil - s.weeks) / 4.3) + " ay daha geçerli" : "€" + (HS.COSTS.schengenEUR + HS.COSTS.agencyEUR) + " (" + money((HS.COSTS.schengenEUR + HS.COSTS.agencyEUR) * HS.FX_RATES.EUR * cpi) + ") · sonuç belirsiz", { travelVisa: 1 }, { icon: "passport-control", off: s.schengenUntil > s.weeks ? "Zaten geçerli." : null }));
+    html += rows(items);
+    // Tatil
+    html += sectionTitle("Yurt dışı tatil", "2 boş zaman · çıkış harcı dahil");
+    html += rows(Object.entries(HS.TRAVEL).map(([k, t]) => row((t.label || k) + (s.visited.world.includes(k) ? " ✓" : ""), money(HS.abroadTripCost(s, k)) + (t.schengen ? " · Schengen" : " · vize gerekmez"), { abroadTrip: k }, { icon: "airplane-departure" })));
+    // Göç dosyası
+    html += sectionTitle("Göç", "Vize süreci uzun, masraflı ve sonucu belirsizdir");
+    if (s.abroad && city.region === "abroad") {
+      html += rows([row(HS.ek(s.birthCity, "dat") + " kesin dönüş", "Uçak ve nakliye", { returnHome: true, cost: 60000 }, { icon: "airplane-departure", confirm: "Türkiye'ye kesin dönüş yapmak istiyor musun?" })]);
+    } else if (!s.visa || s.visa.stage === "red") {
+      html += (s.visa ? card("Önceki başvuru reddedildi", s.visa.retryAt > s.weeks ? (s.visa.retryAt - s.weeks) + " hafta sonra yeniden başvurabilirsin." : "Yeniden başvurabilirsin.") : "") +
+        `<div class="countries">${Object.entries(HS.COUNTRIES)
+          .map(([k, c]) => {
+            const lang = HS.Skills.get(s, c.lang);
+            const fx = { visaStart: k };
+            const can = HS.canApply(s, fx);
+            return `<div class="country"><b>${esc(k)} · ${esc(c.city)}</b><small>${esc(c.visa)}</small><small>Harç ${c.cur} ${c.fee} · kanıtlanacak birikim ${c.cur} ${c.funds.toLocaleString("tr-TR")} (${money(c.funds * HS.FX_RATES[c.cur])})</small><small>Dil: ${esc(HS.SKILLS[c.lang].name)} ${Math.round(lang)}/${c.langMin} · kira ${c.cur} ${c.rent}/ay · tipik net maaş ${c.cur} ${c.wage}${c.lottery ? " · kura %" + Math.round(c.lottery * 100) : ""}</small><button class="mini"${can === true ? on(() => act(fx, { confirm: k + " için göç dosyası açılsın mı? Evrak hazırlığı haftalar sürer ve her biri ücretlidir." })) : ` disabled title="${esc(can)}"`}>Dosya aç</button></div>`;
+          })
+          .join("")}</div>`;
+    } else {
+      const v = s.visa,
+        co = HS.COUNTRIES[v.country];
+      const st = { evrak: "1/4 Evrak hazırlığı", randevu: "2/4 Randevu bekleniyor", degerlendirme: "3/4 Değerlendirmede", onay: "4/4 Onaylandı" }[v.stage];
+      let body = `<b>${esc(st)}</b> · ödenen ${money(v.fees)}${v.blocked ? " · bloke hesapta " + money(v.blocked) : ""}<br>Tahmini onay şansı %${Math.round(HS.visaApproval(s) * (co.lottery && !v.sponsor ? co.lottery : 1) * 100)}${co.lottery && !v.sponsor ? " (kura dahil)" : ""}`;
+      if (v.stage === "randevu") body += "<br>Randevuna " + Math.max(0, v.apptAt - s.weeks) + " hafta var.";
+      if (v.stage === "degerlendirme") body += "<br>Sonuç " + Math.max(0, v.decideAt - s.weeks) + " hafta içinde.";
+      html += card(esc(v.country) + " göç dosyası", body);
+      if (v.stage === "evrak") {
+        html += rows(
+          HS.VISA_DOCS.map((d) => {
+            const state = v.docs[d.id];
+            const cost = typeof d.cost === "function" ? d.cost() : d.cost;
+            const hint = state === "hazir" ? "Hazır ✓" : state === "hazirlaniyor" ? Math.max(0, v.ready[d.id] - s.weeks) + " hafta sonra" + (v.pending && v.pending[d.id] != null ? " · başarı şansı %" + Math.round(v.pending[d.id] * 100) : "") : (cost ? money(cost * s.idx.cpi) + " · " : "") + (d.weeks ? d.weeks + " hafta · " : "") + "1 boş zaman";
+            return row(d.name, hint, { visaDoc: d.id }, { icon: state === "hazir" ? "clipboard" : "page-facing-up", off: state === "hazir" ? "Hazır ✓" : null });
+          }),
+        );
+        html += rows([row("Randevu al", "Aracı kurum hizmet bedeli €" + HS.COSTS.agencyEUR + " · bekleme 2-10 hafta", { visaAppt: 1 }, { icon: "calendar" }), row("Dosyayı kapat", "Ödenen ücretler geri gelmez.", { visaCancel: 1 }, { icon: "warning", confirm: "Göç dosyasını kapatmak istiyor musun?" })]);
+      }
+      if (v.stage === "onay") {
+        const k = HS.emigrateCost(s, v.country);
+        html += rows([row(HS.ek(co.city, "dat") + " taşın", "Bilet " + money(k.flight) + " + çıkış harcı " + money(k.exit) + " + ilk kira ve depozito " + money(k.rent + k.deposit), { visaMove: 1, people: -5, m: 6 }, { icon: "airplane-departure", confirm: co.city + " seni bekliyor. Taşınmaya hazır mısın?" })]);
+      }
+    }
+    return html;
+  }
+
+  // ---------- PARA ----------
+  function moneyTab(s) {
+    const cpi = s.idx.cpi;
+    let html = card(
+      "Para",
+      "Nakit " + money(s.cash) + " · Banka " + money(s.savings) + " · Borç " + money(s.debt) + (s.mortgage ? "<br>Konut kredisi " + money(s.mortgage.left) + " (haftalık " + money(s.mortgage.weekly) + ")" : "") + "<br>Net değer <b>" + money(HS.netWorth(s)) + "</b>",
+    );
+    html += rows([
+      row("Bankaya yatır (%25)", money(s.cash * 0.25) + " mevduata.", { save: Math.round(s.cash * 0.25) }, { off: s.cash < 400 ? "Nakit yok." : null, icon: "bank" }),
+      s.savings > 1 ? row("Bankadan çek (%50)", money(s.savings * 0.5) + " nakde.", { withdraw: 0.5 }, { icon: "bank" }) : null,
+      s.debt > 1 ? row("Borcu öde", "Nakdin kadarını kapat.", { payDebt: 1 }, { icon: "money-with-wings" }) : null,
+    ]);
+    // Yatırımlar
+    html += sectionTitle("Yatırımlar", "Riskli araçlarda her ay %30 kazanç, %70 kayıp ihtimali");
+    html += `<div class="inv-list">${Object.entries(HS.INVEST)
+      .map(([k, d]) => {
+        const v = HS.invVal(s, k);
+        const cost = (s.invCost || {})[k] || 0;
+        const pl = v - cost;
+        const last = (s.invLast || {})[k];
+        const buy = (f) => {
+          const amt = Math.round(s.cash * f);
+          const fx = { invest: { k, amt } };
+          const c = HS.canApply(s, fx);
+          return `<button class="mini"${c === true && amt > 0 ? on(() => act(fx)) : " disabled"}>Al %${f * 100}</button>`;
+        };
+        const sell = (f) => `<button class="mini"${v > 1 ? on(() => act({ divest: { k, frac: f } })) : " disabled"}>Sat ${f === 1 ? "hepsi" : "%" + f * 100}</button>`;
+        return `<div class="inv">${Art.icon(d.icon, 30)}<div><b>${esc(d.name)}</b><small>Risk: ${esc(d.risk)} · ${esc(d.desc)}</small><small>Değer ${money(v)}${v > 1 ? ` · <span class="${pl >= 0 ? "pos" : "neg"}">${pl >= 0 ? "+" : "−"}${money(Math.abs(pl))}</span>` : ""}${last != null && v > 1 ? ` · geçen ay ${last >= 0 ? "▲" : "▼"}%${Math.abs(Math.round(last * 100))}` : ""}</small><div class="mini-row">${buy(0.1)}${buy(0.25)}${sell(0.5)}${sell(1)}</div></div></div>`;
+      })
+      .join("")}</div>`;
+    // Bahis
+    html += sectionTitle("Yasal bahis bayisi (kurmaca)", "18 yaş üstü · haftada en fazla 3 kupon · bilanço " + money(s.bets.net));
+    const stakes = [100, 500, 2000, 10000].map((n) => Math.round(n * cpi));
+    html += `<div class="bets">${Object.entries(HS.BETS)
+      .map(([k, b]) => `<div class="bet"><b>${esc(b.name)}</b><small>Oran ${b.odds.toFixed(2)} · tutma ihtimali %${Math.round(b.p * 100)} · ${esc(b.desc)}</small><div class="mini-row">${stakes.map((st) => `<button class="mini"${HS.canApply(s, { bet: { type: k, stake: st } }) === true ? on(() => act({ bet: { type: k, stake: st } })) : " disabled"}>${money(st)}</button>`).join("")}</div></div>`)
+      .join("")}</div><p class="fine">Bahis bağımlılık yapabilir. Oyundaki oranlar bayinin her zaman kazandığı biçimde ayarlıdır.</p>`;
+    // Ev ve mülkler
+    html += sectionTitle("Ev ve mülkler");
+    const homeRows = [];
+    if (!s.assets.house)
+      Object.entries(HS.HOME_TYPES).forEach(([k, h]) => {
+        homeRows.push(row(h.name + " · peşin", money(HS.homePrice(s, k)) + " · " + s.city, { buy: "house", homeType: k }, { confirm: h.name + " peşin almak istiyor musun?", icon: k === "daire" ? "office-building" : "house-with-garden" }));
+        homeRows.push(row(h.name + " · kredili", "%30 peşinat " + money(HS.homePrice(s, k) * 0.3) + ", 15 yıl", { buy: "house", homeType: k, mortgage: true }, { confirm: h.name + " için konut kredisi çekmek istiyor musun?", icon: k === "daire" ? "office-building" : "house-with-garden" }));
+      });
+    else homeRows.push(row("Oturduğun evi sat", "Değer " + money(HS.homePrice(s)) + (s.mortgage ? " (kredi düşülür)" : "") + " · komisyon %2,4", { sell: "house" }, { confirm: "Evini satmak istiyor musun? Kiraya geçeceksin.", icon: "house" }));
+    if (s.housing === "aile") {
+      homeRows.push(row("Ev arkadaşıyla kiraya çık", "Depozito " + money(HS.rentFull(s)) + ", kiranın yarısı senden.", { rent: "kira-paylasim" }, { icon: "office-building" }));
+      homeRows.push(row("Tek başına kiraya çık", "Depozito + ilk ay " + money(HS.rentFull(s) * 2) + ".", { rent: "kira" }, { icon: "office-building" }));
+    }
+    if (s.housing.startsWith("kira")) homeRows.push(row("Aile evine dön", "Kira biter.", { moveHome: 1, m: -3 }, { confirm: "Aile evine dönmek istiyor musun?", icon: "house" }));
+    html += rows(homeRows);
+    (s.props || []).forEach((p) => {
+      const val = HS.propPrice(s, p.city, p.type);
+      html += card(
+        esc(p.city) + " · " + esc(HS.HOME_TYPES[p.type].name),
+        "Değer " + money(val) + " · " + (p.rented ? "kirada, aylık " + money(HS.propRent(s, p) * 0.9) : p.seeking ? "kiracı aranıyor" : "boş"),
+      );
+      html += rows([
+        !p.rented && !p.seeking ? row("Kiraya ver", "Aylık ~" + money(HS.propRent(s, p) * 0.9) + " · kiracı bulmak 1-4 hafta", { rentOut: p.id }, { icon: "key" }) : null,
+        p.rented ? row("Kiracıyı çıkar", "Ev boşalır.", { endLease: p.id }, { icon: "key", confirm: "Kiracıyla sözleşmeyi bitirmek istiyor musun?" }) : null,
+        row("Sat", money(val * (1 - HS.COSTS.saleCommission)) + " (komisyon sonrası)", { sellProp: p.id }, { icon: "money-bag", confirm: p.city + " mülkünü satmak istiyor musun?" }),
+      ]);
+    });
+    html += `<div class="buyprop"><select id="propCity" aria-label="İl">${HS.HOME_CITIES.map((c) => `<option${c === s.city ? " selected" : ""}>${esc(c)}</option>`).join("")}</select><select id="propType" aria-label="Tür">${Object.entries(HS.HOME_TYPES).map(([k, h]) => `<option value="${k}">${esc(h.name)}</option>`).join("")}</select><button class="mini"${on(() => {
+      const city = $("propCity").value,
+        type = $("propType").value;
+      const price = HS.propPrice(s, city, type) * (1 + HS.COSTS.saleCommission + 0.02);
+      act({ buyProp: { city, type } }, { confirm: city + " · " + HS.HOME_TYPES[type].name + " yatırım amaçlı alınsın mı? Tapu harcı ve komisyon dahil " + money(price) + "." });
+    })}>Yatırım için al</button></div>`;
+    if (!s.assets.land) html += rows([row("Arsa al", "Yaklaşık " + money(HS.landPrice(s)), { buy: "land" }, { confirm: "Arsa almak istiyor musun?", icon: "national-park" })]);
+    else html += rows([row("Arsayı sat", "Değer " + money(HS.landPrice(s)), { sell: "land" }, { confirm: "Arsanı satmak istiyor musun?", icon: "national-park" })]);
+    // Araç, ehliyet, sigorta
+    html += sectionTitle("Araç ve ehliyet");
+    const lic = { yok: "Ehliyetin yok", kurs: "Sürücü kursundasın", direksiyon: "Direksiyon sınavı bekliyor", var: "Ehliyetin var" }[s.license];
+    html += card("", lic + (s.car ? " · " + esc(Art.CARS[s.car].name) + " · ikinci el değeri " + money(HS.carPrice(s) * 0.55) : " · aracın yok"));
+    const carRows = [];
+    if (s.license === "yok") carRows.push(row("Sürücü kursuna yazıl", "Kurs + e-sınav " + money((HS.COSTS.drivingCourse + HS.COSTS.eExam) * cpi) + " · sonra direksiyon sınavı ve harç", { license: 1 }, { icon: "oncoming-automobile" }));
+    Object.entries(Art.CARS)
+      .filter(([k]) => k !== s.car)
+      .forEach(([k, c]) => carRows.push(row((s.car ? "Takasla: " : "Al: ") + c.name, money(HS.carPrice(s, k)) + (s.car ? " (eskisi " + money(HS.carPrice(s) * 0.55) + " düşülür)" : "") + (k !== "bisiklet" ? " · yıllık MTV ve sigorta" : ""), { buy: "car", model: k, trade: !!s.car }, { confirm: c.name + " almak istiyor musun?", icon: c.art })));
+    if (s.car) {
+      carRows.push(row("Aracı boyat", "Yeni renk " + money(18000 * cpi), { cost: 18000, carColor: ((s.carColor || 0) + 1) % 6 }, { icon: Art.CARS[s.car].art }));
+      carRows.push(row("Aracı sat", "İkinci el " + money(HS.carPrice(s) * 0.55), { sell: "car" }, { confirm: "Aracını satmak istiyor musun?", icon: Art.CARS[s.car].art }));
+      if (s.car !== "bisiklet") carRows.push(row(s.ins.kasko ? "Kaskoyu iptal et" : "Kasko yaptır", "Yıllık ~" + money(HS.COSTS.kasko * cpi), { ins: { k: "kasko", on: !s.ins.kasko } }, { icon: "warning" }));
+    }
+    carRows.push(row(s.ins.health ? "Özel sağlık sigortasını iptal et" : "Özel sağlık sigortası yaptır", "Yıllık ~" + money(HS.COSTS.privateHealth * cpi) + " · sağlık olaylarında masraf azalır", { ins: { k: "health", on: !s.ins.health } }, { icon: "health-worker" }));
+    html += rows(carRows);
+    return html;
   }
 
   // ---------- Kayıtlar ----------
   function records() {
     const box = $("recordList");
     box.innerHTML = "";
-    if (!saves.length)
-      box.innerHTML =
-        '<div class="card"><h3>Henüz kayıt yok</h3><p class="fine">İlk hayatını oluşturarak başla.</p></div>';
+    if (!saves.length) box.innerHTML = '<div class="card"><h3>Henüz kayıt yok</h3><p class="fine">İlk hayatını oluşturarak başla.</p></div>';
     saves.forEach((s) => {
       const d = document.createElement("div");
       d.className = "card record" + (s === active ? " current" : "");
-      const status = s.alive
-        ? s.city +
-          " · " +
-          s.age +
-          " yaş · " +
-          (s.retired ? "Emekli" : HS.JOBS[s.job].name)
-        : (s.final ? s.final.title : "Tamamlandı") + " · " + s.age + " yaş";
+      const status = s.alive ? s.city + " · " + s.age + " yaş · " + (s.retired ? "Emekli" : s.job === "none" ? "İş arıyor" : HS.Skills.title(s)) : (s.final ? s.final.title : "Tamamlandı") + " · " + s.age + " yaş";
       d.innerHTML =
         `<div class="face"><svg viewBox="24 6 72 72">${Art.person(Art.fromState(s))}</svg></div>` +
-        "<div><h3>" +
-        esc(s.first + " " + s.last) +
-        "</h3><p>" +
-        esc(status) +
-        "</p></div>" +
+        "<div><h3>" + esc(s.first + " " + s.last) + "</h3><p>" + esc(status) + "</p></div>" +
         `<div class="record-actions"><button class="go" data-open="${s.id}">${s.alive ? "Devam et" : "Anı defteri"}</button><button class="del" data-del="${s.id}" aria-label="Sil">✕</button></div>`;
       box.append(d);
     });
@@ -1132,20 +906,84 @@
     box.querySelectorAll("[data-del]").forEach((b) => {
       b.onclick = () => {
         const s = saves.find((x) => x.id === b.dataset.del);
-        ask(
-          s.first + " " + s.last + " kaydı silinsin mi? Bu geri alınamaz.",
-          () => {
-            saves = saves.filter((x) => x !== s);
-            if (active === s) active = null;
-            persist();
-            records();
-          },
-          "Sil",
-        );
+        ask(s.first + " " + s.last + " kaydı silinsin mi? Bu geri alınamaz.", () => {
+          saves = saves.filter((x) => x !== s);
+          if (active === s) active = null;
+          persist();
+          records();
+        }, "Sil");
       };
     });
     $("endCurrent").classList.toggle("hidden", !(active && active.alive));
     page("records");
+  }
+
+  // ---------- Ayarlar ----------
+  function setSetting(k, v) {
+    settings[k] = v;
+    store.set(SET_KEY, settings);
+    if (HS.Audio && ["music", "sfx", "vibration", "volume"].includes(k)) HS.Audio.set(k, v);
+    applyText();
+    renderSettings();
+  }
+  function applyText() {
+    document.documentElement.classList.toggle("big-text", settings.text === "big");
+  }
+  function renderSettings() {
+    const tg = (k, label, hint) => `<button class="setting" data-k="${k}" role="switch" aria-checked="${!!settings[k]}"><span><b>${label}</b><small>${hint}</small></span><i class="switch${settings[k] ? " on" : ""}"></i></button>`;
+    $("settingsBody").innerHTML =
+      `<article class="card"><h3>Ses</h3>` +
+      tg("music", "Müzik", "Hafif, akustik oyun müziği") +
+      tg("sfx", "Ses efektleri", "Tuş sesleri, kazanma ve kaybetme sesleri") +
+      tg("vibration", "Titreşim", "Destekleyen telefonlarda (iPhone tarayıcıda desteklenmez)") +
+      `<label class="range"><span>Ses düzeyi</span><input type="range" id="volume" min="0" max="1" step="0.05" value="${settings.volume}"></label></article>` +
+      `<article class="card"><h3>Oynanış</h3>` +
+      tg("commute", "İşe gidiş animasyonu", "Ayda bir sabah işe gidişini göster") +
+      `<button class="setting" data-text="1"><span><b>Yazı boyutu</b><small>${settings.text === "big" ? "Büyük" : "Normal"}</small></span><i class="pill">${settings.text === "big" ? "A+" : "A"}</i></button></article>` +
+      `<article class="card"><h3>Hesap</h3><p class="fine">App Store ve Google Play sürümünde kayıtların Apple ile giriş / Game Center ya da Google Play Oyunlar hesabına bağlanabilecek. Bu tarayıcı prototipinde kayıtlar yalnızca bu cihazda tutulur.</p><button class="secondary" disabled>Hesabını bağla (mağaza sürümünde)</button></article>` +
+      `<article class="card"><h3>Kayıtlar</h3><p class="fine">Kayıtlarını başka bir cihaza taşımak için kodu kopyala, diğer cihazda yapıştır.</p><button class="secondary" id="exportBtn">Kayıt kodunu kopyala</button><textarea id="importBox" rows="3" placeholder="Kayıt kodunu buraya yapıştır" aria-label="Kayıt kodu"></textarea><button class="secondary" id="importBtn">Kodu içe aktar</button><button class="secondary danger" id="wipeBtn">Bütün verileri sil</button></article>` +
+      `<article class="card"><h3>Hakkında</h3><p class="fine">Hayat Simülatörü · prototip sürüm 0.3<br>Çizimler: Microsoft Fluent Emoji (MIT). Harita: Natural Earth verisi, react-turkey-map (MIT). Yazı tipleri: Fredoka ve Nunito (SIL OFL).<br>Ekonomi 2026 verileriyle kalibre edilmiştir; 2027 sonrası kurmacadır. Kişi, parti, şirket ve markalar hayal ürünüdür. Yatırım ve bahis bölümleri tavsiye değildir.</p></article>`;
+    $("settingsBody").querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => setSetting(b.dataset.k, !settings[b.dataset.k])));
+    $("settingsBody").querySelector("[data-text]").onclick = () => setSetting("text", settings.text === "big" ? "normal" : "big");
+    $("volume").oninput = (e) => {
+      settings.volume = +e.target.value;
+      store.set(SET_KEY, settings);
+      if (HS.Audio) HS.Audio.set("volume", settings.volume);
+    };
+    $("exportBtn").onclick = () => {
+      const code = btoa(unescape(encodeURIComponent(JSON.stringify(saves))));
+      const done = () => toast("Kayıt kodu kopyalandı.");
+      try {
+        navigator.clipboard.writeText(code).then(done, () => {
+          $("importBox").value = code;
+          $("importBox").select();
+          toast("Kod aşağıya yazıldı; seçip kopyalayabilirsin.");
+        });
+      } catch {
+        $("importBox").value = code;
+        $("importBox").select();
+      }
+    };
+    $("importBtn").onclick = () => {
+      try {
+        const arr = JSON.parse(decodeURIComponent(escape(atob($("importBox").value.trim()))));
+        if (!Array.isArray(arr)) throw 0;
+        const add = arr.filter((x) => x && x.id && !saves.some((y) => y.id === x.id)).map((x) => HS.migrate(x));
+        saves = saves.concat(add);
+        persist();
+        toast(add.length + " hayat içe aktarıldı.");
+      } catch {
+        toast("Kod okunamadı.", "error");
+      }
+    };
+    $("wipeBtn").onclick = () =>
+      ask("Bütün hayatlar, keşfedilen sonlar ve ayarlar silinsin mi? Bu geri alınamaz.", () => {
+        saves = [];
+        active = null;
+        [SAVE_KEY, PROFILE_KEY, ACH_KEY].forEach((k) => store.set(k, null));
+        toast("Bütün veriler silindi.");
+        page("home");
+      }, "Sil");
   }
 
   // ---------- Son ve anı defteri ----------
@@ -1157,95 +995,80 @@
       f = s.final || (s.final = HS.Endings.compose(s));
     const count = addProfile(f.key);
     save();
-    $("memoirScene").innerHTML = Art.scene(s);
+    $("memoirScene").innerHTML = Art.scene(s, "salon");
     $("memoirKicker").textContent = "ANI DEFTERİ · " + s.first + " " + s.last;
     $("memoirTitle").textContent = f.heading;
-    $("memoirArch").textContent =
-      f.title + " · " + f.stats.age + " yaş · " + f.stats.weeks + " hafta";
-    $("memoirBody").innerHTML = f.paragraphs
-      .map((p) => "<p>" + esc(p) + "</p>")
-      .join("");
-    $("memoirMoments").innerHTML = (
-      f.moments.length ? f.moments : ["Kayda geçen büyük bir dönemeç yok."]
-    )
-      .map((m) => "<li>" + esc(m) + "</li>")
-      .join("");
-    $("memoirProfile").innerHTML = HS.Endings.DIMS.map(
-      (d) =>
-        "<dt>" +
-        esc(d.name) +
-        "</dt><dd>" +
-        esc(HS.Endings.label(d.id, f.profile[d.id])) +
-        "</dd>",
-    ).join("");
-    $("memoirCount").textContent =
-      "Bu cihazda keşfedilen farklı son profili: " +
-      count +
-      " · Olası geçerli profil sayısı: " +
-      HS.Endings.spaceSize().toLocaleString("tr-TR") +
-      ".";
+    $("memoirArch").textContent = f.title + " · " + f.stats.age + " yaş · " + f.stats.weeks + " hafta";
+    $("memoirBody").innerHTML = f.paragraphs.map((p) => "<p>" + esc(p) + "</p>").join("");
+    $("memoirChart").innerHTML = chart(s);
+    $("memoirMoments").innerHTML = (f.moments.length ? f.moments : ["Kayda geçen büyük bir dönemeç yok."]).map((m) => "<li>" + esc(m) + "</li>").join("");
+    $("memoirAch").innerHTML = achGrid(s);
+    $("memoirProfile").innerHTML = HS.Endings.DIMS.map((d) => "<dt>" + esc(d.name) + "</dt><dd>" + esc(HS.Endings.label(d.id, f.profile[d.id])) + "</dd>").join("");
+    $("memoirCount").textContent = "Bu cihazda keşfedilen farklı son profili: " + count + " · Olası geçerli profil sayısı: " + HS.Endings.spaceSize().toLocaleString("tr-TR") + ".";
     page("memoir");
-    if (fresh) toast("Hayat tamamlandı ve anı defterine kaydedildi.");
+    if (fresh) {
+      toast("Hayat tamamlandı ve anı defterine kaydedildi.");
+      sfx("notify");
+    }
   }
 
   // ---------- Bağlantılar ----------
   function init() {
-    $("birthCity").innerHTML = HS.HOME_CITIES.map(
-      (c) => `<option${c === "İstanbul" ? " selected" : ""}>${esc(c)}</option>`,
-    ).join("");
-    $("newLife").onclick = () => {
+    load();
+    applyText();
+    if (HS.Audio) HS.Audio.init({ music: settings.music, sfx: settings.sfx, vibration: settings.vibration, volume: settings.volume });
+    $("birthCity").innerHTML = HS.HOME_CITIES.map((c) => `<option${c === "İstanbul" ? " selected" : ""}>${esc(c)}</option>`).join("");
+    const toCreate = () => {
       page("create");
       renderCreate();
     };
-    $("recordNew").onclick = () => {
-      page("create");
-      renderCreate();
-    };
-    $("lookPicker")
-      .querySelectorAll("button")
-      .forEach((b) => {
-        b.onclick = () => {
-          create.look = b.dataset.look;
-          create.hair = create.look === "man" ? "short" : "long";
-          renderCreate();
-        };
-      });
+    $("newLife").onclick = toCreate;
+    $("recordNew").onclick = toCreate;
+    $("lookPicker").querySelectorAll("button").forEach((b) => {
+      b.onclick = () => {
+        create.look = b.dataset.look;
+        create.hair = create.look === "man" ? "short" : "long";
+        renderCreate();
+      };
+    });
     $("continueLife").onclick = records;
     $("menuBtn").onclick = records;
     $("slotPill").onclick = records;
+    $("settingsBtn").onclick = () => {
+      settings._from = PAGES.find((p) => !$(p).classList.contains("hidden"));
+      renderSettings();
+      page("settings");
+    };
     $("beginLife").onclick = begin;
-    $("advanceBtn").onclick = advance;
     $("memoirDone").onclick = records;
-    $("recordBack").onclick = () =>
-      active?.alive ? openWorld() : page("home");
+    $("recordBack").onclick = () => (active?.alive ? openWorld() : page("home"));
     $("backBtn").onclick = () => {
+      if (!$("settings").classList.contains("hidden")) return settings._from === "world" && active?.alive ? openWorld() : page(settings._from && settings._from !== "settings" ? settings._from : "home");
       if (!$("world").classList.contains("hidden")) return records();
-      if (!$("records").classList.contains("hidden"))
-        return active?.alive ? openWorld() : page("home");
+      if (!$("records").classList.contains("hidden")) return active?.alive ? openWorld() : page("home");
       if (!$("memoir").classList.contains("hidden")) return records();
       page("home");
     };
     $("endCurrent").onclick = () => {
       if (!active?.alive) return;
-      ask(
-        "Bu hayatı burada sonlandırıp anı defterine kaydetmek istiyor musun?",
-        () => {
-          HS.endLife(active, "chosen");
-          save();
-          memoir(true);
-        },
-        "Sonlandır",
-      );
+      ask("Bu hayatı burada sonlandırıp anı defterine kaydetmek istiyor musun?", () => {
+        HS.endLife(active, "chosen");
+        save();
+        memoir(true);
+      }, "Sonlandır");
     };
-    $("nameInput").addEventListener(
-      "keydown",
-      (e) => e.key === "Enter" && $("nameOk").click(),
-    );
-    load();
+    $("nameInput").addEventListener("keydown", (e) => e.key === "Enter" && $("nameOk").click());
+    // Genel buton sesi (panel dışındaki butonlar)
+    document.addEventListener("click", (e) => {
+      const b = e.target.closest("button");
+      if (b && !b.closest("#panel") && !b.disabled) {
+        sfx("tap");
+        buzz("tap");
+      }
+    });
     homeScene();
     page("home");
-    if (saves.some((s) => s.alive))
-      $("continueLife").textContent = "Kayıtlı hayatlara devam et";
+    if (saves.some((s) => s.alive)) $("continueLife").textContent = "Kayıtlı hayatlara devam et";
   }
   init();
   HS.ui = {
@@ -1253,6 +1076,9 @@
     render,
     get active() {
       return active;
+    },
+    get settings() {
+      return settings;
     },
   };
 })(globalThis.HS || (globalThis.HS = {}));

@@ -60,6 +60,7 @@ const keys = new Set(),
   dimCount = {};
 let weeks = 0,
   actCount = 0;
+const tabUse = new Map();
 const t0 = Date.now();
 for (let n = 0; n < N; n++) {
   const strat = n % 3 === 0 ? "rastgele" : "kişilik";
@@ -99,6 +100,34 @@ for (let n = 0; n < N; n++) {
       );
     }
     s.scenes.length = 0;
+    // Sekme sistemlerini rastgele kullan (her eylem kendi kontrolünden geçer).
+    if (Math.random() < 0.12) {
+      const cpi = s.idx.cpi;
+      const tries = [
+        { license: 1 },
+        { passport: 1 },
+        { travelVisa: 1 },
+        { visaStart: HS.pick(Object.keys(HS.COUNTRIES)) },
+        s.visa && s.visa.stage === "evrak" ? { visaDoc: HS.pick(HS.VISA_DOCS).id } : null,
+        s.visa && s.visa.stage === "evrak" ? { visaAppt: 1 } : null,
+        s.visa && s.visa.stage === "onay" ? { visaMove: 1 } : null,
+        { invest: { k: HS.pick(Object.keys(HS.INVEST)), amt: Math.round(s.cash * 0.1) } },
+        { divest: { k: HS.pick(Object.keys(HS.INVEST)), frac: 0.5 } },
+        { bet: { type: HS.pick(Object.keys(HS.BETS)), stake: Math.round(200 * cpi) } },
+        { course: HS.pick(HS.COURSES).id },
+        { tour: HS.pick(Object.keys(HS.TOURS)) },
+        { trip: HS.pick(HS.HOME_CITIES) },
+        { abroadTrip: HS.pick(Object.keys(HS.TRAVEL)) },
+        { buyProp: { city: HS.pick(HS.HOME_CITIES), type: "daire" } },
+        s.props && s.props[0] ? { rentOut: s.props[0].id } : null,
+        { ins: { k: "health", on: true } },
+        s.job === "none" ? { coApply: { co: HS.pick(HS.COMPANIES).id, job: HS.pick(["office", "cafe", "factory"]), relocate: true } } : null,
+        s.look === "man" && !s.mil ? { mil: HS.pick(["serving", "bedelli", "tecil"]) } : null,
+      ].filter(Boolean);
+      const fx = HS.pick(tries);
+      if (HS.quickAction(s, fx) === true) tabUse.set(Object.keys(fx)[0], (tabUse.get(Object.keys(fx)[0]) || 0) + 1);
+      s.scenes.length = 0;
+    }
     // EŞYALAR sekmesini taklit et: parası yeten tutumlu kişi ev alır.
     if (
       (P.para > 0.5 || P.aile > 1) &&
@@ -213,6 +242,7 @@ console.log(
   actCount,
   "| hafta başına",
   (actCount / weeks).toFixed(2),
+  "\nSekme eylemleri: " + [...tabUse].map(([k, v]) => k + ":" + v).join(" "),
 );
 console.log("Görülen farklı olay:", ev.length, "/", HS.EVENTS.length + 2);
 console.log(

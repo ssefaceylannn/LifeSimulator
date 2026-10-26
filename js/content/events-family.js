@@ -4,7 +4,8 @@
   "use strict";
   const c = (label, hint, fx = {}) => ({ label, hint, fx });
   const pct = (p) => "%" + Math.round(p * 100);
-  const app = (s, pred) => (s.apps || []).find(pred);
+  // Şirket başvuruları (a.co) js/systems/companies.js içinde ayrıca işlenir
+  const app = (s, pred) => (s.apps || []).find((a) => !a.co && pred(a));
 
   HS.EVENTS.push(
     // ---------------- Başvuru süreci ----------------

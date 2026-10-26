@@ -101,73 +101,112 @@ const assert = (c, m) => {
   const before = await p.evaluate(SAVES);
   assert(before.length === 1 && before[0].weeks >= 55, "haftalar kaydedilmedi");
 
+  // Sahne seçici: oda değiştir
+  for (const v of ["yatak", "mutfak", "salon"]) {
+    await p.click(`#viewChips [data-v=${v}]`);
+    assert((await p.evaluate(() => HS.ui.active.view)) === v, v + " sahnesine geçilmedi");
+    await shot(p, "04-oda-" + v);
+  }
   // Sekmeler
-  for (const t of ["work", "style", "people", "city", "money"]) {
+  for (const t of ["work", "skills", "me", "world", "money", "life"]) {
     await p.click(`.tab[data-tab=${t}]`);
-    assert(await p.isVisible("#tabPanel"), t + " sekmesi açılmadı");
+    const txt = await p.textContent("#panel");
+    assert(txt.length > 80 && !/undefined|NaN/.test(txt), t + " sekmesi bozuk: " + txt.slice(0, 200).replace(/\s+/g, " "));
     await noOverflow(p, t + " sekmesi");
     await shot(p, "04-sekme-" + t);
   }
-  // Berber: kısa kesim ve sakal
-  await p.click(".tab[data-tab=style]");
-  const barberBtn = await p.$(
-    '#tabPanel .choice:not([disabled]):has-text("Kazınmış saç")',
-  );
-  if (barberBtn) {
-    await barberBtn.click();
-    assert(
-      (await p.evaluate(() => HS.ui.active.hair)) === "shaved",
-      "berber işlemi uygulanmadı",
-    );
-  }
-  // Gardırop: takım elbise al ve giy
-  await p.evaluate(() => (HS.ui.active.cash = 20000000));
-  await p.click(".tab[data-tab=style]");
-  await p.click('#tabPanel [data-o="takim"]');
+  const clickRow = async (text) => {
+    const b = await p.$(`#panel button:not([disabled]):has-text("${text}")`);
+    assert(b, "düğme yok: " + text);
+    await b.click();
+    if (await p.isVisible("#confirmModal")) await p.click("#confirmYes");
+    while (await p.isVisible("#event")) await p.click("#eventContinue");
+  };
+  // Berber
+  await p.evaluate(() => (HS.ui.active.cash = 50000000));
+  await p.click(".tab[data-tab=me]");
+  await clickRow("Kazınmış saç");
+  assert((await p.evaluate(() => HS.ui.active.hair)) === "shaved", "berber işlemi uygulanmadı");
+  // Gardırop
+  await p.click('#panel .outfit:has-text("Takım elbise")');
   await p.click("#confirmYes");
-  assert(
-    (await p.evaluate(() => HS.ui.active.outfit)) === "takim",
-    "kıyafet giyilmedi",
-  );
-  // Araba al: sahnede görünmeli
+  await p.click('#panel .outfit:has-text("Takım elbise")');
+  assert((await p.evaluate(() => HS.ui.active.outfit)) === "takim", "kıyafet giyilmedi");
+  // Ehliyet ve araba
+  await p.evaluate(() => {
+    HS.ui.active.license = "var";
+    HS.ui.render();
+  });
   await p.click(".tab[data-tab=money]");
-  await p.click('#tabPanel .choice:has-text("SUV")');
-  await p.click("#confirmYes");
-  assert(
-    (await p.evaluate(() => HS.ui.active.car)) === "suv",
-    "araba alınmadı",
-  );
-  assert(await p.$("#sceneArt .hs-car"), "araba sahnede yok");
-  // İş başvurusu: boş zaman harcar ve listede görünür
+  await clickRow("Al: SUV");
+  assert((await p.evaluate(() => HS.ui.active.car)) === "suv", "araba alınmadı");
+  await p.click("#viewChips [data-v=garaj]");
+  assert(await p.$("#sceneArt .hs-car"), "araba garajda yok");
+  await shot(p, "05-garaj");
+  // Yatırım ve bahis
+  await p.click(".tab[data-tab=money]");
+  await p.click('#panel .inv:has-text("Hisse senedi") .mini:has-text("Al %10")');
+  assert((await p.evaluate(() => HS.invVal(HS.ui.active, "borsa"))) > 0, "borsa alımı olmadı");
+  const betBtn = await p.$("#panel .bet .mini:not([disabled])");
+  await betBtn.click();
+  while (await p.isVisible("#event")) await p.click("#eventContinue");
+  assert((await p.evaluate(() => HS.ui.active.bets.n)) === 1, "bahis oynanmadı");
+  // Şirket başvurusu
   await p.evaluate(() => {
     const s = HS.ui.active;
     s.job = "none";
+    s.company = null;
     s.retired = false;
+    s.mil = s.look === "man" ? "yapildi" : s.mil;
     s.apps = [];
     s.free = 2;
     HS.ui.render();
   });
   await p.click(".tab[data-tab=work]");
-  await p.click('#tabPanel .choice:has-text("Fabrika işçisi")');
-  const st = await p.evaluate(() => ({
-    apps: HS.ui.active.apps.length,
-    free: HS.ui.active.free,
-  }));
-  assert(
-    st.apps === 1 && st.free === 1,
-    "başvuru boş zaman harcamadı: " + JSON.stringify(st),
-  );
+  const apply = await p.$("#panel .co .mini:not([disabled])");
+  assert(apply, "başvurulabilir şirket yok");
+  await apply.click();
+  await p.click("#confirmYes");
+  assert((await p.evaluate(() => HS.ui.active.apps.length)) === 1, "şirket başvurusu kaydedilmedi");
+  // Dünya: harita, il seç, pasaport, vize dosyası
+  await p.click(".tab[data-tab=world]");
+  await p.click(".map path:not(.here) >> nth=10");
+  assert(await p.isVisible('#panel button:has-text("3 günlük gezi")'), "il seçimi çalışmadı");
+  await clickRow("Pasaport çıkar");
+  assert(await p.evaluate(() => HS.ui.active.assets.passport), "pasaport çıkmadı");
+  await p.evaluate(() => HS.Skills.add(HS.ui.active, "almanca", 60));
+  await p.click(".tab[data-tab=world]");
+  await p.click('#panel .country:has-text("Almanya") .mini');
+  await p.click("#confirmYes");
+  assert((await p.evaluate(() => HS.ui.active.visa && HS.ui.active.visa.stage)) === "evrak", "vize dosyası açılmadı");
+  await shot(p, "06-vize");
+  // Beceri: kurs
+  await p.click(".tab[data-tab=skills]");
+  await clickRow("İngilizce");
+  assert((await p.evaluate(() => HS.ui.active.courses.length)) >= 1, "kursa yazılınamadı");
+  // Ayarlar
+  await p.click("#settingsBtn");
+  assert(await p.isVisible("#settings"), "ayarlar açılmadı");
+  await p.click('#settingsBody [data-k="music"]');
+  assert((await p.evaluate(() => HS.ui.settings.music)) === false, "müzik kapanmadı");
+  await p.click('#settingsBody [data-k="vibration"]');
+  await shot(p, "07-ayarlar");
+  await noOverflow(p, "ayarlar");
+  await p.click("#backBtn");
+  assert(await p.isVisible("#world"), "ayarlardan oyuna dönülmedi");
   // Boş zaman etkinliği
+  await p.evaluate(() => {
+    HS.ui.active.free = 1;
+    HS.ui.active.courses = [];
+    HS.ui.active.flags.actDone = {};
+    HS.ui.render();
+  });
   await p.click(".tab[data-tab=life]");
-  assert(await p.isVisible("#panel"), "HAYAT sekmesine dönülmedi");
-  await p.click('#acts [data-a="dinlen"]');
+  await p.click('#panel [data-a="dinlen"]');
   while (await p.isVisible("#event")) await p.click("#eventContinue");
-  assert(
-    (await p.evaluate(() => HS.ui.active.free)) === 0,
-    "etkinlik boş zaman harcamadı",
-  );
-  assert(await p.$("#appsLine .app-chip"), "başvuru listesi görünmüyor");
-  await shot(p, "05-bos-zaman");
+  assert((await p.evaluate(() => HS.ui.active.free)) === 0, "etkinlik boş zaman harcamadı");
+  assert(await p.$("#procList"), "süren işler listesi görünmüyor");
+  await shot(p, "08-bos-zaman");
 
   // Yenile ve kayıttan devam: yarım kalan olay korunmalı
   const titleBefore = await p.textContent("#storyTitle");
@@ -198,10 +237,8 @@ const assert = (c, m) => {
   await shot(p, "05-isim-penceresi");
   await p.fill("#nameInput", "Toprak");
   await p.click("#nameOk");
-  if (await p.isVisible("#event")) {
-    await shot(p, "06-ara-sahne");
-    await p.click("#eventContinue");
-  }
+  if (await p.isVisible("#event")) await shot(p, "06-ara-sahne");
+  while (await p.isVisible("#event")) await p.click("#eventContinue");
   const kids = await p.evaluate(() => HS.ui.active.children.map((k) => k.name));
   assert(kids.includes("Toprak"), "çocuk adı kaydedilmedi");
   await shot(p, "07-aile");
@@ -213,6 +250,7 @@ const assert = (c, m) => {
   await p.click('[data-look="man"]');
   await p.click("#beginLife");
   await playWeeks(5);
+  while (await p.isVisible("#event")) await p.click("#eventContinue");
   await p.click("#menuBtn");
   const recs = await p.$$("#recordList .record");
   assert(recs.length === 2, "iki kayıt bekleniyordu");

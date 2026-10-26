@@ -20,6 +20,7 @@ module.exports = function load() {
   for (const f of [
     "js/content/economy.js",
     "js/content/cities.js",
+    "js/content/costs.js",
     "js/content/events.js",
     "js/content/events-daily.js",
     "js/content/events-family.js",
@@ -28,7 +29,17 @@ module.exports = function load() {
     "js/art/fluent.js",
     "js/art/character.js",
     "js/art/scene.js",
+    "js/art/rooms.js",
+    "js/art/turkey-map.js",
     "js/engine.js",
+    "js/systems/body.js",
+    "js/systems/skills.js",
+    "js/systems/companies.js",
+    "js/systems/invest.js",
+    "js/systems/migration.js",
+    "js/systems/housing.js",
+    "js/systems/music.js",
+    "js/systems/achievements.js",
   ])
     vm.runInContext(
       fs.readFileSync(path.join(__dirname, "..", f), "utf8"),

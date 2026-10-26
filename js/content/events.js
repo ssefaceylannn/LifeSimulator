@@ -377,16 +377,25 @@
         return list
           .sort((a, b) => open(b) - open(a) || HS.JOBS[b].pay - HS.JOBS[a].pay)
           .slice(0, 4)
-          .map((j) =>
-            c(
-              HS.JOBS[j].name + " başvurusu",
-              (HS.JOBS[j].volatile ? "Gelir değişken, ort. " : "Aylık net ") +
-                h.money(HS.wage(s, j, 0)) +
-                " · kabul şansı %" +
-                Math.round(HS.appChance(s, j) * 100),
-              { apply: j },
-            ),
-          )
+          .map((j, i) => {
+            // Şirket ilanı: bu şehirde bu işi veren şirketlerden biri
+            const cos = (HS.COMPANIES || []).filter((x) => x.jobs.includes(j) && HS.coIn(x, s.city));
+            const x = cos.length ? cos[(s.weeks + i * 7 + s.seed) % cos.length] : null;
+            if (!x)
+              return c(
+                HS.JOBS[j].name + " başvurusu",
+                (HS.JOBS[j].volatile ? "Gelir değişken, ort. " : "Aylık net ") +
+                  h.money(HS.wage(s, j, 0)) +
+                  " · kabul şansı %" +
+                  Math.round(HS.appChance(s, j) * 100),
+                { apply: j },
+              );
+            return c(
+              x.name + " · " + HS.JOBS[j].name,
+              x.stars.toFixed(1) + "★ · aylık " + h.money(HS.wage(s, j, 0, x.id)) + " · " + x.stages + " aşamalı mülakat · şans %" + Math.round(HS.coChance(s, x, j) * 100),
+              { coApply: { co: x.id, job: j } },
+            );
+          })
           .concat([
             c("Bu hafta bekle", "Daha iyi bir ilan çıkabilir.", { m: -1 }),
           ]);
@@ -398,15 +407,19 @@
       cooldown: 52,
       when: (s) =>
         working(s) &&
-        s.jobLevel < 2 &&
-        s.jobWeeks >= 156 * (s.jobLevel + 1) &&
-        s.skill >= 15 * (s.jobLevel + 1) &&
-        s.job !== "crime",
+        s.jobLevel < 4 &&
+        HS.Skills.missing(s)?.ok &&
+        s.job !== "crime" &&
+        s.job !== "business",
       title: "Terfi konuşması",
       text: (s) =>
-        "Yöneticin seni odasına çağırdı. Bir üst pozisyon açılıyor ve adın geçiyor. Daha çok sorumluluk, daha yüksek ücret.",
+        "Yöneticin seni odasına çağırdı. " +
+        HS.Skills.title(s, s.job, s.jobLevel + 1) +
+        " pozisyonu açılıyor ve şartları taşıyorsun. Maaşın %" +
+        Math.round((HS.levelMult(s.job, s.jobLevel + 1) / HS.levelMult(s.job, s.jobLevel) - 1) * 100) +
+        " artabilir; sorumluluk da artacak.",
       choices: [
-        c("Terfi mülakatına gir", "Ücret %20 artar, sorumluluk da.", (s) => ({
+        c("Terfi mülakatına gir", "Başarırsan yeni unvan ve zam.", (s) => ({
           h: -1,
           chance: {
             p: Math.min(
@@ -470,10 +483,9 @@
         return [
           c(
             h.ek(to, "dat") + " taşın",
-            "Yeni şehir, yeni çevre. Taşınma masrafı " + h.tl(15000) + ".",
+            "Yeni şehir, yeni çevre. Nakliye, depozito ve ilk kira yaklaşık " + h.money(HS.moveCost ? HS.moveCost(s, to).total : 0) + ".",
             {
               moveCity: to,
-              cost: 15000,
               skill: 2,
               people: -3,
               m: 3,
@@ -647,7 +659,7 @@
       choices: [
         c("Yeni mekânda çal", "Daha çok kazanç, daha geç saatler.", {
           cash: 2800,
-          m: 6,
+          m: 6, fame: 2,
           skill: 2,
           h: -1,
           theme: "craft",
@@ -674,7 +686,7 @@
           theme: "craft",
           chance: {
             p: Math.min(0.5, 0.1 + s.skill * 0.006),
-            win: { cash: 15000, people: 4, m: 8 },
+            win: { cash: 15000, people: 4, m: 8, fame: 6 },
             lose: { m: 2 },
             winT: "Şarkın dinleniyor!",
             winP: "Demo birkaç günde binlerce kez dinlendi. Mekânlar seni arıyor.",
@@ -699,7 +711,7 @@
       text: "Bir sahne kaydın kurmaca bir müzik platformunda beklenmedik şekilde yayıldı. Bir yapımcı albüm teklif ediyor.",
       choices: [
         c("Albüm yap", "Turne, röportaj, yorgunluk.", {
-          cash: 60000,
+          cash: 60000, fame: 15,
           m: 10,
           people: 6,
           h: -3,
@@ -792,7 +804,7 @@
         c(h.ek(otherCity(s), "dat") + " git", "Yeni okul, yeni şehir.", {
           moveCity: otherCity(s),
           keepJob: true,
-          cost: 10000,
+          relocationPaid: true, // kamu tayininde harcırah
           skill: 1,
           people: -2,
           theme: "journey",
@@ -1536,7 +1548,7 @@
           m: 3,
           theme: "security",
         }),
-        c("Nakde çevir", "Hemen kullanılabilir para.", { cash: 60000, m: 3 }),
+        c("Nakde çevir", "Hemen kullanılabilir para.", { cash: 60000, fame: 15, m: 3 }),
       ],
     },
     {
@@ -1660,16 +1672,14 @@
       cooldown: 150,
       minAge: 21,
       maxAge: 55,
-      when: (s) => !s.abroad && s.edu !== "ogrenci",
+      when: (s) => !s.abroad && s.edu !== "ogrenci" && !s.visa,
       title: "Başka bir ülkede fırsat",
       text: "Yurt dışında iş bulma ihtimali belirdi. Kurmaca bir Avrupa şirketi deneyimli çalışan arıyor. Yol masraflı ve belirsiz.",
       choices: (s, h) => [
         s.assets.passport
-          ? c("Berlin’e taşın", "Ücretler yüksek, giderler daha yüksek.", {
-              emigrate: "Berlin",
-              cost: 30000,
-              m: 5,
-              people: -5,
+          ? c("Göç dosyası aç", "Vize süreci başlar: evrak, randevu, mülakat, belirsiz sonuç.", {
+              visaStart: "Almanya",
+              theme: "journey",
             })
           : c(
               "Pasaport çıkar",
@@ -1683,7 +1693,7 @@
       id: "abroadWinter",
       weight: 3,
       cooldown: 52,
-      when: (s) => s.abroad && s.city === "Berlin",
+      when: (s) => s.abroad && HS.CITIES[s.city]?.region === "abroad",
       title: "Yeni şehirde kış",
       text: "Kış beklediğinden uzun ve yalnız geçiyor. Dil kursu çevreni genişletebilir.",
       choices: [
@@ -1701,11 +1711,11 @@
       cooldown: 4,
       when: (s) =>
         s.abroad &&
-        s.city === "Berlin" &&
+        HS.CITIES[s.city]?.region === "abroad" &&
         !working(s) &&
         !s.retired &&
         (s.apps || []).length < 3,
-      title: "Berlin’de iş arayışı",
+      title: (s) => HS.ek(s.city, "loc") + " iş arayışı",
       text: "Diploman ve deneyimin burada farklı değerlendiriliyor. Hangi kapıyı çalacaksın?",
       choices: (s, h) =>
         ["cafe", "factory", "office", "nurse"].map((j) =>

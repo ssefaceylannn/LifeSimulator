@@ -105,69 +105,124 @@
     ["#d9e5ef", "#b8cadb"],
     ["#e6d4ec", "#c9b3d4"],
   ];
+  // Çerçeveli pencere: cam, beyaz çerçeve, denizlik, cam yansıması
+  function win(x, y, w, h, glass = "#9cc6ea", lit = false, frame = "#f7f9fc") {
+    const g = lit ? "#ffe39a" : glass;
+    return (
+      `<rect x="${x - 1.5}" y="${y - 1.5}" width="${w + 3}" height="${h + 3}" rx="1.5" fill="${frame}"/>` +
+      `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${g}"/>` +
+      `<path d="M${x + w / 2} ${y}v${h}" stroke="${frame}" stroke-width="1.2"/>` +
+      `<path d="M${x + 2} ${y + h - 3}l${w * 0.35} -${h * 0.6}" stroke="#fff" stroke-opacity=".45" stroke-width="1.5"/>` +
+      `<rect x="${x - 3}" y="${y + h + 1}" width="${w + 6}" height="2.2" fill="#000" opacity=".12"/>`
+    );
+  }
   function windowsGrid(x0, y0, cols, rows, w, h, gx, gy, fill, lit) {
     let o = "";
     for (let r = 0; r < rows; r++)
       for (let c = 0; c < cols; c++) {
         const on = lit && (r * cols + c) % 5 === lit % 5;
-        o += `<rect x="${x0 + c * gx}" y="${y0 + r * gy}" width="${w}" height="${h}" rx="2" fill="${on ? "#ffe9a8" : fill}"/>`;
+        o += win(x0 + c * gx, y0 + r * gy, w, h, fill, on);
       }
     return o;
+  }
+  // Bina gövdesi: ön yüz, sağda derinlik yüzü, çatı saçağı, zemin gölgesi
+  function block(x, y, w, h, col, roof) {
+    const side = Math.max(6, w * 0.07);
+    return (
+      `<ellipse cx="${x + w / 2}" cy="200" rx="${w * 0.6}" ry="4" fill="#000" opacity=".12"/>` +
+      `<path d="M${x + w} ${y + 4}l${side} -4v${h}l-${side} 4z" fill="${shadeOf(col, 0.22)}"/>` +
+      `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${col}"/>` +
+      `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#hsWallGrad)"/>` +
+      `<rect x="${x - 3}" y="${y - 6}" width="${w + 6 + side}" height="7" fill="${roof || shadeOf(col, 0.35)}"/>` +
+      `<rect x="${x}" y="${y + h - 8}" width="${w}" height="8" fill="${shadeOf(col, 0.12)}"/>`
+    );
+  }
+  const shadeOf = (c, t) => (HS.Art.mix ? HS.Art.mix(c, "#000000", t) : c);
+  function door(x, w, h, col, canopy) {
+    return (
+      `<rect x="${x - 6}" y="196" width="${w + 12}" height="4" fill="#cfd6df"/>` +
+      `<rect x="${x}" y="${200 - h - 4}" width="${w}" height="${h}" rx="2" fill="${col}"/>` +
+      `<rect x="${x + 3}" y="${200 - h}" width="${w / 2 - 4}" height="${h * 0.45}" fill="#fff" opacity=".18"/>` +
+      `<circle cx="${x + w - 4}" cy="${200 - h / 2 - 4}" r="1.3" fill="#e8c76a"/>` +
+      (canopy ? `<path d="M${x - 8} ${200 - h - 6}h${w + 16}l-4 -6h-${w + 8}z" fill="${canopy}"/>` : "")
+    );
   }
   const HOMES = {
     // Eski, sıcak renkli aile apartmanı: balkon, çamaşır ipi, saksı, çanak anten
     aile: (v) => {
-      const [w, d] = pick(WALLS, v);
+      const [w] = pick(WALLS, v);
       return (
-        `<rect x="205" y="78" width="150" height="122" fill="${w}"/><rect x="200" y="72" width="160" height="8" fill="${d}"/>` +
+        block(205, 78, 150, 122, w) +
         `<path d="M330 72v-10M322 60q8-8 16 0" stroke="#8a96a8" stroke-width="2" fill="none"/>` +
         windowsGrid(216, 88, 4, 3, 18, 20, 34, 34, "#9fc3e6") +
-        `<g fill="none" stroke="${d}" stroke-width="2">${[108, 142].map((y) => `<path d="M212 ${y}h136"/><path d="M212 ${y - 6}h136"/>`).join("")}</g>` +
-        `<path d="M218 116q15 6 30 0" stroke="#9aa6b5" fill="none"/><rect x="222" y="116" width="7" height="9" fill="#e85d75"/><rect x="236" y="117" width="7" height="8" fill="#4a86d8"/>` +
-        `<g>${[300, 318].map((x) => `<rect x="${x}" y="134" width="8" height="7" fill="#c46a3d"/><circle cx="${x + 4}" cy="131" r="5" fill="#5aa65a"/>`).join("")}</g>` +
-        `<rect x="268" y="166" width="26" height="34" rx="2" fill="#7a5638"/><path d="M262 164h38l-4-6h-30z" fill="${d}"/>`
+        `<g fill="none" stroke="${shadeOf(w, 0.35)}" stroke-width="1.6">${[110, 144].map((y) => `<path d="M212 ${y}h136M212 ${y - 6}h136${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => `M${214 + i * 17} ${y - 6}v6`).join("")}`).join("")}</g>` +
+        `<path d="M218 117q15 6 30 0" stroke="#9aa6b5" fill="none"/><rect x="222" y="117" width="7" height="9" fill="#e85d75"/><rect x="236" y="118" width="7" height="8" fill="#4a86d8"/>` +
+        `<g>${[300, 318].map((x) => `<rect x="${x}" y="136" width="8" height="7" fill="#c46a3d"/><circle cx="${x + 4}" cy="133" r="5" fill="#5aa65a"/><circle cx="${x + 2}" cy="131" r="1.5" fill="#e85d75"/>`).join("")}</g>` +
+        door(268, 26, 32, "#7a5638", shadeOf(w, 0.3))
       );
     },
     // Ev arkadaşıyla kiralık: eski, gri bej blok, klimalar
-    paylasim: (v) =>
-      `<rect x="215" y="48" width="130" height="152" fill="${pick(["#d7d2c8", "#cfd5db", "#d8cdbb"], v)}"/>` +
-      windowsGrid(226, 58, 4, 5, 16, 18, 30, 27, "#a9c4dd", v + 2) +
-      `<g fill="#eef1f4">${[64, 118, 145].map((y, i) => `<rect x="${i % 2 ? 330 : 222}" y="${y + 14}" width="12" height="7"/>`).join("")}</g>` +
-      `<rect x="268" y="172" width="22" height="28" fill="#6c5847"/>`,
+    paylasim: (v) => {
+      const col = pick(["#d7d2c8", "#cfd5db", "#d8cdbb"], v);
+      return (
+        block(215, 48, 130, 152, col) +
+        windowsGrid(226, 58, 4, 4, 16, 18, 30, 27, "#a9c4dd", v + 2) +
+        `<g>${[64, 118, 145].map((y, i) => `<rect x="${i % 2 ? 329 : 221}" y="${y + 13}" width="13" height="8" rx="1" fill="#eef1f4"/><path d="M${i % 2 ? 331 : 223} ${y + 17}h9" stroke="#b8c2cc"/>`).join("")}</g>` +
+        `<path d="M300 64l8 16" stroke="${shadeOf(col, 0.3)}" stroke-width=".8"/>` +
+        door(268, 22, 28, "#6c5847", "#9aa3ad")
+      );
+    },
     // Modern kiralık daire bloğu
-    kira: (v) =>
-      `<rect x="215" y="36" width="140" height="164" fill="#f7f9fc"/><rect x="215" y="36" width="140" height="6" fill="#dde6f1"/>` +
-      `<g fill="${pick(["#7fb0e3", "#8fc0e0", "#9db7ea"], v)}">${[46, 72, 98, 124, 150].map((y) => `<rect x="224" y="${y}" width="56" height="18" rx="2"/><rect x="290" y="${y}" width="56" height="18" rx="2"/>`).join("")}</g>` +
-      `<g stroke="#c4d1e0" stroke-width="1.5">${[66, 92, 118, 144].map((y) => `<path d="M222 ${y}h126"/>`).join("")}</g>` +
-      `<rect x="272" y="174" width="26" height="26" fill="#4d6a8c"/>`,
+    kira: (v) => {
+      const glass = pick(["#7fb0e3", "#8fc0e0", "#9db7ea"], v);
+      return (
+        block(215, 36, 140, 164, "#f7f9fc", "#c9d6e6") +
+        `<g>${[46, 72, 98, 124, 150].map((y) => win(224, y, 56, 18, glass) + win(290, y, 56, 18, glass)).join("")}</g>` +
+        `<g stroke="#b8c7d8" stroke-width="2">${[67, 93, 119, 145].map((y) => `<path d="M220 ${y}h130"/>`).join("")}</g>` +
+        door(270, 30, 26, "#4d6a8c", "#c9d6e6")
+      );
+    },
     // Satın alınmış daire: aynı modern blok, sıcak renk, kapıda "EVİM"
     daire: (v) =>
       HOMES.kira(v) +
-      `<rect x="300" y="178" width="22" height="9" rx="2" fill="#2f6fd6"/><text x="311" y="185" font-size="6" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">EVİM</text>` +
-      `<circle cx="262" cy="192" r="7" fill="#5aa65a"/><rect x="258" y="192" width="8" height="8" fill="#c46a3d"/>`,
-    // Müstakil bahçeli ev (Fluent çizimi)
-    mustakil: () => G("house-with-garden", 285, 202, 160),
+      `<rect x="306" y="176" width="22" height="9" rx="2" fill="#2f6fd6"/><text x="317" y="183" font-size="6" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">EVİM</text>` +
+      `<circle cx="258" cy="190" r="7" fill="#5aa65a"/><rect x="254" y="190" width="8" height="8" fill="#c46a3d"/>`,
+    // Müstakil bahçeli ev (Fluent çizimi) ve çit
+    mustakil: () =>
+      `<ellipse cx="285" cy="200" rx="90" ry="5" fill="#000" opacity=".1"/>` +
+      G("house-with-garden", 285, 202, 160) +
+      `<g stroke="#f4f1ea" stroke-width="2.4">${Array.from({ length: 9 }, (_, i) => `<path d="M${206 + i * 20} 200v-12"/>`).join("")}<path d="M204 192h170" /></g>`,
     // Varlıklı: modern villa ve havuz
     villa: () =>
-      `<rect x="200" y="96" width="100" height="104" fill="#f7f9fb"/><rect x="270" y="64" width="110" height="136" fill="#ffffff"/>` +
-      `<rect x="196" y="90" width="108" height="8" fill="#3b4f6b"/><rect x="266" y="58" width="118" height="8" fill="#3b4f6b"/>` +
-      `<rect x="210" y="110" width="80" height="44" fill="#8dc2ee"/><rect x="282" y="78" width="88" height="46" fill="#8dc2ee"/><rect x="282" y="136" width="40" height="64" fill="#8dc2ee"/>` +
-      `<path d="M210 132h80M326 78v46" stroke="#f7f9fb" stroke-width="2"/>` +
-      `<rect x="190" y="194" width="200" height="6" fill="#6fc0ea"/><g fill="#4f9a55">${[198, 214, 360, 376].map((x) => `<circle cx="${x}" cy="186" r="9"/>`).join("")}</g>`,
+      `<ellipse cx="290" cy="200" rx="100" ry="5" fill="#000" opacity=".12"/>` +
+      block(200, 96, 100, 104, "#f7f9fb", "#3b4f6b") +
+      block(270, 64, 110, 136, "#ffffff", "#3b4f6b") +
+      win(210, 110, 80, 44, "#8dc2ee") +
+      win(282, 78, 88, 46, "#8dc2ee") +
+      win(282, 136, 40, 60, "#8dc2ee") +
+      `<rect x="330" y="140" width="40" height="8" fill="#c79a5b"/>` +
+      `<rect x="190" y="194" width="200" height="6" fill="#6fc0ea"/><path d="M196 197h40M260 197h50" stroke="#fff" stroke-opacity=".6"/>` +
+      `<g fill="#4f9a55">${[198, 214, 360, 376].map((x) => `<circle cx="${x}" cy="186" r="9"/><circle cx="${x - 3}" cy="183" r="3" fill="#6cbf6f"/>`).join("")}</g>`,
     // Yurt dışı: tuğla sıra evler
     yurtdisi: (v) =>
       [0, 1, 2]
         .map((i) => {
           const x = 205 + i * 52;
-          const c = pick(["#b5654b", "#c98a5d", "#9c5a4a", "#d0a27a"], v + i);
+          const col = pick(["#b5654b", "#c98a5d", "#9c5a4a", "#d0a27a"], v + i);
           return (
-            `<rect x="${x}" y="88" width="50" height="112" fill="${c}"/><path d="M${x - 2} 90l27-34 27 34z" fill="#5b4a4a"/>` +
+            `<rect x="${x}" y="88" width="50" height="112" fill="${col}"/>` +
+            `<g stroke="${shadeOf(col, 0.2)}" stroke-width=".6" opacity=".6">${[100, 112, 124, 136, 148, 160, 172, 184].map((y) => `<path d="M${x} ${y}h50"/>`).join("")}</g>` +
+            `<path d="M${x - 2} 90l27-34 27 34z" fill="#5b4a4a"/><rect x="${x + 35}" y="58" width="6" height="16" fill="#7a6060"/>` +
             windowsGrid(x + 8, 100, 2, 3, 12, 18, 22, 28, "#e9eef5") +
-            `<rect x="${x + 17}" y="178" width="16" height="22" fill="#3d3030"/>`
+            door(x + 17, 16, 22, "#3d3030")
           );
         })
         .join(""),
   };
+  // Sokak eşyaları: lamba, bank, posta kutusu
+  const STREET =
+    `<g><rect x="186" y="150" width="3" height="52" fill="#56606f"/><path d="M187 150q0-8 10-8" stroke="#56606f" stroke-width="3" fill="none"/><rect x="194" y="141" width="10" height="5" rx="2" fill="#56606f"/><ellipse cx="199" cy="147" rx="5" ry="2" fill="#ffe9a8" opacity=".9"/></g>` +
+    `<g><rect x="372" y="186" width="14" height="13" rx="2" fill="#c0392b"/><rect x="375" y="190" width="8" height="1.6" fill="#fff"/><rect x="377" y="199" width="3" height="4" fill="#56606f"/></g>`;
   Art.homeType = function (s) {
     if (HS.CITIES[s.city]?.region === "abroad") return "yurtdisi";
     if (s.housing === "ev") return s.homeType || "daire";
@@ -184,6 +239,7 @@
     teacher: "school",
     nurse: "hospital",
     business: "convenience-store",
+    memur: "classical-building",
   };
   // Araba modelleri: Fluent çizimi ve renk tonu (hue-rotate) ile
   Art.CARS = {
@@ -218,7 +274,7 @@
   };
   Art.CAR_COLORS = [0, 200, 120, 250, 35, 300];
 
-  Art.scene = function (s) {
+  Art.street = function (s) {
     const city = HS.CITIES[s.city] || {};
     const feats = city.f || [];
     const crime = s.job === "crime";
@@ -228,7 +284,7 @@
     const grass = snow ? GRASS.kis : GRASS[sea_];
     const sid = "hsSky" + skyId++;
     let o = `<svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Karakter evinin önünde">`;
-    o += `<defs><linearGradient id="${sid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bottom}"/></linearGradient></defs>`;
+    o += `<defs><linearGradient id="${sid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bottom}"/></linearGradient><linearGradient id="hsWallGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".12"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".08"/></linearGradient></defs>`;
     o += `<rect width="400" height="260" fill="url(#${sid})"/>`;
     o += crime
       ? F("crescent-moon", 334, 14, 30) +
@@ -256,7 +312,7 @@
     if (wk) o += G(wk, 38, 200, wk === "hot-beverage" ? 40 : 66);
     // ev
     const ht = Art.homeType(s);
-    o += `<g class="hs-home">${HOMES[ht](s.homeV || 0)}</g>`;
+    o += `<g class="hs-home">${HOMES[ht](s.homeV || 0)}</g>` + STREET;
     // kaldırım ve yol
     o += `<rect x="0" y="200" width="400" height="24" fill="#e4e9f0"/><g stroke="#d3dbe6">${Array.from({ length: 12 }, (_, i) => `<path d="M${i * 36} 200v24"/>`).join("")}</g>`;
     o += `<rect x="0" y="222" width="400" height="4" fill="#c5cfdc"/><rect x="0" y="226" width="400" height="34" fill="#5b6576"/><path d="M0 245h400" stroke="#e9eef5" stroke-width="2" stroke-dasharray="16 14"/>`;
@@ -267,64 +323,89 @@
       // Büyük araçlar yolda, bisiklet ve scooter kaldırımda durur
       o += `<g class="hs-car" style="filter:hue-rotate(${hue}deg)">${c.small ? G(c.art, 330, 221, c.size) : G(c.art, 318, 254, c.size)}</g>`;
     }
-    // evcil hayvan
-    if (s.flags && s.flags.kedi)
-      o += `<g class="hs-pet">${G("cat", 236, 214, 24)}</g>`;
-    // aile ve karakter
+    o += Art.cast(s, 132, 214, 0.8);
+    if (snow)
+      o += `<g class="hs-snow" fill="#fff">${Array.from({ length: 26 }, (_, i) => `<circle cx="${(i * 53) % 400}" cy="${(i * 37) % 200}" r="${1 + (i % 3) * 0.6}"/>`).join("")}</g>`;
+    return o + "</svg>";
+  };
+
+
+  // Aile: karakter (cx, alt y, ölçek k), sağında partner, solunda çocuklar, yanında kedi.
+  const hashStr = (t) => {
+    let h = 2166136261;
+    for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 16777619);
+    return h >>> 0;
+  };
+  Art.hash = hashStr;
+  const put = (cls, cx, by, k, inner) => `<g class="${cls}" transform="translate(${(cx - 60 * k).toFixed(1)} ${(by - 214 * k).toFixed(1)}) scale(${k})">${inner}</g>`;
+  Art.put = put;
+  Art.cast = function (s, cx, by, k, opt = {}) {
     const P = Art.fromState(s);
-    const kids = (s.children || [])
-      .filter((k) => s.year - k.born < 18)
-      .slice(0, 2);
-    kids.forEach((k, i) => {
-      const a = s.year - k.born;
-      const sc = a < 4 ? 0.32 : a < 11 ? 0.42 : 0.56;
-      const kp = {
-        gender:
-          (HS.hashStr ? HS.hashStr(k.name) : k.name.length) % 2
-            ? "man"
-            : "woman",
-        skin: P.skin,
-        hair:
-          a < 4
-            ? "short"
-            : pick(["short", "long", "curly", "bun"], k.name.length),
-        hairColor: P.hairColor,
-        gray: 0,
-        age: a,
-        outfit: pick(
-          ["gunluk", "esofman", "kapusonlu", "elbise"],
-          k.name.length + i,
-        ),
-        mood: 1,
-      };
-      if (kp.outfit === "elbise" && kp.gender === "man") kp.outfit = "gunluk";
-      o += `<g class="hs-kid" transform="translate(${46 - i * 36} ${214 - 214 * sc}) scale(${sc})">${Art.person(kp)}</g>`;
-    });
-    o += `<g class="hs-me" transform="translate(84 ${214 - 214 * 0.8}) scale(0.8)">${Art.person(P)}</g>`;
-    if (s.partner) {
+    let o = "";
+    if (s.flags && s.flags.kedi && !opt.solo) o += `<g class="hs-pet">${G("cat", cx - 92 * k, by, 30 * k)}</g>`;
+    if (!opt.solo)
+      (s.children || [])
+        .filter((c) => s.year - c.born < 18)
+        .slice(0, 2)
+        .forEach((c, i) => {
+          const a = s.year - c.born;
+          const sc = (a < 4 ? 0.42 : a < 11 ? 0.55 : 0.72) * k;
+          const h = hashStr(c.name);
+          const kp = {
+            gender: h % 2 ? "man" : "woman",
+            skin: P.skin,
+            hair: a < 4 ? "short" : pick(h % 2 ? ["short", "curly", "short"] : ["long", "braid", "bun", "curly"], h >> 3),
+            hairColor: P.hairColor,
+            age: a,
+            outfit: pick(["gunluk", "esofman", "kapusonlu", "ceket", "elbise"], h >> 5),
+            mood: 1,
+            eyeColor: (h >>> 7) % 4,
+            fat: 0.25,
+          };
+          if (kp.outfit === "elbise" && kp.gender === "man") kp.outfit = "gunluk";
+          o += put("hs-kid", cx - (58 + i * 40) * k, by, sc, Art.person(kp));
+        });
+    o += put("hs-me", cx, by, k, Art.person(P));
+    if (s.partner && !opt.solo) {
       const pp = {
         gender: P.gender === "man" ? "woman" : "man",
         skin: (s.seed + 1) % 4,
-        hair:
-          P.gender === "man"
-            ? pick(["long", "bun", "curly"], s.seed)
-            : pick(["short", "curly", "shaved"], s.seed),
+        hair: P.gender === "man" ? pick(["long", "bun", "curly", "braid"], s.seed) : pick(["short", "curly", "shaved"], s.seed),
         hairColor: pick(Object.keys(Art.HAIR_COLORS), s.seed + 2),
         gray: P.gray * 0.9,
         beard: P.gender !== "man" && s.seed % 3 === 0,
         age: s.age,
-        outfit: pick(
-          ["gomlek", "hirka", "gunluk", "elbise"],
-          s.seed + (s.partner.married ? 1 : 0),
-        ),
+        outfit: pick(["gomlek", "hirka", "gunluk", "elbise", "ceket"], s.seed + (s.partner.married ? 1 : 0)),
         mood: s.partner.bond >= 55 ? 1 : s.partner.bond < 30 ? -1 : 0,
         glasses: s.age >= 60,
+        eyeColor: (s.seed + 3) % 4,
+        fat: Math.min(0.8, 0.25 + Math.max(0, s.age - 30) / 120),
       };
       if (pp.outfit === "elbise" && pp.gender === "man") pp.outfit = "gomlek";
-      o += `<g class="hs-partner" transform="translate(150 ${214 - 214 * 0.74}) scale(0.74)">${Art.person(pp)}</g>`;
+      o += put("hs-partner", cx + 70 * k, by, k * 0.95, Art.person(pp));
     }
-    if (snow)
-      o += `<g class="hs-snow" fill="#fff">${Array.from({ length: 26 }, (_, i) => `<circle cx="${(i * 53) % 400}" cy="${(i * 37) % 200}" r="${1 + (i % 3) * 0.6}"/>`).join("")}</g>`;
+    return o;
+  };
+
+  // Sabah işe gidiş şeridi: solda ev, sağda iş yeri; araç/yaya .hs-mover ile hareket eder.
+  Art.commute = function (s) {
+    const ht = Art.homeType(s);
+    const wk = s.edu === "ogrenci" && s.job === "none" ? "school" : WORK[s.job] || (s.job === "music" ? "stadium" : "office-building");
+    const vehicle = s.car && Art.CARS[s.car] ? Art.CARS[s.car] : null;
+    const hue = Art.CAR_COLORS[(s.carColor || 0) % Art.CAR_COLORS.length];
+    const P = Art.fromState(s);
+    let o = `<svg viewBox="0 0 400 170" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="İşe gidiş">`;
+    o += `<defs><linearGradient id="hsDawn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ec2f2"/><stop offset="1" stop-color="#fde3c3"/></linearGradient></defs>`;
+    o += `<rect width="400" height="170" fill="url(#hsDawn)"/>` + G("sun", 200, 70, 34, 'opacity=".95"');
+    o += `<g fill="#c4d5ea">${[30, 70, 110, 250, 290, 330].map((x, i) => `<rect x="${x}" y="${60 + (i % 3) * 10}" width="26" height="${60 - (i % 3) * 10}"/>`).join("")}</g>`;
+    o += `<rect y="118" width="400" height="12" fill="#e4e9f0"/><rect y="130" width="400" height="40" fill="#5b6576"/><path d="M0 150h400" stroke="#e9eef5" stroke-width="2" stroke-dasharray="14 12"/>`;
+    o += `<g transform="translate(-115 -2) scale(.6)">${HOMES[ht](s.homeV || 0)}</g>`;
+    o += G(wk, 350, 122, 70);
+    let mover;
+    if (vehicle && !vehicle.small) mover = `<g style="filter:hue-rotate(${hue}deg)">${G(vehicle.art, 0, 160, 72)}</g>`;
+    else if (vehicle) mover = `<g transform="translate(-14 2)"><g transform="translate(0 46) scale(.36)">${Art.person(P)}</g></g>` + G(vehicle.art, 6, 126, 34);
+    else mover = G("bus", 0, 160, 70);
+    o += `<g class="hs-mover">${mover}</g>`;
     return o + "</svg>";
   };
 

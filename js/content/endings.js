@@ -81,12 +81,8 @@
         const t = Object.entries(s.jobTime || {}).sort((a, b) => b[1] - a[1]);
         if (!t.length || t[0][1] < 8) return "hic";
         const peak = s.peak || 0;
-        const band =
-          peak >= 2 && s.skill >= 50
-            ? "zirve"
-            : peak >= 1 || s.skill >= 40
-              ? "usta"
-              : "cirak";
+        // 5 basamaklı kariyer: 0-1 başlangıç, 2 usta, 3-4 zirve
+        const band = peak >= 3 ? "zirve" : peak >= 2 ? "usta" : "cirak";
         return t[0][0] + "-" + band;
       },
     },
