@@ -120,32 +120,37 @@
     return o;
   }
 
+  // Sevimli gözler: küçük, iri irisli, yumuşak kapaklı; gülerken alt kapak hafifçe kalkar.
   function eyes(p, d, id, c) {
-    const rx = (d.kid ? 8.4 : 7.4) - (d.age > 50 ? 0.7 : 0) - d.fat * 0.6;
-    const ry = rx * (p.mood === -1 ? 0.95 : 1.08);
-    const ey = 46;
+    const rx = (d.kid ? 5.6 : 5.0) - (d.age > 50 ? 0.3 : 0) - d.fat * 0.3;
+    const ry = rx * (p.mood === -1 ? 1.0 : 1.12);
+    const ey = 47.5;
     let o = "";
     for (const s of [-1, 1]) {
-      const ex = 60 + s * 11;
+      const ex = 60 + s * 10.5;
       const cid = `${id}e${s > 0 ? "r" : "l"}`;
-      const ir = rx * 0.74;
-      const flip = s < 0 ? ` transform="matrix(-1 0 0 1 ${n1(ex * 2)} 0)"` : "";
-      o += `<clipPath id="${cid}"><ellipse cx="${n1(ex)}" cy="${ey}" rx="${n1(rx)}" ry="${n1(ry)}"/></clipPath>`;
-      o += `<ellipse cx="${n1(ex)}" cy="${ey}" rx="${n1(rx)}" ry="${n1(ry)}" fill="#fff"/>`;
+      const ir = rx * 0.9;
+      o += `<clipPath id="${cid}"><ellipse cx="${n1(ex)}" cy="${n1(ey)}" rx="${n1(rx)}" ry="${n1(ry)}"/></clipPath>`;
+      o += `<ellipse cx="${n1(ex)}" cy="${n1(ey)}" rx="${n1(rx)}" ry="${n1(ry)}" fill="#fff"/>`;
       o += `<g clip-path="url(#${cid})">`;
-      o += `<circle cx="${n1(ex + s * 0.3)}" cy="${n1(ey + 0.9)}" r="${n1(ir)}" fill="url(#${id}i)"/>`;
-      o += `<circle cx="${n1(ex + s * 0.3)}" cy="${n1(ey + 0.9)}" r="${n1(ir * 0.46)}" fill="#160f0c"/>`;
-      o += `<ellipse cx="${n1(ex)}" cy="${n1(ey - ry + 1.6)}" rx="${n1(rx)}" ry="3" fill="#000" opacity=".12"/>`;
+      o += `<circle cx="${n1(ex)}" cy="${n1(ey + 0.5)}" r="${n1(ir)}" fill="url(#${id}i)"/>`;
+      o += `<circle cx="${n1(ex)}" cy="${n1(ey + 0.5)}" r="${n1(ir * 0.55)}" fill="#1a110d"/>`;
+      // Üst kapak gölgesi: bakışı yumuşatır
+      o += `<ellipse cx="${n1(ex)}" cy="${n1(ey - ry + 0.6)}" rx="${n1(rx + 1)}" ry="${n1(ry * 0.42)}" fill="${c.shade}"/>`;
+      // Gülerken alt kapak (yanak) gözün altını örter
+      if (p.mood === 1) o += `<ellipse cx="${n1(ex)}" cy="${n1(ey + ry + 1.4)}" rx="${n1(rx + 1.5)}" ry="${n1(ry * 0.62)}" fill="${c.skin}"/>`;
       o += `</g>`;
-      o += `<circle cx="${n1(ex - ir * 0.32)}" cy="${n1(ey - ir * 0.28)}" r="${n1(ir * 0.32)}" fill="#fff"/>`;
-      o += `<circle cx="${n1(ex + ir * 0.36)}" cy="${n1(ey + ir * 0.42)}" r="${n1(ir * 0.14)}" fill="#fff" opacity=".9"/>`;
-      o += `<path d="M${n1(ex - rx - 0.4)} ${n1(ey + 0.5)}Q${n1(ex - rx * 0.6)} ${n1(ey - ry - 0.8)} ${n1(ex)} ${n1(ey - ry - 0.3)}Q${n1(ex + rx * 0.7)} ${n1(ey - ry - 0.2)} ${n1(ex + rx + 0.4)} ${n1(ey - 0.5)}" stroke="#2a1a14" stroke-width="${d.w ? 2.6 : 2}" fill="none" stroke-linecap="round"${flip}/>`;
+      o += `<circle cx="${n1(ex - ir * 0.3)}" cy="${n1(ey - ir * 0.2)}" r="${n1(ir * 0.36)}" fill="#fff"/>`;
+      o += `<circle cx="${n1(ex + ir * 0.34)}" cy="${n1(ey + ir * 0.38)}" r="${n1(ir * 0.15)}" fill="#fff" opacity=".85"/>`;
+      // Kirpik çizgisi (kapak gölgesinin altında, yumuşak bir yay)
+      const ly = ey - ry * 0.16;
+      o += `<path d="M${n1(ex - rx - 0.3)} ${n1(ly + 0.8)}Q${n1(ex)} ${n1(ly - ry * 0.95)} ${n1(ex + rx + 0.3)} ${n1(ly + 0.8)}" stroke="#3a2620" stroke-width="${d.w ? 1.7 : 1.3}" fill="none" stroke-linecap="round"/>`;
       if (d.w) {
-        const ox = ex + s * (rx + 0.2);
-        o += `<path d="M${n1(ox - s * 0.6)} ${n1(ey - 1.2)}q${s * 2} -1 ${s * 3.2} -3.4" stroke="#2a1a14" stroke-width="1.3" stroke-linecap="round" fill="none"/>`;
+        const ox = ex + s * (rx + 0.1);
+        o += `<path d="M${n1(ox - s * 0.4)} ${n1(ly + 0.2)}q${s * 1.4} -0.6 ${s * 2.2} -2.2" stroke="#3a2620" stroke-width="1.1" stroke-linecap="round" fill="none"/>`;
       }
-      if (d.age >= 50) o += `<path d="M${n1(ex - rx * 0.7)} ${n1(ey + ry + 1.4)}q${n1(rx * 0.7)} 2.6 ${n1(rx * 1.4)} 0" stroke="${c.deep}" stroke-width="1" fill="none" opacity="${n1(Math.min(0.55, (d.age - 45) / 40))}"/>`;
-      if (d.age >= 48) o += `<path d="M${n1(ex + s * (rx + 2))} ${n1(ey - 1)}l${s * 3} -1.4M${n1(ex + s * (rx + 2))} ${n1(ey + 1.5)}l${s * 3} 0.8" stroke="${c.deep}" stroke-width=".9" opacity="${n1(Math.min(0.6, (d.age - 44) / 40))}"/>`;
+      if (d.age >= 50) o += `<path d="M${n1(ex - rx * 0.7)} ${n1(ey + ry + 1.4)}q${n1(rx * 0.7)} 2 ${n1(rx * 1.4)} 0" stroke="${c.deep}" stroke-width=".9" fill="none" opacity="${n1(Math.min(0.45, (d.age - 45) / 40))}"/>`;
+      if (d.age >= 48) o += `<path d="M${n1(ex + s * (rx + 2))} ${n1(ey - 1)}l${s * 2.6} -1.2M${n1(ex + s * (rx + 2))} ${n1(ey + 1.5)}l${s * 2.6} 0.7" stroke="${c.deep}" stroke-width=".8" opacity="${n1(Math.min(0.5, (d.age - 44) / 40))}"/>`;
     }
     return `<g class="hs-eyes">${o}</g>`;
   }
@@ -157,7 +162,7 @@
     for (const s of [-1, 1]) {
       const iy = y + (p.mood === -1 ? -2.4 : p.mood === 1 ? 0.4 : 0.6);
       const oy = y + (p.mood === -1 ? 2 : p.mood === 1 ? 0 : 0.8);
-      o += `<path d="M${n1(60 + s * 4.5)} ${n1(iy)}Q${n1(60 + s * 11)} ${n1(y - 3.4)} ${n1(60 + s * 17.5)} ${n1(oy)}" stroke="${col}" stroke-width="${d.w ? 2.4 : 3.2}" stroke-linecap="round" fill="none"/>`;
+      o += `<path d="M${n1(60 + s * 4.5)} ${n1(iy)}Q${n1(60 + s * 11)} ${n1(y - 3.4)} ${n1(60 + s * 17.5)} ${n1(oy)}" stroke="${col}" stroke-width="${d.w ? 2 : 2.6}" stroke-linecap="round" fill="none"/>`;
     }
     return o;
   }
@@ -165,15 +170,15 @@
   function mouth(p, d, c) {
     const y = 63.5 + d.fat * 1.5;
     const lip = c.lips;
+    // Sevimli, küçük ve kapalıya yakın gülümseme (dişler görünmez)
     if (p.mood === 1)
       return (
-        `<path d="M52.5 ${n1(y - 1)}Q60 ${n1(y + 7.5)} 67.5 ${n1(y - 1)}Q60 ${n1(y + 1.2)} 52.5 ${n1(y - 1)}z" fill="#7a2f2f"/>` +
-        `<path d="M54.5 ${n1(y - 0.2)}Q60 ${n1(y + 1.6)} 65.5 ${n1(y - 0.2)}l-.6 1.6q-4.9 1.3-9.8 0z" fill="#fff"/>` +
-        `<path d="M56 ${n1(y + 4)}q4 1.8 8 0q-4 -1.6 -8 0z" fill="#e0716f"/>` +
-        `<path d="M52 ${n1(y - 1.4)}Q60 ${n1(y + 8)} 68 ${n1(y - 1.4)}" stroke="${dark(lip, 0.2)}" stroke-width="1.2" fill="none" stroke-linecap="round"/>`
+        `<path d="M55.5 ${n1(y - 0.4)}Q60 ${n1(y + 4.6)} 64.5 ${n1(y - 0.4)}Q60 ${n1(y + 1.4)} 55.5 ${n1(y - 0.4)}z" fill="#9a4a46"/>` +
+        `<path d="M57.6 ${n1(y + 2)}q2.4 1.2 4.8 0q-2.4 -0.6 -4.8 0z" fill="#e58a86"/>` +
+        `<path d="M54.8 ${n1(y - 0.9)}Q60 ${n1(y + 5)} 65.2 ${n1(y - 0.9)}" stroke="${dark(lip, 0.2)}" stroke-width="1.3" fill="none" stroke-linecap="round"/>`
       );
-    if (p.mood === -1) return `<path d="M54 ${n1(y + 2.4)}Q60 ${n1(y - 1.6)} 66 ${n1(y + 2.4)}" stroke="${dark(lip, 0.25)}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
-    return `<path d="M54 ${n1(y)}Q60 ${n1(y + 4)} 66 ${n1(y)}" stroke="${dark(lip, 0.22)}" stroke-width="2" fill="none" stroke-linecap="round"/>` + (d.w ? `<path d="M56 ${n1(y + 1.9)}q4 1.6 8 0" stroke="${lip}" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7"/>` : "");
+    if (p.mood === -1) return `<path d="M55.5 ${n1(y + 2)}Q60 ${n1(y - 0.8)} 64.5 ${n1(y + 2)}" stroke="${dark(lip, 0.25)}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+    return `<path d="M55.5 ${n1(y)}Q60 ${n1(y + 3)} 64.5 ${n1(y)}" stroke="${dark(lip, 0.22)}" stroke-width="2" fill="none" stroke-linecap="round"/>` + (d.w ? `<path d="M56 ${n1(y + 1.9)}q4 1.6 8 0" stroke="${lip}" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7"/>` : "");
   }
 
   function face(p, d, id, c) {

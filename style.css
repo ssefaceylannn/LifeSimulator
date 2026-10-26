@@ -2282,3 +2282,11 @@ html.bg *::after {
   font: 600 15px var(--body);
   min-width: 0;
 }
+
+/* Oyun hızı */
+.speed-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+.speed { text-align: left; padding: 10px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--card, transparent); color: inherit; font: inherit; }
+.speed b { display: block; }
+.speed small { opacity: 0.75; font-size: 0.78em; }
+.speed.on { border-color: var(--blue); box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 25%, transparent); }
+.speed-chip { margin-left: 6px; flex: none; border: 0; border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 0.78em; background: color-mix(in srgb, var(--blue) 14%, transparent); color: inherit; }

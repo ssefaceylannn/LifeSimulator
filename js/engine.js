@@ -1239,7 +1239,8 @@
   }
   HS.doActivity = doActivity;
 
-  function week(s) {
+  // quiet: hızlı ilerlemede aradaki haftalar (olay seçilmez, para ve yaş işlenir)
+  function week(s, quiet) {
     // Defter, sekmelerde yapılan harcamaları da kapsar; hafta sonunda sıfırlanır.
     s.ledger = s.ledger || { in: [], out: [] };
     const cash0 = s.cash,
@@ -1270,7 +1271,7 @@
     const end = deathCheck(s);
     if (end) return { ended: endLife(s, end) };
     if (s.weeks % 26 === 0) halfYearScene(s);
-    nextEvent(s);
+    if (!quiet) nextEvent(s);
     return { ok: true };
   }
   HS.week = week;

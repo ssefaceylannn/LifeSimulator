@@ -14,3 +14,4 @@ jobs:
           node-version: 20
       - run: node scripts/build-single.js && node scripts/build-app.js
       - run: node tests/simulate.js 20
+      - run: node tests/variety.js 8

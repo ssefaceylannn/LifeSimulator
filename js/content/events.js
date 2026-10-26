@@ -1078,23 +1078,26 @@
         !s.partner.married &&
         s.partner.bond >= 55 &&
         s.year - (s.partner.met || s.year) >= 1,
-      title: "Birlikte bir gelecek",
+      // Gelenek: teklifi çoğunlukla erkek eder. Kadın oyuncuya partneri teklif eder; erkek oyuncu
+      // teklifi kendisi yapar ve ailesiyle "kız istemeye" gider.
+      title: (s) => (s.look === "woman" ? "Evlenme teklifi!" : "Teklif zamanı mı?"),
       text: (s) =>
-        s.partner.name +
-        " ile ilişkinizi resmileştirmeyi konuşuyorsunuz. Düğün büyük ya da küçük olabilir.",
-      choices: [
-        c("Küçük bir nikâh", "Sade bir kutlama.", {
+        s.look === "woman"
+          ? s.partner.name + " akşam yemeğinde birden diz çöktü; elinde küçük kadife bir kutu var. \"Benimle evlenir misin?\" Cevap verirsen düğün büyük ya da küçük olabilir."
+          : s.partner.name + " ile ilişkiniz ciddileşti; aileler de soruyor. Yüzüğü alıp teklif etme ve ailenle kız istemeye gitme zamanı mı?",
+      choices: (s) => [
+        c(s.look === "woman" ? "Evet! Küçük bir nikâh olsun" : "Teklif et · küçük bir nikâh", "Sade bir kutlama.", {
           marry: true,
           cost: 15000,
           m: 8,
         }),
-        c("Büyük düğün", "Herkes gelsin; borç olsa da.", {
+        c(s.look === "woman" ? "Evet! Büyük düğün yapalım" : "Teklif et · büyük düğün", "Herkes gelsin; borç olsa da.", {
           marry: true,
           cost: 120000,
           m: 10,
           people: 6,
         }),
-        c("Şimdilik bekleyelim", "Acele etmeyin.", { bond: -3, m: 1 }),
+        c(s.look === "woman" ? "Biraz düşünmem lazım" : "Şimdilik bekleyelim", "Acele etmeyin.", { bond: -3, m: 1 }),
       ],
     },
     {
@@ -1429,7 +1432,7 @@
         }),
         c(
           "Saç ekimi araştır",
-          "Saç ekimini İLİŞKİLER sekmesindeki berberden yaptırabilirsin.",
+          "Saç ekimini BEN › Stil bölümündeki berberden yaptırabilirsin.",
           { thinning: true, m: -1 },
         ),
       ],
@@ -1438,22 +1441,22 @@
       id: "barberChat",
       weight: 0.5,
       cooldown: 60,
-      title: "Berberde sohbet",
-      text: "Berber yeni bir model önerdi. Değişiklik iyi gelebilir.",
-      choices: (s) => [
-        c("Uzun bırak", "Bakımı biraz zor.", { hair: "long", cost: 500, m: 2 }),
-        c("Kıvırcık perma", "Cesur bir değişim.", {
-          hair: "curly",
-          cost: 1200,
-          m: 2,
-        }),
-        c(s.beard ? "Sakalı kes" : "Sakal bırak", "Yüzün değişsin.", {
-          beard: !s.beard,
-          cost: 300,
-          m: 1,
-        }),
-        c("Aynısı olsun", "Bildiğin yoldan şaşma.", { cost: 500 }),
-      ],
+      title: (s) => (s.look === "man" ? "Berberde sohbet" : "Kuaförde sohbet"),
+      text: (s) => (s.look === "man" ? "Berber yeni bir model önerdi. Değişiklik iyi gelebilir." : "Kuaförün yeni bir model önerdi; fön makinesinin sesi arasında ikna etmeye çalışıyor."),
+      choices: (s) =>
+        s.look === "man"
+          ? [
+              c("Uzun bırak", "Bakımı biraz zor.", { hair: "long", cost: 500, m: 2 }),
+              c("Kıvırcık perma", "Cesur bir değişim.", { hair: "curly", cost: 1200, m: 2 }),
+              c(s.beard ? "Sakalı kes" : "Sakal bırak", "Yüzün değişsin.", { beard: !s.beard, cost: 300, m: 1 }),
+              c("Aynısı olsun", "Bildiğin yoldan şaşma.", { cost: 500 }),
+            ]
+          : [
+              c("Kısa kesim (bob)", "Ferah ve modern.", { hair: "bob", cost: 900, m: 2 }),
+              c("Dalgalı fön ve bakım", "Kendini bakımlı hissedersin.", { hair: "wavy", cost: 1400, m: 3, esteem: 2 }),
+              c("Örgü yaptır", "Pratik ve şık.", { hair: "braid", cost: 1100, m: 2 }),
+              c("Sadece uçlarını al", "Bildiğin yoldan şaşma.", { cost: 700 }),
+            ],
     },
 
     // ================= PARA =================

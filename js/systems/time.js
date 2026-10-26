@@ -87,7 +87,43 @@
     }
     s.evDone = 0;
     s.weekPlan = HS.rollWeek();
-    return HS.week(s);
+    // Oyun hızı: her tur birden fazla hafta ilerleyebilir (Ayarlar › Oyun hızı).
+    // Aradaki haftalarda maaş, giderler ve yaş yine işlenir; özetler birleştirilir.
+    const step = Math.max(1, Math.min(8, Math.round((HS.CFG && HS.CFG.weekStep) || 1)));
+    const sum = { in: [], out: [], cash: 0, worth: 0 };
+    for (let i = 1; i < step; i++) {
+      const r = HS.week(s, true);
+      if (r.ended) return r;
+      const lw = s.lastWeek;
+      sum.in.push(...lw.in);
+      sum.out.push(...lw.out);
+      sum.cash += lw.cash;
+      sum.worth += lw.worth;
+    }
+    const res = HS.week(s);
+    if (step > 1 && !res.ended && s.lastWeek) {
+      s.lastWeek.in = sum.in.concat(s.lastWeek.in);
+      s.lastWeek.out = sum.out.concat(s.lastWeek.out);
+      s.lastWeek.cash += sum.cash;
+      s.lastWeek.worth += sum.worth;
+      s.lastWeek.span = step;
+    }
+    return res;
+  };
+  // Hazır hız ayarları
+  HS.SPEEDS = [
+    { id: "yavas", name: "Yavaş", desc: "Her hafta tek tek · haftada 3-6 olay", cfg: { weekStep: 1, weekMin: 3, weekMax: 6 } },
+    { id: "normal", name: "Normal", desc: "Her tur 2 hafta · 3-5 olay", cfg: { weekStep: 2, weekMin: 3, weekMax: 5 } },
+    { id: "hizli", name: "Hızlı", desc: "Her tur 4 hafta (≈1 ay) · 2-4 olay", cfg: { weekStep: 4, weekMin: 2, weekMax: 4 } },
+    { id: "cokhizli", name: "Çok hızlı", desc: "Her tur 8 hafta (≈2 ay) · 2-3 olay", cfg: { weekStep: 8, weekMin: 2, weekMax: 3 } },
+  ];
+  HS.speedNow = () => {
+    const C = HS.CFG || {};
+    return HS.SPEEDS.find((x) => Object.entries(x.cfg).every(([k, v]) => C[k] === v)) || null;
+  };
+  HS.setSpeed = (id) => {
+    const sp = HS.SPEEDS.find((x) => x.id === id);
+    if (sp && HS.saveConfig) HS.saveConfig({ ...HS.CFG, ...sp.cfg });
   };
   HS.COOLDOWN_SCALE = 0.55;
   HS.rollWeek = () => {

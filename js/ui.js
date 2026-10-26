@@ -414,7 +414,11 @@
       )
       .join("")}</div>`;
     const last = (s.evDone || 0) + 1 >= (s.weekPlan || 4);
-    html += `<div class="week-dots" aria-label="Bu haftanın olayları">${Array.from({ length: s.weekPlan || 4 }, (_, i) => `<i class="${i < (s.evDone || 0) ? "done" : i === (s.evDone || 0) ? "now" : ""}"></i>`).join("")}<span>Bu hafta ${s.weekPlan || 4} olay</span></div>`;
+    html += `<div class="week-dots" aria-label="Bu haftanın olayları">${Array.from({ length: s.weekPlan || 4 }, (_, i) => `<i class="${i < (s.evDone || 0) ? "done" : i === (s.evDone || 0) ? "now" : ""}"></i>`).join("")}<span>Bu hafta ${s.weekPlan || 4} olay</span><button class="speed-chip" title="Oyun hızı"${on(() => {
+      const i = HS.SPEEDS.indexOf(HS.speedNow());
+      HS.setSpeed(HS.SPEEDS[(i + 1) % HS.SPEEDS.length].id);
+      renderPanel();
+    })}>⏩ ${HS.speedNow() ? HS.speedNow().name : "Özel"}</button></div>`;
     html += `<button class="advance" id="advanceBtn" disabled>${last ? "Seç ve haftayı tamamla" : "Seç ve devam et"} <span>→</span></button>`;
     // Boş zaman
     const total = Math.max(s.free, HS.freeSlots(s));
@@ -437,7 +441,7 @@
       const lines = []
         .concat(lw.in.map(([k, v]) => `<div class="led in"><span>${esc(k)}</span><b>+${money(v)}</b></div>`))
         .concat(lw.out.map(([k, v]) => `<div class="led out"><span>${esc(k)}</span><b>−${money(v)}</b></div>`));
-      html += `<article class="card"><button class="collapse"${on(() => ((lastWeekOpen = !lastWeekOpen), renderPanel()))}><h3>Geçen haftanın dökümü</h3><span>${lw.cash >= 0 ? "+" : "−"}${money(Math.abs(lw.cash))} ${lastWeekOpen ? "▴" : "▾"}</span></button>${lastWeekOpen ? `<div class="ledger">${lines.join("") || '<p class="fine">Kayıt yok.</p>'}<div class="led total"><span>Toplam</span><b>${money(sum(lw.in) - sum(lw.out))}</b></div></div>` : ""}</article>`;
+      html += `<article class="card"><button class="collapse"${on(() => ((lastWeekOpen = !lastWeekOpen), renderPanel()))}><h3>${lw.span > 1 ? "Son " + lw.span + " haftanın dökümü" : "Geçen haftanın dökümü"}</h3><span>${lw.cash >= 0 ? "+" : "−"}${money(Math.abs(lw.cash))} ${lastWeekOpen ? "▴" : "▾"}</span></button>${lastWeekOpen ? `<div class="ledger">${lines.join("") || '<p class="fine">Kayıt yok.</p>'}<div class="led total"><span>Toplam</span><b>${money(sum(lw.in) - sum(lw.out))}</b></div></div>` : ""}</article>`;
     }
     return html;
   }
@@ -807,7 +811,7 @@
     if (s.partner) {
       html += card(esc(s.partner.name) + (s.partner.married ? " · eşin" : " · partnerin"), `Bağ ${bar(s.partner.bond)} ${Math.round(s.partner.bond)}<br>Güven ${bar(s.partner.trust ?? 70)} ${Math.round(s.partner.trust ?? 70)}`);
       html += rows([
-        !s.partner.married ? row("Evlenme teklif et", "Yüzük ve akşam yemeği " + money(35000 * cpi), { cost: 35000, chance: { p: Math.min(0.95, Math.max(0.1, s.partner.bond / 100 + 0.1)), win: { marry: true, m: 10 }, lose: { bond: -12, m: -8 }, winT: s.partner.name + " evet dedi!", winP: "Restoranda herkes alkışladı.", loseT: "Henüz hazır değil", loseP: s.partner.name + " biraz daha zamana ihtiyacı olduğunu söyledi." } }, { weekly: "propose", icon: "ring" }) : null,
+        !s.partner.married ? row(s.look === "man" ? "Evlenme teklif et" : "Evlenme teklifini sen et", (s.look === "man" ? "Yüzük ve akşam yemeği " : "Geleneksel olarak erkek eder ama beklemek zorunda değilsin · yüzük ve yemek ") + money(35000 * cpi), { cost: 35000, chance: { p: Math.min(0.95, Math.max(0.1, s.partner.bond / 100 + 0.1)), win: { marry: true, m: 10 }, lose: { bond: -12, m: -8 }, winT: s.partner.name + " evet dedi!", winP: "Restoranda herkes alkışladı.", loseT: "Henüz hazır değil", loseP: s.partner.name + " biraz daha zamana ihtiyacı olduğunu söyledi." } }, { weekly: "propose", icon: "ring" }) : null,
         row(s.partner.married ? "Boşan" : "Ayrıl", s.partner.married ? "Avukat ve dava " + money(45000 * cpi) + "; birikimler paylaşılır." : "İlişkiyi bitir.", { breakup: true, m: -8, stress: 10, cost: s.partner.married ? 45000 : 0, divorceSplit: s.partner.married ? 1 : 0 }, { confirm: "Bu ilişkiyi bitirmek istediğine emin misin?", icon: "warning" }),
       ]);
     } else html += card("İlişki", "Şu an bir ilişkin yok." + (s.exes ? " Geçmişte " + s.exes + " ayrılık." : "") + " Yakın çevren: " + Math.round(s.people) + " kişi.");
@@ -852,13 +856,13 @@
         return `<button class="outfit${onIt ? " on" : ""}"${handler}><svg viewBox="0 0 120 220">${Art.person({ ...P, outfit: k, mood: 1 })}</svg><b>${esc(o.name)}</b><small${fits ? ' class="fit"' : ""}>${onIt ? "Giyiliyor" : owned ? "Giy" : money(o.price * cpi)}${fits ? " · işe uygun" : ""}</small></button>`;
       })
       .join("")}</div>`;
-    html += sectionTitle("Berber ve kuaför", "Saç modeline dokun; fiyat modele göre değişir");
+    html += sectionTitle(s.look === "man" ? "Berber" : "Kuaför", "Saç modeline dokun; fiyat modele göre değişir");
     const list = Art.HAIR_FOR[s.look === "man" ? "man" : "woman"];
     const price = (h) => Math.round(E.haircut * ({ curly: 2.4, afro: 3, braid: 1.8, wavy: 2.2, pompadour: 1.4, bob: 1.3, pixie: 1.3 }[h] || 1) * cpi);
     html += `<div class="hairs">${list
       .map((h) => {
         const fx = { hair: h, cost: price(h) / cpi };
-        const c = h === s.hair ? "Şu anki modelin" : s.flags.tabUse?.barber === s.weeks ? "Bu hafta kuaföre gittin." : HS.canApply(s, fx);
+        const c = h === s.hair ? "Şu anki modelin" : s.flags.tabUse?.barber === s.weeks ? (s.look === "man" ? "Bu hafta berbere gittin." : "Bu hafta kuaföre gittin.") : HS.canApply(s, fx);
         return `<button class="hair${h === s.hair ? " on" : ""}"${c === true ? on(() => act(fx, { weekly: "barber" })) : " disabled"}>${head({ ...P, hair: h, thin: false }, 64)}<b>${esc(Art.HAIR_STYLES[h])}</b><small>${h === s.hair ? "Şu an" : money(price(h))}</small></button>`;
       })
       .join("")}</div>`;
@@ -1380,11 +1384,19 @@
       tg("saver", "Pil tasarrufu (önerilir)", "Karakterlerin nefes alma, göz kırpma ve arka plan animasyonlarını kapatır; telefon ısınmaz, pil uzun gider") +
       tg("commute", "İşe gidiş ve eve dönüş", "Hafta içi sabah işe gidişi ve akşam eve dönüşü göster") +
       `<button class="setting" data-text="1"><span><b>Yazı boyutu</b><small>${settings.text === "big" ? "Büyük" : "Normal"}</small></span><i class="pill">${settings.text === "big" ? "A+" : "A"}</i></button></article>` +
+      `<article class="card"><h3>Oyun hızı</h3><p class="fine">Yıllar yavaş geçiyorsa hızlandır. Aradaki haftalarda maaş, giderler ve yaş yine işlenir; yalnızca soru sayısı azalır.</p><div class="speed-row">${HS.SPEEDS.map((sp) => `<button class="speed${HS.speedNow() === sp ? " on" : ""}" data-speed="${sp.id}"><b>${sp.name}</b><small>${sp.desc}</small></button>`).join("")}</div></article>` +
       `<article class="card"><h3>Oyun dengesi</h3><p class="fine">Başlangıç parası, giderler, maaşlar, haftalık olay sayısı, borsa ihtimali gibi değerleri kendin ayarla. Değişiklikler hemen geçerli olur (başlangıç parası ve yaşı yeni hayatlarda).</p><button class="secondary" id="cfgToggle">${cfgOpen ? "Kapat" : "Ayarları düzenle"}</button>${cfgOpen ? cfgForm() : ""}</article>` +
       `<article class="card"><h3>Hesap</h3><p class="fine">App Store ve Google Play sürümünde kayıtların Apple ile giriş / Game Center ya da Google Play Oyunlar hesabına bağlanabilecek. Bu tarayıcı prototipinde kayıtlar yalnızca bu cihazda tutulur.</p><button class="secondary" disabled>Hesabını bağla (mağaza sürümünde)</button></article>` +
       `<article class="card"><h3>Kayıtlar</h3><p class="fine">Kayıtlarını başka bir cihaza taşımak için kodu kopyala, diğer cihazda yapıştır.</p><button class="secondary" id="exportBtn">Kayıt kodunu kopyala</button><textarea id="importBox" rows="3" placeholder="Kayıt kodunu buraya yapıştır" aria-label="Kayıt kodu"></textarea><button class="secondary" id="importBtn">Kodu içe aktar</button><button class="secondary danger" id="wipeBtn">Bütün verileri sil</button></article>` +
       `<article class="card"><h3>Hakkında</h3><p class="fine">Hayat Simülatörü · prototip sürüm 0.3<br>Çizimler: Microsoft Fluent Emoji (MIT). Harita: Natural Earth verisi, react-turkey-map (MIT). Yazı tipleri: Baloo 2 ve Nunito (SIL OFL).<br>Ekonomi 2026 verileriyle kalibre edilmiştir; 2027 sonrası kurmacadır. Kişi, parti, şirket ve markalar hayal ürünüdür. Yatırım ve bahis bölümleri tavsiye değildir.</p></article>`;
     $("settingsBody").querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => setSetting(b.dataset.k, !settings[b.dataset.k])));
+    $("settingsBody").querySelectorAll("[data-speed]").forEach(
+      (b) =>
+        (b.onclick = () => {
+          HS.setSpeed(b.dataset.speed);
+          renderSettings();
+        }),
+    );
     $("cfgToggle").onclick = () => {
       cfgOpen = !cfgOpen;
       renderSettings();
