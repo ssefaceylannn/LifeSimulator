@@ -1,0 +1,112 @@
+# App Store / TestFlight derlemesi: imzalı derler ve App Store Connect'e yükler.
+# YALNIZCA ELLE başlatılır: GitHub › Actions › "iOS App Store (TestFlight)" › Run workflow.
+#
+# Gereken gizli değişkenler (GitHub › Settings › Secrets and variables › Actions):
+#   APPLE_TEAM_ID   Apple Developer ekip kimliği (10 karakter, ör. AB12CD34EF)
+#   ASC_KEY_ID      App Store Connect API anahtar kimliği
+#   ASC_ISSUER_ID   App Store Connect API "Issuer ID"
+#   ASC_KEY_P8      API anahtarının .p8 dosyasının tüm içeriği (BEGIN/END satırları dahil)
+#   ADMOB_IOS_APP_ID, ADMOB_IOS_INTERSTITIAL, ADMOB_IOS_REWARDED  (AdMob; yoksa test reklamları çıkar)
+# Anahtar rolü "Admin" olmalı (Xcode bulut imzalama sertifika ve profil oluşturur).
+# Ayrıntılı adımlar: MAGAZA-REHBERI.md
+name: iOS App Store (TestFlight)
+on:
+  workflow_dispatch:
+jobs:
+  appstore:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      BUNDLE_ID: com.hayatsimulatoru.oyun
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: En yeni Xcode'u seç
+        run: |
+          X=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$X"
+          xcodebuild -version
+      - name: Oyunu derle
+        env:
+          ADMOB_IOS_INTERSTITIAL: ${{ secrets.ADMOB_IOS_INTERSTITIAL }}
+          ADMOB_IOS_REWARDED: ${{ secrets.ADMOB_IOS_REWARDED }}
+        run: node scripts/build-single.js && node scripts/build-app.js
+      - name: Capacitor ve oyun hizmetleri eklentisi
+        run: npm install --no-save --no-audit --no-fund @capacitor/core@8 @capacitor/cli@8 @capacitor/ios@8 @idleflowgames/capacitor-play-games@0.3 @capacitor-community/admob@8 @capgo/native-purchases@8
+      - name: iOS projesi oluştur
+        env:
+          ADMOB_IOS_APP_ID: ${{ secrets.ADMOB_IOS_APP_ID }}
+        run: |
+          npx cap add ios
+          npx cap sync ios
+          cp assets/app/icon-1024.png ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
+          cp store/ios/PrivacyInfo.xcprivacy ios/App/App/PrivacyInfo.xcprivacy
+          cp store/ios/App.entitlements ios/App/App/App.entitlements
+          P=ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Hayat Simülatörü" $P
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" $P || true
+          /usr/libexec/PlistBuddy -c "Add :UIRequiresFullScreen bool true" $P || true
+          /usr/libexec/PlistBuddy -c "Add :GKGameCenterBadgingDisabled bool false" $P || true
+          /usr/libexec/PlistBuddy -c "Add :LSApplicationCategoryType string public.app-category.simulation-games" $P || true
+          /usr/libexec/PlistBuddy -c "Delete :UISupportedInterfaceOrientations" $P || true
+          /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations array" $P
+          /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait" $P
+          # AdMob uygulama kimliği (yoksa Google'ın test kimliği), izleme izni metni, SKAdNetwork
+          /usr/libexec/PlistBuddy -c "Add :GADApplicationIdentifier string ${ADMOB_IOS_APP_ID:-ca-app-pub-3940256099942544~1458002511}" $P
+          /usr/libexec/PlistBuddy -c "Add :NSUserTrackingUsageDescription string Bu izin, sana daha alakalı reklamlar gösterilmesi için kullanılır. İzin vermesen de oyun aynen çalışır." $P
+          /usr/libexec/PlistBuddy -c "Add :SKAdNetworkItems array" $P
+          i=0; for id in cstr6suwn9 4fzdc2evr5 2fnua5tdw4 ydx93a7ass 5a6flpkh64 p78axxw29g v72qych5uu c6k4g5qg8m s39g8k73mm 3qy4746246 3sh42y64q3 f38h382jlk hs6bdukanm prcb7njmu6 wzmmz9fp6w yclnxrl5pm 4468km3ulz t38b2kh725 7ug5zh24hu 9rd848q2bz n6fk4nfna4 kbd757ywx3 9t245vhmpl a2p9lx4jpn 22mmun2rn5 4pfyvq9l8r 3rd42ekr43 ludvb6z3bs; do
+            /usr/libexec/PlistBuddy -c "Add :SKAdNetworkItems:$i dict" $P
+            /usr/libexec/PlistBuddy -c "Add :SKAdNetworkItems:$i:SKAdNetworkIdentifier string $id.skadnetwork" $P
+            i=$((i+1))
+          done
+          sudo gem install xcodeproj --no-document
+          ruby store/ios/add-files.rb
+      - name: API anahtarını yaz
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          printf '%s' "$ASC_KEY_P8" > ~/.appstoreconnect/private_keys/AuthKey.p8
+      - name: Arşivle (bulut imzalama)
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          cd ios/App
+          if [ -d App.xcworkspace ]; then SRC="-workspace App.xcworkspace"; else SRC="-project App.xcodeproj"; fi
+          VERSION=$(node -p "require('../../package.json').version")
+          xcodebuild $SRC -scheme App -configuration Release -destination 'generic/platform=iOS' \
+            -archivePath build/App.xcarchive archive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey.p8 \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER" \
+            DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="${{ github.run_number }}" | tail -n 60
+      - name: App Store Connect'e yükle
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          cat > ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$TEAM</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive -archivePath ios/App/build/App.xcarchive \
+            -exportOptionsPlist ExportOptions.plist -exportPath build-export \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey.p8 \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER" | tail -n 40
+          echo "Yüklendi. App Store Connect › TestFlight bölümünde 10-30 dakika içinde işlenir."

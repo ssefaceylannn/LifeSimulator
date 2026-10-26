@@ -11,11 +11,11 @@
   HS.ACTIVITIES = [
     {
       id: "spor",
-      label: "Spor yap",
+      label: "Koşuya çık",
       art: "running-shoe",
-      hint: "Sağlık +, mutluluk +",
-      fx: { h: 3, m: 2 },
-      done: "Ter attın, kafan boşaldı.",
+      hint: "Kilo −, sağlık +",
+      fx: { h: 3, m: 2, kg: -0.35, mus: 0.5 },
+      done: "Sahil yolunda 5 km koştun.",
       surprises: [
         {
           p: 0.06,
@@ -37,6 +37,34 @@
           kind: "win",
         },
       ],
+    },
+    {
+      id: "salon",
+      label: "Spor salonu",
+      art: "flexed-biceps",
+      hint: "Kas +, kilo −",
+      fx: (s) => ({ cost: s.flags.salonUye ? 0 : 350, mus: s.flags.salonUye ? 3 : 2.2, kg: -0.15, h: 1 }),
+      done: "Ağırlık çalıştın; kasların yanıyor.",
+      surprises: [
+        { p: 0.04, t: "Omzun incindi", text: "Fazla ağırlık kaldırdın; birkaç hafta dikkatli olmalısın.", fx: { h: -4, mus: -2 }, art: "✕", kind: "lose" },
+      ],
+    },
+    {
+      id: "diyet",
+      label: "Sağlıklı beslen",
+      art: "green-salad",
+      hint: "Kilo −, mutluluk −",
+      when: (s) => HS.Body.bmi(s) > 20,
+      fx: { kg: -0.6, m: -2, h: 1 },
+      done: "Bu hafta şekeri ve hamuru kestin.",
+    },
+    {
+      id: "disarida",
+      label: "Dışarıda ye",
+      art: "hamburger",
+      hint: "Mutluluk +, kilo +",
+      fx: { cost: 900, m: 4, kg: 0.45 },
+      done: "Sevdiğin yerde doya doya yedin.",
     },
     {
       id: "ders",
@@ -207,36 +235,6 @@
       hint: "Sağlık +",
       fx: { h: 2, m: 1 },
       done: "Uzun bir uyku iyi geldi.",
-    },
-    {
-      id: "piyango",
-      label: "Piyango bileti al",
-      art: "four-leaf-clover",
-      hint: "₺100 · küçük bir umut",
-      fx: { cost: 100 },
-      done: "Bilet cüzdanında; çekiliş yakında.",
-      surprises: [
-        {
-          p: 0.004,
-          t: "BÜYÜK İKRAMİYE!",
-          text: "Numaraları üç kez kontrol ettin. Gerçekten tuttu.",
-          fx: {
-            cash: 1000000,
-            m: 20,
-            log: "Piyangodan büyük ikramiye kazandı.",
-          },
-          art: "★",
-          kind: "win",
-        },
-        {
-          p: 0.04,
-          t: "Amorti ve biraz fazlası",
-          text: "Küçük bir ikramiye çıktı.",
-          fx: { cash: 2000, m: 3 },
-          art: "✓",
-          kind: "win",
-        },
-      ],
     },
   ];
 })(globalThis.HS || (globalThis.HS = {}));

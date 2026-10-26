@@ -1,0 +1,17 @@
+# Hızlı kontrol: oyunun tek dosya derlemesi ve motor simülasyonu (Linux sunucuda).
+name: Kontrol
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/build-single.js && node scripts/build-app.js
+      - run: node tests/simulate.js 20
+      - run: node tests/variety.js 8

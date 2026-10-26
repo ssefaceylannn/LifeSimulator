@@ -63,7 +63,7 @@
       c(
         "Üniversite sınavına hazırlan",
         "Birkaç ay ders çalış; kapılar açılabilir.",
-        { skill: 2, cost: 1500, flag: "examPrep" },
+        { skill: 2, examStart: 1 },
       ),
       c("Bir hafta kendine ayır", "Şehri dolaş, nefes al.", {
         cost: 400,
@@ -377,16 +377,25 @@
         return list
           .sort((a, b) => open(b) - open(a) || HS.JOBS[b].pay - HS.JOBS[a].pay)
           .slice(0, 4)
-          .map((j) =>
-            c(
-              HS.JOBS[j].name + " başvurusu",
-              (HS.JOBS[j].volatile ? "Gelir değişken, ort. " : "Aylık net ") +
-                h.money(HS.wage(s, j, 0)) +
-                " · kabul şansı %" +
-                Math.round(HS.appChance(s, j) * 100),
-              { apply: j },
-            ),
-          )
+          .map((j, i) => {
+            // Şirket ilanı: bu şehirde bu işi veren şirketlerden biri
+            const cos = (HS.COMPANIES || []).filter((x) => x.jobs.includes(j) && HS.coIn(x, s.city));
+            const x = cos.length ? cos[(s.weeks + i * 7 + s.seed) % cos.length] : null;
+            if (!x)
+              return c(
+                HS.JOBS[j].name + " başvurusu",
+                (HS.JOBS[j].volatile ? "Gelir değişken, ort. " : "Aylık net ") +
+                  h.money(HS.wage(s, j, 0)) +
+                  " · kabul şansı %" +
+                  Math.round(HS.appChance(s, j) * 100),
+                { apply: j },
+              );
+            return c(
+              x.name + " · " + HS.JOBS[j].name,
+              x.stars.toFixed(1) + "★ · aylık " + h.money(HS.wage(s, j, 0, x.id)) + " · " + x.stages + " aşamalı mülakat · şans %" + Math.round(HS.coChance(s, x, j) * 100),
+              { coApply: { co: x.id, job: j } },
+            );
+          })
           .concat([
             c("Bu hafta bekle", "Daha iyi bir ilan çıkabilir.", { m: -1 }),
           ]);
@@ -398,15 +407,19 @@
       cooldown: 52,
       when: (s) =>
         working(s) &&
-        s.jobLevel < 2 &&
-        s.jobWeeks >= 156 * (s.jobLevel + 1) &&
-        s.skill >= 15 * (s.jobLevel + 1) &&
-        s.job !== "crime",
+        s.jobLevel < 4 &&
+        HS.Skills.missing(s)?.ok &&
+        s.job !== "crime" &&
+        s.job !== "business",
       title: "Terfi konuşması",
       text: (s) =>
-        "Yöneticin seni odasına çağırdı. Bir üst pozisyon açılıyor ve adın geçiyor. Daha çok sorumluluk, daha yüksek ücret.",
+        "Yöneticin seni odasına çağırdı. " +
+        HS.Skills.title(s, s.job, s.jobLevel + 1) +
+        " pozisyonu açılıyor ve şartları taşıyorsun. Maaşın %" +
+        Math.round((HS.levelMult(s.job, s.jobLevel + 1) / HS.levelMult(s.job, s.jobLevel) - 1) * 100) +
+        " artabilir; sorumluluk da artacak.",
       choices: [
-        c("Terfi mülakatına gir", "Ücret %20 artar, sorumluluk da.", (s) => ({
+        c("Terfi mülakatına gir", "Başarırsan yeni unvan ve zam.", (s) => ({
           h: -1,
           chance: {
             p: Math.min(
@@ -470,10 +483,9 @@
         return [
           c(
             h.ek(to, "dat") + " taşın",
-            "Yeni şehir, yeni çevre. Taşınma masrafı " + h.tl(15000) + ".",
+            "Yeni şehir, yeni çevre. Nakliye, depozito ve ilk kira yaklaşık " + h.money(HS.moveCost ? HS.moveCost(s, to).total : 0) + ".",
             {
               moveCity: to,
-              cost: 15000,
               skill: 2,
               people: -3,
               m: 3,
@@ -647,7 +659,7 @@
       choices: [
         c("Yeni mekânda çal", "Daha çok kazanç, daha geç saatler.", {
           cash: 2800,
-          m: 6,
+          m: 6, fame: 2,
           skill: 2,
           h: -1,
           theme: "craft",
@@ -674,7 +686,7 @@
           theme: "craft",
           chance: {
             p: Math.min(0.5, 0.1 + s.skill * 0.006),
-            win: { cash: 15000, people: 4, m: 8 },
+            win: { cash: 15000, people: 4, m: 8, fame: 6 },
             lose: { m: 2 },
             winT: "Şarkın dinleniyor!",
             winP: "Demo birkaç günde binlerce kez dinlendi. Mekânlar seni arıyor.",
@@ -699,7 +711,7 @@
       text: "Bir sahne kaydın kurmaca bir müzik platformunda beklenmedik şekilde yayıldı. Bir yapımcı albüm teklif ediyor.",
       choices: [
         c("Albüm yap", "Turne, röportaj, yorgunluk.", {
-          cash: 60000,
+          cash: 60000, fame: 15,
           m: 10,
           people: 6,
           h: -3,
@@ -792,7 +804,7 @@
         c(h.ek(otherCity(s), "dat") + " git", "Yeni okul, yeni şehir.", {
           moveCity: otherCity(s),
           keepJob: true,
-          cost: 10000,
+          relocationPaid: true, // kamu tayininde harcırah
           skill: 1,
           people: -2,
           theme: "journey",
@@ -914,7 +926,7 @@
             winP: "Zarfı alırken elin titriyordu. Kimse bir şey sormadı.",
             loseT: "Polis çevirmesi",
             loseP:
-              "Son anda kurtuldun ama malı bırakmak zorunda kaldın. Borçlu çıktın.",
+              "Son anda sıyrıldın ama iş yarıda kaldı; üstüne borçlu çıktın.",
           },
         }),
         c("Kesin olarak reddet", "Bu yollara girmeyeceksin.", {
@@ -1066,23 +1078,26 @@
         !s.partner.married &&
         s.partner.bond >= 55 &&
         s.year - (s.partner.met || s.year) >= 1,
-      title: "Birlikte bir gelecek",
+      // Gelenek: teklifi çoğunlukla erkek eder. Kadın oyuncuya partneri teklif eder; erkek oyuncu
+      // teklifi kendisi yapar ve ailesiyle "kız istemeye" gider.
+      title: (s) => (s.look === "woman" ? "Evlenme teklifi!" : "Teklif zamanı mı?"),
       text: (s) =>
-        s.partner.name +
-        " ile ilişkinizi resmileştirmeyi konuşuyorsunuz. Düğün büyük ya da küçük olabilir.",
-      choices: [
-        c("Küçük bir nikâh", "Sade bir kutlama.", {
+        s.look === "woman"
+          ? s.partner.name + " akşam yemeğinde birden diz çöktü; elinde küçük kadife bir kutu var. \"Benimle evlenir misin?\" Cevap verirsen düğün büyük ya da küçük olabilir."
+          : s.partner.name + " ile ilişkiniz ciddileşti; aileler de soruyor. Yüzüğü alıp teklif etme ve ailenle kız istemeye gitme zamanı mı?",
+      choices: (s) => [
+        c(s.look === "woman" ? "Evet! Küçük bir nikâh olsun" : "Teklif et · küçük bir nikâh", "Sade bir kutlama.", {
           marry: true,
           cost: 15000,
           m: 8,
         }),
-        c("Büyük düğün", "Herkes gelsin; borç olsa da.", {
+        c(s.look === "woman" ? "Evet! Büyük düğün yapalım" : "Teklif et · büyük düğün", "Herkes gelsin; borç olsa da.", {
           marry: true,
           cost: 120000,
           m: 10,
           people: 6,
         }),
-        c("Şimdilik bekleyelim", "Acele etmeyin.", { bond: -3, m: 1 }),
+        c(s.look === "woman" ? "Biraz düşünmem lazım" : "Şimdilik bekleyelim", "Acele etmeyin.", { bond: -3, m: 1 }),
       ],
     },
     {
@@ -1417,7 +1432,7 @@
         }),
         c(
           "Saç ekimi araştır",
-          "Saç ekimini İLİŞKİLER sekmesindeki berberden yaptırabilirsin.",
+          "Saç ekimini BEN › Stil bölümündeki berberden yaptırabilirsin.",
           { thinning: true, m: -1 },
         ),
       ],
@@ -1426,22 +1441,22 @@
       id: "barberChat",
       weight: 0.5,
       cooldown: 60,
-      title: "Berberde sohbet",
-      text: "Berber yeni bir model önerdi. Değişiklik iyi gelebilir.",
-      choices: (s) => [
-        c("Uzun bırak", "Bakımı biraz zor.", { hair: "long", cost: 500, m: 2 }),
-        c("Kıvırcık perma", "Cesur bir değişim.", {
-          hair: "curly",
-          cost: 1200,
-          m: 2,
-        }),
-        c(s.beard ? "Sakalı kes" : "Sakal bırak", "Yüzün değişsin.", {
-          beard: !s.beard,
-          cost: 300,
-          m: 1,
-        }),
-        c("Aynısı olsun", "Bildiğin yoldan şaşma.", { cost: 500 }),
-      ],
+      title: (s) => (s.look === "man" ? "Berberde sohbet" : "Kuaförde sohbet"),
+      text: (s) => (s.look === "man" ? "Berber yeni bir model önerdi. Değişiklik iyi gelebilir." : "Kuaförün yeni bir model önerdi; fön makinesinin sesi arasında ikna etmeye çalışıyor."),
+      choices: (s) =>
+        s.look === "man"
+          ? [
+              c("Uzun bırak", "Bakımı biraz zor.", { hair: "long", cost: 500, m: 2 }),
+              c("Kıvırcık perma", "Cesur bir değişim.", { hair: "curly", cost: 1200, m: 2 }),
+              c(s.beard ? "Sakalı kes" : "Sakal bırak", "Yüzün değişsin.", { beard: !s.beard, cost: 300, m: 1 }),
+              c("Aynısı olsun", "Bildiğin yoldan şaşma.", { cost: 500 }),
+            ]
+          : [
+              c("Kısa kesim (bob)", "Ferah ve modern.", { hair: "bob", cost: 900, m: 2 }),
+              c("Dalgalı fön ve bakım", "Kendini bakımlı hissedersin.", { hair: "wavy", cost: 1400, m: 3, esteem: 2 }),
+              c("Örgü yaptır", "Pratik ve şık.", { hair: "braid", cost: 1100, m: 2 }),
+              c("Sadece uçlarını al", "Bildiğin yoldan şaşma.", { cost: 700 }),
+            ],
     },
 
     // ================= PARA =================
@@ -1536,7 +1551,7 @@
           m: 3,
           theme: "security",
         }),
-        c("Nakde çevir", "Hemen kullanılabilir para.", { cash: 60000, m: 3 }),
+        c("Nakde çevir", "Hemen kullanılabilir para.", { cash: 60000, fame: 15, m: 3 }),
       ],
     },
     {
@@ -1660,16 +1675,14 @@
       cooldown: 150,
       minAge: 21,
       maxAge: 55,
-      when: (s) => !s.abroad && s.edu !== "ogrenci",
+      when: (s) => !s.abroad && s.edu !== "ogrenci" && !s.visa,
       title: "Başka bir ülkede fırsat",
       text: "Yurt dışında iş bulma ihtimali belirdi. Kurmaca bir Avrupa şirketi deneyimli çalışan arıyor. Yol masraflı ve belirsiz.",
       choices: (s, h) => [
         s.assets.passport
-          ? c("Berlin’e taşın", "Ücretler yüksek, giderler daha yüksek.", {
-              emigrate: "Berlin",
-              cost: 30000,
-              m: 5,
-              people: -5,
+          ? c("Göç dosyası aç", "Vize süreci başlar: evrak, randevu, mülakat, belirsiz sonuç.", {
+              visaStart: "Almanya",
+              theme: "journey",
             })
           : c(
               "Pasaport çıkar",
@@ -1683,7 +1696,7 @@
       id: "abroadWinter",
       weight: 3,
       cooldown: 52,
-      when: (s) => s.abroad && s.city === "Berlin",
+      when: (s) => s.abroad && HS.CITIES[s.city]?.region === "abroad",
       title: "Yeni şehirde kış",
       text: "Kış beklediğinden uzun ve yalnız geçiyor. Dil kursu çevreni genişletebilir.",
       choices: [
@@ -1701,11 +1714,11 @@
       cooldown: 4,
       when: (s) =>
         s.abroad &&
-        s.city === "Berlin" &&
+        HS.CITIES[s.city]?.region === "abroad" &&
         !working(s) &&
         !s.retired &&
         (s.apps || []).length < 3,
-      title: "Berlin’de iş arayışı",
+      title: (s) => HS.ek(s.city, "loc") + " iş arayışı",
       text: "Diploman ve deneyimin burada farklı değerlendiriliyor. Hangi kapıyı çalacaksın?",
       choices: (s, h) =>
         ["cafe", "factory", "office", "nurse"].map((j) =>

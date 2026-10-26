@@ -30,8 +30,8 @@
     // Aylık temel sepet (kira hariç), tek yetişkin bağımsız yaşarken.
     // TÜRK-İŞ Temmuz 2026: bekâr çalışanın yaşam maliyeti ₺47.758 (kira dahil).
     // Oyun bunu kira + sepet olarak böler; kalemler oyun varsayımıdır.
-    basket: { food: 11500, transport: 3628, other: 7800 },
-    familyContribution: 0.4, // aile yanında yaşarken sepetin bu kadarını öder
+    basket: { food: 11500, transport: 3628, other: 4300 }, // faturalar ayrı (js/systems/bank.js)
+    familyContribution: 0.3, // aile yanında yaşarken sepetin bu kadarını öder
     childMonthly: 9000, // 0-18 yaş çocuk başı aylık ek gider (oyun varsayımı)
     homeSize: 70, // m²
     abroadWage: 2.3, // yurt dışında ücret çarpanı (kurmaca)
@@ -73,9 +73,9 @@
       prop: "OFİS",
       icon: "▣",
       need: (s) =>
-        s.edu === "universite" || s.skill >= 14
+        s.edu === "universite" || (s.skill >= 14 && s.age >= 20 && s.worked)
           ? true
-          : "Üniversite diploması ya da 14 beceri gerekir.",
+          : "Üniversite diploması ya da (20 yaş üstü) en az 14 beceri ve iş tecrübesi gerekir.",
     },
     teacher: {
       name: "Öğretmen",

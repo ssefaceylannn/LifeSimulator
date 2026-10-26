@@ -1,0 +1,51 @@
+# iPhone için imzasız .ipa üretir (GitHub'ın macOS sunucusunda, Xcode ile).
+# Çıktı: Actions › bu çalıştırma › Artifacts › HayatSimulatoru-ipa
+# Not: İmzasız ipa doğrudan kurulamaz; Sideloadly / AltStore gibi bir araçla kendi
+# Apple kimliğinle imzalanarak kurulur (ayrıntı: APP_STORE.md).
+name: iOS IPA (imzasız)
+# Yalnızca elle başlatılır (GitHub › Actions › iOS IPA › Run workflow); gönderimle otomatik çalışmaz.
+on:
+  workflow_dispatch:
+jobs:
+  ipa:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Oyunu tek dosyada derle
+        run: node scripts/build-single.js && node scripts/build-app.js
+      - name: Capacitor kur
+        run: npm install --no-save --no-audit --no-fund @capacitor/core@8 @capacitor/cli@8 @capacitor/ios@8 @idleflowgames/capacitor-play-games@0.3 @capacitor-community/admob@8 @capgo/native-purchases@8
+      - name: iOS projesi oluştur
+        run: |
+          npx cap add ios
+          npx cap sync ios
+          cp assets/app/icon-1024.png ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Hayat Simülatörü" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :UIRequiresFullScreen bool true" ios/App/App/Info.plist || true
+          /usr/libexec/PlistBuddy -c "Add :GADApplicationIdentifier string ca-app-pub-3940256099942544~1458002511" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :NSUserTrackingUsageDescription string Bu izin, sana daha alakalı reklamlar gösterilmesi için kullanılır." ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Delete :UISupportedInterfaceOrientations" ios/App/App/Info.plist || true
+          /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations array" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait" ios/App/App/Info.plist
+      - name: Xcode ile derle (imzasız)
+        run: |
+          cd ios/App
+          if [ -d App.xcworkspace ]; then SRC="-workspace App.xcworkspace"; else SRC="-project App.xcodeproj"; fi
+          xcodebuild $SRC -scheme App -configuration Release -sdk iphoneos \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build | tail -n 40
+      - name: IPA paketle
+        run: |
+          mkdir -p Payload
+          cp -R ios/App/build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qry HayatSimulatoru-imzasiz.ipa Payload
+          ls -la HayatSimulatoru-imzasiz.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HayatSimulatoru-ipa
+          path: HayatSimulatoru-imzasiz.ipa
+          retention-days: 30

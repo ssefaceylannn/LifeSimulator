@@ -4,26 +4,93 @@
   "use strict";
   const c = (label, hint, fx = {}) => ({ label, hint, fx });
 
-  // Yedek olay da her seferinde farklı küçük bir an anlatır.
+  // Yedek olay: o hafta yeni bir konu kalmadıysa gelir. Her seferinde farklı bir giriş
+  // (mevsim, hava, gün, tanıdıklar, evdeki eşyalar) ve son kullanılmamış üç seçenek gösterir;
+  // böylece "aynı soru" hissi oluşmaz.
+  const FREE = [
+    ["Dizi aç, kanepeye uzan", "Stres −", { stress: -4, m: 1, kg: 0.05 }],
+    ["Bir arkadaşını ara", "Çevre +", { people: 1, m: 2 }],
+    ["Akşam yürüyüşü", "Sağlık +, stres −", { h: 1, stress: -3, kg: -0.05 }],
+    ["Kitap oku", "Beceri +", { skill: 1, stress: -2 }],
+    ["Evi topla", "İçin rahatlar.", { stress: -2, m: 1 }],
+    ["Ücretsiz çevrim içi ders izle", "Beceri +, yorgunluk", { skill: 1.5, stress: 1 }],
+    ["Telefonda vakit geçir", "Zaman uçup gider.", { m: 1, stress: 1, sleep: 1 }],
+    ["Erken yat", "Sağlık +", { h: 2, stress: -2, sleep: -3 }],
+    ["Mahalle kahvesine in", "₺60 · sohbet", { cost: 60, people: 1, m: 2 }],
+    ["Annene telefon et", "Aile bağı +", { m: 1, people: 0.5 }],
+    ["Kendine iyi bir kahve yap", "Küçük bir keyif.", { m: 2 }],
+    ["Haftaya plan yap", "Daha düzenli bir hafta.", { stress: -2, perf: 1 }],
+    ["Dolapları ayıkla, eskileri bağışla", "Ev ferahlar, gönül de.", { m: 2, people: 0.5, stress: -1 }],
+    ["Balkonda çay demle", "Sessiz bir saat.", { stress: -3, m: 1 }],
+    ["Yeni bir yemek tarifi dene", "₺350 · şans işi", { cost: 350, m: 2, h: 1 }],
+    ["Eski fotoğraflara bak", "Biraz hüzün, biraz gülümseme.", { m: 1, esteem: 1 }],
+    ["Sahilde / parkta bisiklete bin", "₺120 kiralama · sağlık +", { cost: 120, h: 2, stress: -3 }],
+    ["Podcast dinleyerek bulaşık/çamaşır hallet", "İki iş birden.", { stress: -1, skill: 0.5 }],
+    ["Bütçeni gözden geçir", "Harcamaların netleşir.", { stress: -1, sk: { finans: 1 } }],
+    ["Yabancı dil uygulamasında seri yap", "İngilizce +", { sk: { ingilizce: 1.5 }, stress: 1 }],
+    ["Bir müzeye / sergiye git", "₺250 · ilham", { cost: 250, m: 3, skill: 0.5 }],
+    ["Halı sahaya / spora katıl", "₺300 · çevre ve sağlık", { cost: 300, h: 1, people: 1, kg: -0.1 }],
+    ["Bakkalla iki laf et, ekmek al", "Mahalle bağı +", { cost: 30, rel: { bakkal: 3 }, m: 1 }],
+    ["Komşuya selam ver, hal hatır sor", "Komşuluk +", { rel: { komsu: 3 }, people: 0.5 }],
+    ["Uzun bir duş ve yüz maskesi", "Kendine bakım", { stress: -3, esteem: 1, cost: 80 }],
+    ["Bulmaca / sudoku çöz", "Zihin açılır.", { skill: 0.5, stress: -1 }],
+    ["Saksılardaki çiçekleri sula, toprağı değiştir", "₺150", { cost: 150, m: 2, stress: -2 }],
+    ["Online indirimlere göz at ama bir şey alma", "İrade testi", { m: -1, esteem: 1 }],
+    ["Gece sinemasına git", "₺220", { cost: 220, m: 3, sleep: 1 }],
+    ["Hiçbir şey yapma, tavanı izle", "Bazen gerek.", { stress: -2, m: 0 }],
+  ];
+  const PARTNER_FREE = [
+    ["Partnerinle yürüyüşe çık", "Bağ +", { bond: 3, h: 1, stress: -2 }],
+    ["Birlikte yemek yapın", "₺300 · bağ +", { cost: 300, bond: 4, m: 2 }],
+    ["Partnerine sürpriz çiçek al", "₺400 · bağ ++", { cost: 400, bond: 5, trust: 1 }],
+  ];
+  const KID_FREE = [
+    ["Çocuklarla kutu oyunu oyna", "Çocuk bağı +", { kidBond: 4, stress: -1 }],
+    ["Çocukları parka götür", "Çocuk bağı +, yorgunluk", { kidBond: 3, h: 1, stress: 1 }],
+  ];
+  const OPEN = [
+    (s, h) => "Bugün kimse bir şey istemedi, telefon da sustu. Bu saatleri nasıl geçireceksin?",
+    (s, h) => "İş güç bitti, önünde birkaç saat var.",
+    (s, h) => "Pencereden " + h.ek(s.city, "gen") + " sokaklarına baktın; herkes kendi telaşında.",
+    (s, h) => "Çay demlendi. Kafanda bir sürü yapılacak iş var ama hiçbiri acil değil.",
+    (s, h) => (s.week >= 23 && s.week <= 36 ? "Sıcak bir akşam; ağustos böcekleri bile yorgun." : s.week >= 48 || s.week <= 9 ? "Dışarıda soğuk bir rüzgâr var; kalorifer tıkırdıyor." : "Ilık bir akşam; hava ne sıcak ne soğuk.") + " Ne yapsan?",
+    (s, h) => "Apartmanın merdiveninden " + HS.castName(s, "komsu") + " seslendi: \"Bu akşam sessiz bir akşam!\" Haklı.",
+    (s, h) => "Telefonuna " + HS.castName(s, "enYakin") + " bir video atmış; gülerek düşündün: bu akşamı nasıl değerlendirsen?",
+    (s, h) => (s.partner ? s.partner.name + " kitabına gömülmüş. " : "") + "Evde tatlı bir sessizlik var.",
+    (s, h) => "Takvimde bu akşam için hiçbir şey yazmıyor. Nadir bir durum.",
+    (s, h) => "Yağmur camlara vuruyor. İçerisi sıcak.",
+    (s, h) => "Şarjın %100, enerjin %60. Plansız birkaç saat var.",
+    (s, h) => "Mahalle bakkalının önünde " + HS.castName(s, "bakkal") + " ile göz göze geldin; o da sakin bir gün geçiriyor.",
+  ];
+  const TITLES_N = ["Boş bir akşam", "Sessiz bir gece", "Akşam üstü", "Kendine kalan saatler", "Sakin bir akşam", "Plansız bir gece"];
+  const TITLES_D = ["Plansız bir gün", "Kendine kalan saatler", "Sakin bir öğleden sonra", "Boş bir öğle", "Nefes alınan bir gün"];
   HS.FALLBACK_EVENT = {
     id: "ordinary",
-    title: (s, h) =>
-      h.pick(["Sıradan bir hafta", "Sakin günler", "Takvimden bir yaprak"]),
-    text: (s, h) =>
-      h.pick([
-        "Sabah kahvesi, akşam haberleri. Hayat bu hafta kendi ritminde aktı.",
-        "Pencereden bakınca mahallede her şey aynı; sen biraz değişmişsin gibi.",
-        "Bu hafta dikkat çekici bir şey olmadı. Belki de iyi haber budur.",
-        "Otobüste yanındaki kişinin telefonundan eski bir şarkı çaldı; günün geri kalanında aklından çıkmadı.",
-      ]),
-    choices: [
-      c("Düzenini sürdür", "Bu hafta sakin geçsin.", { m: 1 }),
-      c("Kendine küçük bir iyilik yap", "Bir kahve, bir kitap.", {
-        cost: 250,
-        m: 3,
-      }),
-      c("Birini ara", "Uzun zamandır konuşmadığın biri.", { people: 1, m: 2 }),
-    ],
+    title: (s, h) => h.pick(HS.isNight && HS.isNight(s) ? TITLES_N : TITLES_D),
+    text: (s, h) => {
+      // Son kullanılan girişleri tekrar etme
+      const used = (s.freeOpen = s.freeOpen || []);
+      let idx = OPEN.map((f, i) => i).filter((i) => !used.includes(i));
+      if (!idx.length) idx = OPEN.map((f, i) => i);
+      const i = idx[(Math.random() * idx.length) | 0];
+      used.push(i);
+      if (used.length > OPEN.length - 2) used.shift();
+      return OPEN[i](s, h);
+    },
+    choices: (s, h) => {
+      let pool = FREE.slice();
+      if (s.partner) pool = pool.concat(PARTNER_FREE);
+      if (s.children && s.children.length) pool = pool.concat(KID_FREE);
+      // Son 18 seçenek gösterilmesin
+      const used = (s.freeUsed = s.freeUsed || []);
+      let fresh = pool.filter((x) => !used.includes(x[0]));
+      if (fresh.length < 3) fresh = pool;
+      const out = [];
+      while (out.length < 3 && fresh.length) out.push(fresh.splice((Math.random() * fresh.length) | 0, 1)[0]);
+      out.forEach((x) => used.push(x[0]));
+      while (used.length > 18) used.shift();
+      return out.map((x) => c(x[0], x[1], { ...x[2] }));
+    },
   };
 
   HS.EVENTS.push(
@@ -31,6 +98,7 @@
     {
       id: "moveOut",
       priority: 60,
+      nag: true, // "biraz daha kal" denirse her seferinde daha geç tekrar sorulur
       cooldown: 26,
       when: (s) =>
         s.housing === "aile" &&
@@ -187,25 +255,6 @@
           cost: 200,
           m: 2,
           people: 1,
-        }),
-      ],
-    },
-    {
-      id: "lottery",
-      weight: 0.4,
-      cooldown: 104,
-      title: "Yılbaşı biletinden ikramiye",
-      text: "Kurmaca piyangodan küçük bir ikramiye çıktı.",
-      choices: [
-        c("Bankaya koy", "Bir gün lazım olur.", (s) => ({
-          cash: 15000,
-          save: 15000 * s.idx.cpi,
-          theme: "security",
-        })),
-        c("Hemen harca", "Bir kerelik sevinç.", {
-          cash: 15000,
-          cost: 12000,
-          m: 8,
         }),
       ],
     },

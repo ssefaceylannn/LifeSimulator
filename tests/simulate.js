@@ -60,6 +60,7 @@ const keys = new Set(),
   dimCount = {};
 let weeks = 0,
   actCount = 0;
+const tabUse = new Map();
 const t0 = Date.now();
 for (let n = 0; n < N; n++) {
   const strat = n % 3 === 0 ? "rastgele" : "kişilik";
@@ -71,9 +72,12 @@ for (let n = 0; n < N; n++) {
     look: ["woman", "man", "neutral"][n % 3],
   });
   HS.nextEvent(s);
+  // Çoğu bot faturalarını otomatik öder; bir kısmı unutur (gecikme ve kesinti sınansın).
+  s.billAuto = Math.random() < 0.8;
+  if (s.card) s.card.auto = "full";
   // Sekme eylemlerini taklit et: zaman zaman ev/araba al, birikim yap.
   let guard = 0;
-  while (s.alive && guard++ < 6000) {
+  while (s.alive && guard++ < 30000) {
     // Boş zaman: botlar rastgele etkinlik yapar (sürprizler dahil)
     for (let k = 0; k < 3 && s.free > 0; k++) {
       const acts = HS.ACTIVITIES.filter((a) => !a.when || a.when(s));
@@ -99,6 +103,41 @@ for (let n = 0; n < N; n++) {
       );
     }
     s.scenes.length = 0;
+    // Sekme sistemlerini rastgele kullan (her eylem kendi kontrolünden geçer).
+    if (Math.random() < 0.12) {
+      const cpi = s.idx.cpi;
+      const tries = [
+        { license: 1 },
+        { passport: 1 },
+        { travelVisa: 1 },
+        { visaStart: HS.pick(Object.keys(HS.COUNTRIES)) },
+        s.visa && s.visa.stage === "evrak" ? { visaDoc: HS.pick(HS.VISA_DOCS).id } : null,
+        s.visa && s.visa.stage === "evrak" ? { visaAppt: 1 } : null,
+        s.visa && s.visa.stage === "onay" ? { visaMove: 1 } : null,
+        { invest: { k: HS.pick(Object.keys(HS.INVEST)), amt: Math.round(s.cash * 0.1) } },
+        { divest: { k: HS.pick(Object.keys(HS.INVEST)), frac: 0.5 } },
+        { course: HS.pick(HS.COURSES).id },
+        { tour: HS.pick(Object.keys(HS.TOURS)) },
+        { trip: HS.pick(HS.HOME_CITIES) },
+        { abroadTrip: HS.pick(Object.keys(HS.TRAVEL)) },
+        { buyProp: { city: HS.pick(HS.HOME_CITIES), type: "daire" } },
+        s.props && s.props[0] ? { rentOut: s.props[0].id } : null,
+        { ins: { k: "health", on: true } },
+        s.job === "none" ? { coApply: { co: HS.pick(HS.COMPANIES).id, job: HS.pick(["office", "cafe", "factory"]), relocate: true } } : null,
+        s.look === "man" && !s.mil ? { mil: HS.pick(["serving", "bedelli", "tecil"]) } : null,
+        { cardApply: 1 },
+        s.card ? { cardPay: HS.pick(["stmt", "min", "all"]) } : null,
+        { loanApply: { kind: "ihtiyac", amt: Math.floor(HS.loanMax(s, "ihtiyac") * 0.3 / 1000) * 1000, months: 24 } },
+        { depositOpen: { amt: Math.floor(s.cash * 0.3), months: HS.pick([1, 3, 6, 12]) } },
+        s.bills.length ? { billPay: "all" } : null,
+        { gymBuy: HS.pick([1, 3, 6, 12]) },
+        { itemBuy: { id: HS.pick(Object.keys(HS.ITEMS)), inst: s.card ? HS.pick([1, 3, 6]) : 1 } },
+        s.kin.some((k) => k.alive) ? { visit: HS.pick(s.kin.filter((k) => k.alive)).id } : null,
+      ].filter(Boolean);
+      const fx = HS.pick(tries);
+      if (HS.quickAction(s, fx) === true) tabUse.set(Object.keys(fx)[0], (tabUse.get(Object.keys(fx)[0]) || 0) + 1);
+      s.scenes.length = 0;
+    }
     // EŞYALAR sekmesini taklit et: parası yeten tutumlu kişi ev alır.
     if (
       (P.para > 0.5 || P.aile > 1) &&
@@ -213,6 +252,7 @@ console.log(
   actCount,
   "| hafta başına",
   (actCount / weeks).toFixed(2),
+  "\nSekme eylemleri: " + [...tabUse].map(([k, v]) => k + ":" + v).join(" "),
 );
 console.log("Görülen farklı olay:", ev.length, "/", HS.EVENTS.length + 2);
 console.log(
