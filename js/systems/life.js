@@ -54,7 +54,7 @@
       s.scenes.push({ t: "Salon üyeliğin bitti", p: "Turnike kartın artık okumuyor. Yenilemek için BEN sekmesine bak.", art: "◷" });
     }
     // Deneyim
-    s.xp += 2;
+    s.xp += 2 * (HS.CFG ? HS.CFG.xpScale : 1);
   });
 
   // ---- Seviye ----
@@ -70,7 +70,7 @@
   HS.HOOKS.weekly.push((s) => {
     const n = (s.ach || []).length;
     if (n > (s.achXp || 0)) {
-      s.xp += (n - (s.achXp || 0)) * 25;
+      s.xp += (n - (s.achXp || 0)) * 25 * (HS.CFG ? HS.CFG.xpScale : 1);
       s.achXp = n;
     }
     const lv = HS.level(s);
@@ -91,13 +91,13 @@
   const prevBuy = HS.CAN.buy;
   HS.CAN.buy = (s, v, fx) => {
     const need = HS.levelNeed(fx);
-    if (need && HS.level(s) < need) return "Seviye " + need + " gerekir (şu an " + HS.level(s) + ")";
+    if (need && (!HS.CFG || HS.CFG.levelLocks) && HS.level(s) < need) return "Seviye " + need + " gerekir (şu an " + HS.level(s) + ")";
     return prevBuy ? prevBuy(s, v, fx) : true;
   };
   const prevBuyProp = HS.CAN.buyProp;
   HS.CAN.buyProp = (s, v, fx) => {
     const need = HS.levelNeed(fx);
-    if (need && HS.level(s) < need) return "Seviye " + need + " gerekir (şu an " + HS.level(s) + ")";
+    if (need && (!HS.CFG || HS.CFG.levelLocks) && HS.level(s) < need) return "Seviye " + need + " gerekir (şu an " + HS.level(s) + ")";
     return prevBuyProp ? prevBuyProp(s, v, fx) : true;
   };
 
@@ -144,7 +144,7 @@
   HS.CAN.itemBuy = (s, v) => {
     const it = HS.ITEMS[v.id];
     if (!it) return "Ürün yok.";
-    if (it.lv && HS.level(s) < it.lv) return "Seviye " + it.lv + " gerekir (şu an " + HS.level(s) + ")";
+    if (it.lv && (!HS.CFG || HS.CFG.levelLocks) && HS.level(s) < it.lv) return "Seviye " + it.lv + " gerekir (şu an " + HS.level(s) + ")";
     if (!it.consumable && s.items.includes(v.id)) return "Zaten sende var.";
     if (it.gift && !s.partner) return "Hediye edecek bir partnerin yok.";
     const price = HS.itemPrice(s, v.id, v.inst || 1);

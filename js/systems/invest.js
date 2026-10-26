@@ -62,7 +62,7 @@
       if (v < 1) continue;
       const d = HS.INVEST[k];
       let pct;
-      if (d.up) pct = r() < HS.UP_CHANCE ? between(d.up[0], d.up[1]) : -between(d.down[0], d.down[1]);
+      if (d.up) pct = r() < (HS.CFG ? HS.CFG.investUp / 100 : HS.UP_CHANCE) ? between(d.up[0], d.up[1]) : -between(d.down[0], d.down[1]);
       else if (k === "altin") pct = cpiM * 1.05 + (r() - 0.5) * 0.09;
       else pct = cpiM * 0.95 + (r() - 0.5) * 0.05;
       s.invLast[k] = pct;
@@ -94,7 +94,8 @@
     if (s.age < 18) return "18 yaşından küçükler bahis oynayamaz.";
     if (s.cash < v.stake) return "Bu kadar nakit yok.";
     const thisWeek = s.bets.recent.filter((w) => w === s.weeks).length;
-    if (thisWeek >= 3) return "Bu hafta bahis sınırına ulaştın (3).";
+    const lim = HS.CFG ? HS.CFG.betLimit : 3;
+    if (thisWeek >= lim) return "Bu hafta bahis sınırına ulaştın (" + lim + ").";
     return true;
   };
   HS.FX.bet = (s, v) => {

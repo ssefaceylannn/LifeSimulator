@@ -106,7 +106,16 @@ const assert = (c, m) => {
   const sc = await p.evaluate(() => ({ v: HS.ui.active.view, r: HS.ui.active.clock.room, views: HS.Art.views(HS.ui.active).map((x) => x.id) }));
   assert(!sc.views.includes(sc.r) || sc.v === sc.r, "sahne olayın odasına geçmedi: " + JSON.stringify(sc));
   assert(!(await p.$("#viewChips")), "elle sahne düğmeleri hâlâ var");
-  // Bütçe: tutumlu yaşam gideri düşürür
+  // Seçimlerde para etiketi görünür
+  await p.click(".tab[data-tab=life]");
+  assert(await p.$("#choices .mtag"), "seçimlerde para etiketi yok");
+  // Aile evinde temel gider yok
+  assert((await p.evaluate(() => HS.weeklyBudget(HS.ui.active).out)) < 1 || (await p.evaluate(() => HS.ui.active.housing)) !== "aile", "aile evinde gider var");
+  // Bütçe: tutumlu yaşam gideri düşürür (kendi evinde)
+  await p.evaluate(() => {
+    HS.ui.active.housing = "kira";
+    HS.ui.render();
+  });
   await p.click(".tab[data-tab=money]");
   const out0 = await p.evaluate(() => HS.weeklyBudget(HS.ui.active).out);
   await p.click('#panel .style-row:has-text("Yemek") button:has-text("Tutumlu")');
@@ -161,10 +170,12 @@ const assert = (c, m) => {
   // Yatırım ve bahis
   await p.click(".tab[data-tab=money]");
   await sub("Yatırım");
-  await p.click('#panel .inv:has-text("Hisse senedi") .mini:has-text("Al %10")');
+  await p.fill("#invAmt", "1234");
+  await p.click('#panel .inv:has-text("Hisse senedi") .mini:has-text("Tutarı al")');
+  assert(Math.abs((await p.evaluate(() => HS.ui.active.invCost.borsa)) - 1234) < 1, "elle yazılan tutarla alım olmadı");
   assert((await p.evaluate(() => HS.invVal(HS.ui.active, "borsa"))) > 0, "borsa alımı olmadı");
-  const betBtn = await p.$("#panel .bet .mini:not([disabled])");
-  await betBtn.click();
+  await p.fill("#betAmt", "750");
+  await p.click('#panel .bet:has-text("Tek maç") .mini:has-text("Yazdığım tutarla")');
   while (await p.isVisible("#event")) await p.click("#eventContinue");
   assert((await p.evaluate(() => HS.ui.active.bets.n)) === 1, "bahis oynanmadı");
   // Banka: kart, vadeli, kredi, fatura
@@ -251,6 +262,17 @@ const assert = (c, m) => {
   await p.click(".tab[data-tab=skills]");
   await clickRow("İngilizce");
   assert((await p.evaluate(() => HS.ui.active.courses.length)) >= 1, "kursa yazılınamadı");
+  // Oyun dengesi düzenleyicisi
+  await p.click("#settingsBtn");
+  await p.click("#cfgToggle");
+  await p.fill('[data-cfg="startCash"]', "75000");
+  await p.click("#cfgSave");
+  assert((await p.evaluate(() => HS.CFG.startCash)) === 75000, "oyun dengesi kaydedilmedi");
+  await shot(p, "07-oyun-dengesi");
+  await p.click("#cfgReset");
+  await p.click("#confirmYes");
+  assert((await p.evaluate(() => HS.CFG.startCash)) === 50000, "varsayılana dönülmedi");
+  await p.click("#backBtn");
   // Ayarlar
   await p.click("#settingsBtn");
   assert(await p.isVisible("#settings"), "ayarlar açılmadı");

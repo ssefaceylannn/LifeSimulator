@@ -133,11 +133,11 @@
       outfits: look === "man" ? ["gunluk", "gomlek"] : ["gunluk", "elbise"],
       birthCity: city,
       city,
-      age: 18,
+      age: HS.CFG ? HS.CFG.startAge : 18,
       year: E().startYear,
       week: 1,
       weeks: 0,
-      cash: E().startCash,
+      cash: HS.CFG ? HS.CFG.startCash : E().startCash,
       scenario: pick(scenarioIds),
       seed: (rnd() * 1000) | 0,
       created: Date.now(),
@@ -311,7 +311,7 @@
       (HS.wageMod ? HS.wageMod(s, job, co) : 1);
     if (s.policy === "enterprise" && (job === "business" || job === "factory"))
       p *= 1.05;
-    return p;
+    return p * (HS.CFG ? HS.CFG.wageScale : 1);
   }
   function pension(s) {
     const base = s.worked && s.lastJob ? wage(s, s.lastJob, 0) * 0.6 : 0;
@@ -320,7 +320,7 @@
   function rentFull(s) {
     let r = cityData(s).rent * s.idx.housing;
     if (s.policy === "housing") r *= 0.92;
-    return r;
+    return r * (HS.CFG ? HS.CFG.rentScale : 1);
   }
   function rentShare(s) {
     if (s.housing === "kira") return rentFull(s) * s.rentMult;
@@ -369,7 +369,9 @@
     // Oyuncunun seçtiği yaşam tarzı (js/systems/budget.js): tutumlu, normal, rahat
     const st = HS.styleMul ? HS.styleMul(s) : { food: 1, transport: 1, other: 1 };
     let total = b.food * s.idx.food * st.food + transport * st.transport + b.other * s.idx.cpi * st.other;
-    if (s.housing === "aile") total *= E().familyContribution;
+    // Aile evinde giderlerin yalnızca ayarlanan kadarı (varsayılan %0) oyuncuya düşer.
+    if (s.housing === "aile") total *= HS.CFG ? HS.CFG.familyShare / 100 : E().familyContribution;
+    else total *= HS.CFG ? HS.CFG.livingScale : 1;
     if (s.housing === "ev") total += rentFull(s) * 0.05; // aidat ve bakım
     return total * abroadMul(s, "cost");
   }
@@ -932,6 +934,20 @@
   function resolveText(v, s) {
     return typeof v === "function" ? v(s, ctx(s)) : v;
   }
+  // Olay seçeneklerindeki para miktarlarını oyun dengesi ayarlarıyla ölçekler.
+  function scaleMoney(fx) {
+    const C = HS.CFG;
+    if (!C || !fx) return;
+    const one = (f) => {
+      if (f.cost) f.cost *= C.eventCostScale;
+      if (f.cash) f.cash *= f.cash > 0 ? C.eventGainScale : C.eventCostScale;
+    };
+    one(fx);
+    if (fx.chance) {
+      if (fx.chance.win) one((fx.chance.win = { ...fx.chance.win }));
+      if (fx.chance.lose) one((fx.chance.lose = { ...fx.chance.lose }));
+    }
+  }
   // Olay tanımını, kayda yazılabilir düz bir nesneye çevirir.
   function materialize(def, s) {
     const raw =
@@ -939,6 +955,7 @@
     const c = raw.filter(Boolean).map((ch) => {
       const fx =
         typeof ch.fx === "function" ? ch.fx(s, ctx(s)) : { ...(ch.fx || {}) };
+      scaleMoney(fx);
       if (ch.theme) fx.theme = ch.theme;
       const ok = ch.need ? ch.need(s) : true;
       const can = ok === true ? canApply(s, fx) : ok;
@@ -1016,7 +1033,7 @@
       const v = Math.max(
         0,
         typeof d.weight === "function" ? d.weight(s) : (d.weight ?? 1),
-      );
+      ) * (/^fate/.test(d.id) && HS.CFG ? HS.CFG.fateScale : 1);
       total += v;
       return v;
     });
@@ -1211,7 +1228,7 @@
     weeklyMoney(s);
     weeklyLife(s);
     runHooks("weekly", s);
-    if (s.weeks % 4 === 0) runHooks("monthly", s);
+    if (HS.isMonthTurn(s)) runHooks("monthly", s);
     s.lastWeek = {
       in: s.ledger.in,
       out: s.ledger.out,
@@ -1229,21 +1246,27 @@
   }
   HS.week = week;
 
+  // Ay dönümü: yılda 12 kez (52 hafta / 12).
+  HS.isMonthTurn = (s) => Math.floor(s.weeks / WEEKS_PER_MONTH) !== Math.floor((s.weeks - 1) / WEEKS_PER_MONTH);
   function weeklyMoney(s) {
     const b = budget(s);
-    let income = b.income;
-    if (b.volatile) income *= 1 + (rnd() * 2 - 1) * b.volatile;
-    income = Math.max(0, income);
-    if (s.edu === "ogrenci" && s.job !== "none") income *= 0.5; // yarı zamanlı
     let living = b.living;
     if (s.transitPass > 0) {
       living -= (E().basket.transport * s.idx.transport * 0.12) / WEEKS_PER_MONTH;
       s.transitPass--;
     }
-    earn(s, s.retired ? "Emekli maaşı" : s.job !== "none" ? "Maaş" : "Gelir", income);
-    book(s, "Yaşam giderleri", living);
-    book(s, "Kira", b.rent);
-    book(s, "Çocuk giderleri", b.kids);
+    // Maaş, kira ve yaşam giderleri ayda bir işlenir (Türkiye'de maaş ve kira aylıktır).
+    if (HS.isMonthTurn(s)) {
+      const M = WEEKS_PER_MONTH;
+      let income = b.income * M;
+      if (b.volatile) income *= 1 + (rnd() * 2 - 1) * b.volatile;
+      income = Math.max(0, income);
+      if (s.edu === "ogrenci" && s.job !== "none") income *= 0.5; // yarı zamanlı
+      earn(s, s.retired ? "Emekli maaşı" : s.job !== "none" ? "Aylık maaş" : "Gelir", income);
+      book(s, "Aylık yaşam giderleri", living * M);
+      book(s, "Aylık kira", b.rent * M);
+      book(s, "Çocuk giderleri (aylık)", b.kids * M);
+    }
     if (s.mortgage) {
       const interest = s.mortgage.left * s.mortgage.r;
       const p = Math.min(s.mortgage.weekly, s.mortgage.left + interest);

@@ -2032,3 +2032,95 @@ html.big-text .fine {
   display: grid;
   gap: 6px;
 }
+
+/* ---------- Para etiketi, tutar kutusu, oyun dengesi ---------- */
+.mtag {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+.mtag i {
+  font-style: normal;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.mtag i.neg {
+  background: #fde8e6;
+  color: var(--coral);
+}
+.mtag i.pos {
+  background: #e2f5ec;
+  color: var(--green);
+}
+.mtag i.bank {
+  background: #e8f0ff;
+  color: var(--blue-deep);
+}
+.mtag i.free {
+  background: #f0f3f8;
+  color: var(--muted);
+}
+.mtag small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.amount-box {
+  display: grid;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 10px 12px;
+}
+.amount-box label {
+  font-weight: 800;
+  font-size: 13px;
+}
+.amount-box input,
+.cfg-row input {
+  width: 100%;
+  min-width: 0;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 9px 10px;
+  font: 700 16px var(--body);
+  background: #fbfdff;
+}
+.amount-box small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.cfg-group {
+  font: 800 11px var(--body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-top: 8px;
+}
+.cfg-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.cfg-row b {
+  display: block;
+  font-size: 14px;
+}
+.cfg-row small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.cfg-row input.changed {
+  border-color: var(--gold);
+  background: #fffbea;
+}

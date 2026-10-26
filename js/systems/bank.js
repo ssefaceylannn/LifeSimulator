@@ -19,7 +19,7 @@
   const cpiRate = (s) => (HS.rate ? HS.rate(s, "cpi") : 0.3);
   // Oranlar enflasyon senaryosuna göre değişir; 2026 seviyesine kalibre.
   HS.bankRates = (s) => {
-    const k = clamp(cpiRate(s) / 0.3, 0.35, 2.5);
+    const k = clamp(cpiRate(s) / 0.3, 0.35, 2.5) * (HS.CFG ? HS.CFG.bankRateScale : 1);
     return {
       card: 0.0325 * k,
       cardLate: 0.0355 * k,
@@ -220,7 +220,7 @@
     const size = { daire: 1, kira: 0.9, paylasim: 1, mustakil: 1.5, villa: 2.4, yurtdisi: 1, aile: 1 }[ht] || 1;
     const out = [];
     for (const b of BILLS) {
-      if (s.housing === "aile" && !b.personal) continue;
+      if (s.housing === "aile" && (!b.personal || (HS.CFG && !HS.CFG.familyBills))) continue;
       if (b.apt && !["daire", "kira", "paylasim", "yurtdisi"].includes(ht)) continue;
       let amt = b.amt * b.season[season] * s.idx.cpi;
       if (b.k === "dogalgaz") amt *= cold * size;
@@ -229,7 +229,7 @@
       if (!b.personal) amt *= share;
       if (city.region === "abroad") amt *= HS.COUNTRIES && HS.COUNTRIES[city.country] ? HS.COUNTRIES[city.country].costMul * 0.5 : 2;
       if (b.k === "telefon" && s.items && s.items.includes("telefon")) amt *= 1.3;
-      out.push({ k: b.k, name: b.name, amt: Math.round(amt) });
+      out.push({ k: b.k, name: b.name, amt: Math.round(amt * (HS.CFG ? HS.CFG.billScale : 1)) });
     }
     return out;
   };

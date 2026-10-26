@@ -34,6 +34,9 @@
     meSub = "ben",
     depMonths = 3,
     loanSel = { kind: "ihtiyac", frac: 0.5, months: 24 },
+    invAmt = 0,
+    betAmt = 0,
+    cfgOpen = false,
     moneySub = "butce",
     lastWeekOpen = false,
     create = { look: "woman", skin: 1, hairColor: "kahve", hair: "long" },
@@ -344,6 +347,26 @@
   }
 
   // ---------- HAYAT ----------
+  // Bir seçimin paraya etkisi: kırmızı harcama, yeşil kazanç, mavi bankaya aktarım.
+  function moneyTag(s, fx) {
+    if (!fx) return "";
+    const k = fx.raw ? 1 : s.idx.cpi;
+    let out = (fx.cost || 0) * k + (fx.cash < 0 ? -fx.cash * k : 0),
+      inn = fx.cash > 0 ? fx.cash * k : 0;
+    if (fx.chance && !out && !inn) {
+      const w = fx.chance.win || {},
+        l = fx.chance.lose || {};
+      const wk = w.raw ? 1 : s.idx.cpi,
+        lk = l.raw ? 1 : s.idx.cpi;
+      if (w.cash > 0) inn = w.cash * wk;
+      if (l.cash < 0 || l.cost) out = (l.cost || 0) * lk + (l.cash < 0 ? -l.cash * lk : 0);
+      if (inn || out) return `<span class="mtag">${inn ? `<i class="pos">+${money(inn)}</i>` : ""}${out ? `<i class="neg">−${money(out)}</i>` : ""}<small>şansa bağlı</small></span>`;
+    }
+    if (fx.save) return `<span class="mtag"><i class="bank">→ banka ${money(fx.save)}</i></span>`;
+    if (out) return `<span class="mtag"><i class="neg">−${money(out)}</i></span>`;
+    if (inn) return `<span class="mtag"><i class="pos">+${money(inn)}</i></span>`;
+    return `<span class="mtag"><i class="free">ücretsiz</i></span>`;
+  }
   function lifeTab(s) {
     const ev = s.current;
     const seasonName = { kis: "Kış", ilkbahar: "İlkbahar", yaz: "Yaz", sonbahar: "Sonbahar" }[Art.season(s)];
@@ -355,7 +378,7 @@
     html += `<div class="choice-list" id="choices">${ev.c
       .map(
         (c, i) =>
-          `<button class="choice" data-c="${i}"${c.off ? " disabled" : ""}><span class="bullet">${String.fromCharCode(65 + i)}</span><span><b>${esc(c.label)}</b><small>${c.off ? needHtml(c.off) : esc(c.hint)}</small></span>${c.odds != null && !c.off ? `<span class="odds-tag" title="Başarı şansı">🎲 %${c.odds}</span>` : ""}</button>`,
+          `<button class="choice" data-c="${i}"${c.off ? " disabled" : ""}><span class="bullet">${String.fromCharCode(65 + i)}</span><span><b>${esc(c.label)}</b><small>${c.off ? needHtml(c.off) : esc(c.hint)}</small>${c.off ? "" : moneyTag(s, c.fx)}</span>${c.odds != null && !c.off ? `<span class="odds-tag" title="Başarı şansı">🎲 %${c.odds}</span>` : ""}</button>`,
       )
       .join("")}</div>`;
     const last = (s.evDone || 0) + 1 >= (s.weekPlan || 4);
@@ -931,7 +954,8 @@
     if (moneySub === "banka") return html + bankPanel(s);
     if (moneySub === "yatirim") {
     // Yatırımlar
-    html += sectionTitle("Yatırımlar", "Riskli araçlarda her ay %30 kazanç, %70 kayıp ihtimali");
+    html += sectionTitle("Yatırımlar", "Riskli araçlarda her ay %" + Math.round(HS.CFG.investUp) + " kazanç, %" + (100 - Math.round(HS.CFG.investUp)) + " kayıp ihtimali");
+    html += `<div class="amount-box"><label for="invAmt">Tutar (₺)</label><input id="invAmt" type="number" inputmode="numeric" min="1" step="100" placeholder="Örn. 2500" value="${invAmt || ""}"><small>Nakit ${money(s.cash)} · bir yatırımın altındaki "Tutarı al" ya da "Tutarı sat" ile uygula</small></div>`;
     html += `<div class="inv-list">${Object.entries(HS.INVEST)
       .map(([k, d]) => {
         const v = HS.invVal(s, k);
@@ -945,14 +969,34 @@
           return `<button class="mini"${c === true && amt > 0 ? on(() => act(fx)) : " disabled"}>Al %${f * 100}</button>`;
         };
         const sell = (f) => `<button class="mini"${v > 1 ? on(() => act({ divest: { k, frac: f } })) : " disabled"}>Sat ${f === 1 ? "hepsi" : "%" + f * 100}</button>`;
-        return `<div class="inv">${Art.icon(d.icon, 30)}<div><b>${esc(d.name)}</b><small>Risk: ${esc(d.risk)} · ${esc(d.desc)}</small><small>Değer ${money(v)}${v > 1 ? ` · <span class="${pl >= 0 ? "pos" : "neg"}">${pl >= 0 ? "+" : "−"}${money(Math.abs(pl))}</span>` : ""}${last != null && v > 1 ? ` · geçen ay ${last >= 0 ? "▲" : "▼"}%${Math.abs(Math.round(last * 100))}` : ""}</small><div class="mini-row">${buy(0.1)}${buy(0.25)}${sell(0.5)}${sell(1)}</div></div></div>`;
+        const typed = () => {
+          const v = Math.round(+$("invAmt").value || 0);
+          invAmt = v;
+          return v;
+        };
+        const manual = `<button class="mini"${on(() => {
+          const v = typed();
+          if (v <= 0) return toast("Önce bir tutar yaz.", "error");
+          act({ invest: { k, amt: v } });
+        })}>Tutarı al</button><button class="mini"${v > 1 ? on(() => {
+          const t = typed();
+          if (t <= 0) return toast("Önce bir tutar yaz.", "error");
+          act({ divest: { k, frac: Math.min(1, t / v) } });
+        }) : " disabled"}>Tutarı sat</button>`;
+        return `<div class="inv">${Art.icon(d.icon, 30)}<div><b>${esc(d.name)}</b><small>Risk: ${esc(d.risk)} · ${esc(d.desc)}</small><small>Değer ${money(v)}${v > 1 ? ` · <span class="${pl >= 0 ? "pos" : "neg"}">${pl >= 0 ? "+" : "−"}${money(Math.abs(pl))}</span>` : ""}${last != null && v > 1 ? ` · geçen ay ${last >= 0 ? "▲" : "▼"}%${Math.abs(Math.round(last * 100))}` : ""}</small><div class="mini-row">${manual}${buy(0.1)}${buy(0.25)}${sell(0.5)}${sell(1)}</div></div></div>`;
       })
       .join("")}</div>`;
     // Bahis
-    html += sectionTitle("Yasal bahis bayisi (kurmaca)", "18 yaş üstü · haftada en fazla 3 kupon · bilanço " + money(s.bets.net));
+    html += sectionTitle("Yasal bahis bayisi (kurmaca)", "18 yaş üstü · haftada en fazla " + HS.CFG.betLimit + " kupon · bilanço " + money(s.bets.net));
+    html += `<div class="amount-box"><label for="betAmt">Kupon tutarı (₺)</label><input id="betAmt" type="number" inputmode="numeric" min="1" step="50" placeholder="Örn. 750" value="${betAmt || ""}"><small>Yazıp aşağıdaki kuponlardan "Yazdığım tutarla oyna"ya bas</small></div>`;
     const stakes = [100, 500, 2000, 10000].map((n) => Math.round(n * cpi));
     html += `<div class="bets">${Object.entries(HS.BETS)
-      .map(([k, b]) => `<div class="bet"><b>${esc(b.name)}</b><small>Oran ${b.odds.toFixed(2)} · tutma ihtimali %${Math.round(b.p * 100)} · ${esc(b.desc)}</small><div class="mini-row">${stakes.map((st) => `<button class="mini"${HS.canApply(s, { bet: { type: k, stake: st } }) === true ? on(() => act({ bet: { type: k, stake: st } })) : " disabled"}>${money(st)}</button>`).join("")}</div></div>`)
+      .map(([k, b]) => `<div class="bet"><b>${esc(b.name)}</b><small>Oran ${b.odds.toFixed(2)} · tutma ihtimali %${Math.round(b.p * 100)} · ${esc(b.desc)}</small><div class="mini-row"><button class="mini"${on(() => {
+        const v = Math.round(+$("betAmt").value || 0);
+        betAmt = v;
+        if (v <= 0) return toast("Önce bir tutar yaz.", "error");
+        act({ bet: { type: k, stake: v } });
+      })}>Yazdığım tutarla oyna</button>${stakes.map((st) => `<button class="mini"${HS.canApply(s, { bet: { type: k, stake: st } }) === true ? on(() => act({ bet: { type: k, stake: st } })) : " disabled"}>${money(st)}</button>`).join("")}</div></div>`)
       .join("")}</div><p class="fine">Bahis bağımlılık yapabilir. Oyundaki oranlar bayinin her zaman kazandığı biçimde ayarlıdır.</p>`;
       return html;
     }
@@ -1013,14 +1057,17 @@
     return html;
   }
   function budgetPanel(s) {
+    const W = HS.WEEKS_PER_MONTH;
     const wb = HS.weeklyBudget(s);
+    const mo = (v) => money(v * W);
     let html = card(
-      "Haftalık bütçe",
-      `<div class="led in"><span>${s.retired ? "Emekli maaşı" : s.job !== "none" ? "Maaş (haftalık)" : "Düzenli gelir"}</span><b>+${money(wb.income)}</b></div>` +
-        wb.lines.map(([k, v]) => `<div class="led out"><span>${esc(k)}</span><b>−${money(v)}</b></div>`).join("") +
-        `<div class="led total"><span>Haftalık fark</span><b class="${wb.net >= 0 ? "pos" : "neg"}">${wb.net >= 0 ? "+" : "−"}${money(Math.abs(wb.net))}</b></div>` +
-        (wb.net < 0 && s.cash > 0 ? `<p class="fine">Bu gidişle nakdin yaklaşık ${Math.max(1, Math.floor(s.cash / -wb.net))} hafta yeter.</p>` : "") +
-        (s.housing === "aile" ? '<p class="fine">Aile evinde yaşıyorsun: kira yok, ev giderlerinin yalnızca bir kısmına katkı veriyorsun.</p>' : ""),
+      "Aylık bütçe",
+      `<div class="led in"><span>${s.retired ? "Emekli maaşı" : s.job !== "none" ? "Maaş" : "Düzenli gelir"}</span><b>+${mo(wb.income)}</b></div>` +
+        (wb.lines.length ? wb.lines.map(([k, v]) => `<div class="led out"><span>${esc(k.replace(" (aylık ortalama)", ""))}</span><b>−${mo(v)}</b></div>`).join("") : '<div class="led"><span>Düzenli giderin yok</span><b>₺0</b></div>') +
+        `<div class="led total"><span>Aylık fark</span><b class="${wb.net >= 0 ? "pos" : "neg"}">${wb.net >= 0 ? "+" : "−"}${mo(Math.abs(wb.net))}</b></div>` +
+        (wb.net < 0 && s.cash > 0 ? `<p class="fine">Bu gidişle nakdin yaklaşık ${Math.max(1, Math.floor(s.cash / (-wb.net * W)))} ay yeter.</p>` : "") +
+        '<p class="fine">Maaş, kira ve yaşam giderleri ayda bir işlenir. Bunların dışında para yalnızca senin seçimlerinle değişir: her seçimin yanında harcaması ya da kazancı yazar.</p>' +
+        (s.housing === "aile" ? `<p class="fine">Aile evinde yaşıyorsun: kira yok${HS.CFG.familyShare > 0 ? ", ev giderlerinin %" + HS.CFG.familyShare + "'ine katkı veriyorsun" : ", temel giderleri ailen karşılıyor"}. Kendi evine geçince kira, faturalar ve yaşam giderleri başlar.</p>` : ""),
     );
     html += sectionTitle("Yaşam tarzı", "Tasarruf etmek istersen düşür; mutluluk ve stres biraz etkilenir");
     for (const [k, def] of Object.entries(HS.STYLE)) {
@@ -1029,7 +1076,7 @@
         .map((lv) => {
           const test = { ...s, style: { ...s.style, [k]: lv.id } };
           const w = HS.weeklyBudget(test).out;
-          return `<button class="${cur === lv.id ? "selected" : ""}"${on(() => act({ style: { k, lv: lv.id } }))}>${esc(lv.name)}<small>${money(w)}/hafta</small></button>`;
+          return `<button class="${cur === lv.id ? "selected" : ""}"${on(() => act({ style: { k, lv: lv.id } }))}>${esc(lv.name)}<small>${money(w * HS.WEEKS_PER_MONTH)}/ay</small></button>`;
         })
         .join("")}</div><small class="fine">${esc(def.levels[cur].desc)}</small></div>`;
     }
@@ -1153,6 +1200,67 @@
   function applyText() {
     document.documentElement.classList.toggle("big-text", settings.text === "big");
   }
+  // Oyun dengesi düzenleyicisi (HS.CFG): gruplu sayı alanları, kaydet, sıfırla, dışa/içe aktar
+  function cfgForm() {
+    let html = "",
+      grp = "";
+    for (const [g, k, label, desc, def, min, max, step] of HS.CFG_FIELDS) {
+      if (g !== grp) {
+        html += `<div class="cfg-group">${esc(g)}</div>`;
+        grp = g;
+      }
+      const v = HS.CFG[k];
+      html += `<label class="cfg-row"><span><b>${esc(label)}</b><small>${esc(desc)} Varsayılan: ${def}.</small></span><input type="number" data-cfg="${k}" min="${min}" max="${max}" step="${step}" value="${v}" inputmode="decimal"${v !== def ? ' class="changed"' : ""}></label>`;
+    }
+    html += `<div class="mini-row wide"><button class="mini" id="cfgSave">Kaydet</button><button class="mini" id="cfgReset">Varsayılana dön</button><button class="mini" id="cfgExport">Dışa aktar</button><button class="mini" id="cfgImport">İçe aktar</button></div><textarea id="cfgBox" rows="3" placeholder="Ayar kodunu (JSON) buraya yapıştır" aria-label="Ayar kodu"></textarea>`;
+    return html;
+  }
+  function bindCfg() {
+    const read = () => {
+      const out = {};
+      $("settingsBody").querySelectorAll("[data-cfg]").forEach((inp) => {
+        const f = HS.CFG_FIELDS.find((x) => x[1] === inp.dataset.cfg);
+        let v = parseFloat(String(inp.value).replace(",", "."));
+        if (!isFinite(v)) v = f[4];
+        out[f[1]] = Math.max(f[5], Math.min(f[6], v));
+      });
+      return out;
+    };
+    $("cfgSave").onclick = () => {
+      HS.saveConfig(read());
+      if (active) HS.refresh(active);
+      toast("Oyun dengesi kaydedildi.");
+      renderSettings();
+    };
+    $("cfgReset").onclick = () =>
+      ask("Bütün oyun dengesi ayarları varsayılana dönsün mü?", () => {
+        HS.resetConfig();
+        if (active) HS.refresh(active);
+        renderSettings();
+        toast("Varsayılan ayarlar yüklendi.");
+      }, "Sıfırla");
+    $("cfgExport").onclick = () => {
+      const code = JSON.stringify(HS.CFG, null, 1);
+      $("cfgBox").value = code;
+      $("cfgBox").select();
+      try {
+        navigator.clipboard.writeText(code).then(() => toast("Ayar kodu kopyalandı."), () => {});
+      } catch {}
+    };
+    $("cfgImport").onclick = () => {
+      try {
+        const obj = JSON.parse($("cfgBox").value);
+        const clean = {};
+        for (const f of HS.CFG_FIELDS) if (typeof obj[f[1]] === "number") clean[f[1]] = Math.max(f[5], Math.min(f[6], obj[f[1]]));
+        HS.saveConfig(clean);
+        if (active) HS.refresh(active);
+        renderSettings();
+        toast("Ayarlar içe aktarıldı.");
+      } catch {
+        toast("Ayar kodu okunamadı.", "error");
+      }
+    };
+  }
   function renderSettings() {
     const tg = (k, label, hint) => `<button class="setting" data-k="${k}" role="switch" aria-checked="${!!settings[k]}"><span><b>${label}</b><small>${hint}</small></span><i class="switch${settings[k] ? " on" : ""}"></i></button>`;
     $("settingsBody").innerHTML =
@@ -1164,10 +1272,16 @@
       `<article class="card"><h3>Oynanış</h3>` +
       tg("commute", "İşe gidiş ve eve dönüş", "Hafta içi sabah işe gidişi ve akşam eve dönüşü göster") +
       `<button class="setting" data-text="1"><span><b>Yazı boyutu</b><small>${settings.text === "big" ? "Büyük" : "Normal"}</small></span><i class="pill">${settings.text === "big" ? "A+" : "A"}</i></button></article>` +
+      `<article class="card"><h3>Oyun dengesi</h3><p class="fine">Başlangıç parası, giderler, maaşlar, haftalık olay sayısı, borsa ihtimali gibi değerleri kendin ayarla. Değişiklikler hemen geçerli olur (başlangıç parası ve yaşı yeni hayatlarda).</p><button class="secondary" id="cfgToggle">${cfgOpen ? "Kapat" : "Ayarları düzenle"}</button>${cfgOpen ? cfgForm() : ""}</article>` +
       `<article class="card"><h3>Hesap</h3><p class="fine">App Store ve Google Play sürümünde kayıtların Apple ile giriş / Game Center ya da Google Play Oyunlar hesabına bağlanabilecek. Bu tarayıcı prototipinde kayıtlar yalnızca bu cihazda tutulur.</p><button class="secondary" disabled>Hesabını bağla (mağaza sürümünde)</button></article>` +
       `<article class="card"><h3>Kayıtlar</h3><p class="fine">Kayıtlarını başka bir cihaza taşımak için kodu kopyala, diğer cihazda yapıştır.</p><button class="secondary" id="exportBtn">Kayıt kodunu kopyala</button><textarea id="importBox" rows="3" placeholder="Kayıt kodunu buraya yapıştır" aria-label="Kayıt kodu"></textarea><button class="secondary" id="importBtn">Kodu içe aktar</button><button class="secondary danger" id="wipeBtn">Bütün verileri sil</button></article>` +
       `<article class="card"><h3>Hakkında</h3><p class="fine">Hayat Simülatörü · prototip sürüm 0.3<br>Çizimler: Microsoft Fluent Emoji (MIT). Harita: Natural Earth verisi, react-turkey-map (MIT). Yazı tipleri: Baloo 2 ve Nunito (SIL OFL).<br>Ekonomi 2026 verileriyle kalibre edilmiştir; 2027 sonrası kurmacadır. Kişi, parti, şirket ve markalar hayal ürünüdür. Yatırım ve bahis bölümleri tavsiye değildir.</p></article>`;
     $("settingsBody").querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => setSetting(b.dataset.k, !settings[b.dataset.k])));
+    $("cfgToggle").onclick = () => {
+      cfgOpen = !cfgOpen;
+      renderSettings();
+    };
+    if (cfgOpen) bindCfg();
     $("settingsBody").querySelector("[data-text]").onclick = () => setSetting("text", settings.text === "big" ? "normal" : "big");
     $("volume").oninput = (e) => {
       settings.volume = +e.target.value;

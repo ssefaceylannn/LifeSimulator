@@ -47,7 +47,7 @@
   function init(s) {
     delete s.half;
     s.evDone = s.evDone || 0;
-    s.weekPlan = s.weekPlan || 3 + ((r() * 4) | 0);
+    s.weekPlan = s.weekPlan || HS.rollWeek();
     s.shiftIdx = s.shiftIdx || 0;
     s.clock = s.clock || { day: 0, hour: 8, min: 0, room: "salon" };
   }
@@ -81,10 +81,15 @@
       return { ok: true, mid: true };
     }
     s.evDone = 0;
-    s.weekPlan = 3 + ((r() * 4) | 0);
+    s.weekPlan = HS.rollWeek();
     return HS.week(s);
   };
   HS.COOLDOWN_SCALE = 0.55;
+  HS.rollWeek = () => {
+    const lo = HS.CFG ? Math.round(HS.CFG.weekMin) : 3,
+      hi = Math.max(lo, HS.CFG ? Math.round(HS.CFG.weekMax) : 6);
+    return lo + ((r() * (hi - lo + 1)) | 0);
+  };
   HS.lateWeek = (s) => (s.evDone || 0) >= (s.weekPlan || 4) - 2;
   HS.slotKey = (s) => s.weeks * 10 + (s.evDone || 0);
 
