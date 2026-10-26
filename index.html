@@ -21,6 +21,7 @@
         <div class="wordmark">hayat<span>simülatörü</span></div>
         <div class="top-actions">
           <button class="icon-btn" id="menuBtn" aria-label="Kayıtlı hayatlar">☰</button>
+          <button class="icon-btn" id="calBtn" aria-label="Takvim">📅</button>
           <button class="icon-btn" id="settingsBtn" aria-label="Ayarlar">⚙</button>
         </div>
       </header>
@@ -102,6 +103,12 @@
         <button class="secondary" id="recordBack">Geri dön</button>
       </section>
 
+      <section id="calendar" class="screen hidden">
+        <div class="kicker">TAKVİM</div>
+        <h2>Ne zaman <em>ne olacak?</em></h2>
+        <div id="calBody" class="cal"></div>
+      </section>
+
       <section id="settings" class="screen hidden">
         <div class="kicker">AYARLAR</div>
         <h2>Oyunu <em>kendine göre</em> ayarla</h2>
@@ -176,6 +183,16 @@
         </div>
       </div>
 
+      <div id="infoModal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-card info-card">
+          <div class="kicker" id="infoKicker"></div>
+          <h3 id="infoTitle"></h3>
+          <div id="infoBody" class="info-body"></div>
+          <div id="infoActions" class="choice-list"></div>
+          <button class="secondary" id="infoClose">Kapat</button>
+        </div>
+      </div>
+
       <div class="toast hidden" id="toast" role="status"></div>
     </main>
     <script src="js/content/economy.js"></script>
@@ -188,6 +205,7 @@
     <script src="js/content/events-life.js"></script>
     <script src="js/content/activities.js"></script>
     <script src="js/content/endings.js"></script>
+    <script src="js/content/questions.js"></script>
     <script src="js/art/fluent.js"></script>
     <script src="js/art/turkey-map.js"></script>
     <script src="js/art/character.js"></script>
@@ -206,6 +224,9 @@
     <script src="js/systems/life.js"></script>
     <script src="js/systems/budget.js"></script>
     <script src="js/systems/family.js"></script>
+    <script src="js/systems/exam.js"></script>
+    <script src="js/systems/calendar.js"></script>
+    <script src="js/systems/realism.js"></script>
     <script src="js/systems/achievements.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/ui.js"></script>

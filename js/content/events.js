@@ -63,7 +63,7 @@
       c(
         "Üniversite sınavına hazırlan",
         "Birkaç ay ders çalış; kapılar açılabilir.",
-        { skill: 2, cost: 1500, flag: "examPrep" },
+        { skill: 2, examStart: 1 },
       ),
       c("Bir hafta kendine ayır", "Şehri dolaş, nefes al.", {
         cost: 400,

@@ -9,7 +9,7 @@
   const SFX_LVL = 0.32; // efekt seviyesi
   const BPM = 86;
   const STEP = 60 / BPM / 4; // 16'lık nota süresi
-  const LOOK = 0.2; // ileriye planlama penceresi (sn)
+  const LOOK = 0.45; // ileriye planlama penceresi (sn); seyrek zamanlayıcıyla boşluk olmasın
 
   let ctx = null, master = null, musicBus = null, sfxBus = null, noiseBuf = null;
   let unlocked = false, listening = false, timer = null, stopTimer = null, playing = false;
@@ -232,7 +232,7 @@
     step = 0;
     bar = 0;
     nextT = t + 0.08;
-    timer = setInterval(tick, 50);
+    timer = setInterval(tick, 180); // seyrek zamanlayıcı: işlemci ve pil dostu
     tick();
   }
 

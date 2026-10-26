@@ -23,7 +23,7 @@ Apple'ın güncel gönderim açıklamaları: https://developer.apple.com/app-sto
 
 ## iPhone'da deneme (imzasız .ipa)
 
-Her `main` ya da geliştirme dalı gönderiminde GitHub Actions (`.github/workflows/ios.yml`) macOS sunucusunda oyunu Capacitor ile yerel bir iOS uygulamasına sarar ve **imzasız** bir `.ipa` üretir. İndirmek için: GitHub › Actions › "iOS IPA (imzasız)" › son çalıştırma › Artifacts › `HayatSimulatoru-ipa` (zip içinde `HayatSimulatoru-imzasiz.ipa`).
+GitHub Actions (`.github/workflows/ios.yml`) yalnızca elle başlatıldığında (GitHub › Actions › "iOS IPA (imzasız)" › Run workflow) macOS sunucusunda oyunu Capacitor ile yerel bir iOS uygulamasına sarar ve **imzasız** bir `.ipa` üretir. İndirmek için: GitHub › Actions › "iOS IPA (imzasız)" › son çalıştırma › Artifacts › `HayatSimulatoru-ipa` (zip içinde `HayatSimulatoru-imzasiz.ipa`).
 
 Apple, imzasız uygulamaların doğrudan kurulmasına izin vermez. Kendi telefonuna kurmanın yolları:
 

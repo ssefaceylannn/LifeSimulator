@@ -64,7 +64,8 @@ button {
   height: 54px;
   flex: none;
   display: grid;
-  grid-template-columns: 84px minmax(0, 1fr) 84px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 6px;
   align-items: center;
   padding: 0 10px;
   background: var(--surface);
@@ -2123,4 +2124,161 @@ html.big-text .fine {
 .cfg-row input.changed {
   border-color: var(--gold);
   background: #fffbea;
+}
+
+/* ---------- Pil ve ısı ----------
+   SVG içindeki sonsuz animasyonlar telefonda her karede bütün sahnenin yeniden çizilmesine
+   yol açar. Pil tasarrufu modunda (varsayılan) bunlar kapalıdır; tam modda bile 15 saniye
+   dokunulmazsa ve uygulama arka plandayken tüm animasyonlar durur. */
+html.saver .hs-breath,
+html.saver .hs-eyes,
+html.saver .hs-kid > g,
+html.saver .hs-cloud,
+html.saver .hs-ferry,
+html.saver .hs-snow,
+html.saver .hs-pet,
+html.saver .hs-fire,
+html.saver .hs-scroll.slow {
+  animation: none !important;
+}
+html.idle *,
+html.idle *::before,
+html.idle *::after,
+html.bg *,
+html.bg *::before,
+html.bg *::after {
+  animation-play-state: paused !important;
+}
+.scene-art svg,
+.home-scene svg {
+  contain: paint;
+}
+
+/* ---------- Şirket detayı, bilgi penceresi ---------- */
+.co-name {
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  font: 800 15px var(--body);
+  color: var(--blue-deep);
+}
+.co-name span {
+  color: var(--blue);
+  font-size: 13px;
+}
+.info-card {
+  max-height: 88vh;
+  overflow-y: auto;
+}
+.info-body p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #33425a;
+}
+.info-grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 10px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.info-grid span {
+  color: var(--muted);
+}
+.info-grid b {
+  overflow-wrap: anywhere;
+}
+.pc {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+@media (max-width: 380px) {
+  .pc {
+    grid-template-columns: 1fr;
+  }
+}
+.pc h4 {
+  margin: 0 0 4px;
+  font: 600 15px var(--display);
+}
+.pc ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+.pc ul li::marker {
+  color: var(--green);
+}
+.pc ul.cons li::marker {
+  color: var(--coral);
+}
+
+/* ---------- Takvim ---------- */
+.cal {
+  display: grid;
+  gap: 10px;
+}
+.cal-month {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 8px 12px;
+}
+.cal-month h4 {
+  margin: 4px 0 6px;
+  font: 600 16px var(--display);
+  text-transform: capitalize;
+}
+.cal-row {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 5px 0 5px 8px;
+  border-left: 3px solid var(--line);
+  font-size: 13px;
+}
+.cal-row span {
+  color: var(--muted);
+  font-weight: 700;
+}
+.cal-row b {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.cal-row.para {
+  border-color: var(--gold);
+}
+.cal-row.okul {
+  border-color: var(--blue);
+}
+.cal-row.dogum {
+  border-color: #e47aa0;
+}
+.cal-row.tatil {
+  border-color: var(--green);
+}
+.cal-row.is {
+  border-color: #8c6bb1;
+}
+.cal-row.elle {
+  border-color: var(--ink);
+}
+.upcoming {
+  margin-top: 6px;
+}
+.note-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.note-form input,
+.note-form select {
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 9px 10px;
+  font: 600 15px var(--body);
+  min-width: 0;
 }

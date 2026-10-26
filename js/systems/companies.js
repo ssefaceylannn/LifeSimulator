@@ -29,7 +29,7 @@
     C("demlik", "Demlik Kafe Zinciri", "Perakende", 3.8, 1.12, 1, 0.15, 0.3, ["cafe", "office"], ["İstanbul", "Ankara", "İzmir", "Antalya", "Bursa", "Eskişehir", "Berlin"], "Bahşiş havuzu"),
     C("firinkahve", "Fırın & Fincan", "Perakende", 3.0, 1.0, 1, 0.3, 0.2, ["cafe"], ["Konya", "Kayseri", "Samsun", "Trabzon", "Diyarbakır", "Erzurum", "Van"], "Esnek vardiya"),
     C("derman", "Derman Sağlık Grubu", "Sağlık", 3.6, 1.2, 2, 0.32, 0.4, ["nurse", "office"], ["İstanbul", "Ankara", "İzmir", "Bursa", "Adana", "Diyarbakır"], "Nöbet ücreti"),
-    C("akasya", "Akasya Tıp Merkezleri", "Sağlık", 4.0, 1.35, 3, 0.18, 0.5, ["nurse"], ["İstanbul", "Antalya", "Muğla", "London"], "Yurt içi eğitim"),
+    C("akasya", "Akasya Tıp Merkezleri", "Sağlık", 4.0, 1.35, 3, 0.18, 0.5, ["nurse"], ["İstanbul", "Antalya", "Muğla", "Londra"], "Yurt içi eğitim"),
     C("bilge", "Bilge Koleji", "Eğitim", 3.9, 1.2, 2, 0.2, 0.3, ["teacher"], ["İstanbul", "Ankara", "İzmir", "Bursa", "Konya", "Kocaeli"], "Çocuğuna indirimli okul"),
     C("pergel", "Pergel Eğitim Kurumları", "Eğitim", 3.2, 1.05, 1, 0.28, 0.2, ["teacher"], ["Gaziantep", "Şanlıurfa", "Malatya", "Elazığ", "Sivas", "Samsun"], "Yaz tatili"),
     C("kentas", "Kent A.Ş. (belediye şirketi)", "Kamu", 3.3, 1.0, 2, 0.25, 0.2, ["memur"], null, "İş güvencesi"),
@@ -393,4 +393,34 @@
     const cur = CO(s.company);
     return HS.coRanking().find((x) => x.jobs.includes(s.job) && HS.coScore(x) > HS.coScore(cur) + 5 && !(s.apps || []).some((a) => a.co === x.id) && x.cities);
   }
+})(globalThis.HS || (globalThis.HS = {}));
+
+// Şirket tanıtımları (tamamı kurmacadır): ne iş yapar, kuruluş, çalışan sayısı, artılar, eksiler.
+(function (HS) {
+  "use strict";
+  const I = (about, founded, staff, pros, cons) => ({ about, founded, staff, pros, cons });
+  HS.CO_INFO = {
+    atlas: I("Bankalar ve e-ticaret siteleri için ödeme ve mobil uygulama yazılımları geliştirir. Avrupa'daki müşterileri için Berlin ve Amsterdam'da ofisleri var.", 2009, "1.800", ["Sektörün en yüksek maaşları", "Haftada 2 gün evden çalışma", "Yurt dışı ofislere tayin imkânı", "Yıllık eğitim ve konferans bütçesi"], ["Dört aşamalı, çok zor mülakat (vaka çalışması dahil)", "Teslim haftalarında gece yarısına kadar mesai", "Performans düşükse hızlı ayrılık"]),
+    pusula: I("Okullar ve belediyeler için eğitim ve şehir yönetimi yazılımları yapar.", 2012, "650", ["Kişi başı yıllık eğitim bütçesi", "Sakin, öğretici ekipler", "Esnek giriş saatleri"], ["Maaş artışları piyasanın biraz gerisinde", "Kamu ihalelerine bağlı dönemsel belirsizlik"]),
+    kuzeyveri: I("Perakende ve lojistik şirketlerine veri analizi ve raporlama hizmeti verir.", 2016, "240", ["Hızlı terfi; genç ekip", "Uzaktan çalışmaya açık", "Sorumluluk erken verilir"], ["Küçük şirket, iş güvencesi zayıf", "Müşteri baskısı yüzünden stres yüksek", "Yan haklar az"]),
+    yildizbank: I("Kurumsal krediler, yatırım danışmanlığı ve hazine işlemleri yapan bir yatırım bankası. Londra'da şubesi var.", 1988, "4.200", ["Yüksek yıl sonu ikramiyesi", "Prestijli; özgeçmişte çok güçlü durur", "Londra şubesine tayin imkânı"], ["Haftada 55-60 saate varan mesai", "Mobbing şikâyetleri sık", "Dört aşamalı mülakat ve vaka sunumu"]),
+    liman: I("Faizsiz bankacılık ilkeleriyle çalışan, Anadolu'da yaygın bir katılım finans kuruluşu.", 1994, "2.900", ["Düzenli mesai, 18:00'de çıkış", "Anadolu şehirlerinde çok şube", "Düşük ama istikrarlı zamlar"], ["Kariyer basamakları yavaş", "Yenilikçi projeler az"]),
+    egesig: I("Ege bölgesinde araç, konut ve sağlık sigortası satan bölgesel bir sigorta şirketi.", 1997, "900", ["Çalışana ve ailesine özel sağlık sigortası", "Ege şehirlerinde yaşam", "İki aşamalı kolay mülakat"], ["Prim hedefleri baskılı", "Maaşlar ortalama", "Büyük şehirlere tayin yok"]),
+    kervan: I("Limanlar ve sanayi bölgeleri arasında tır, depo ve gümrük hizmeti veren lojistik firması.", 2001, "3.500", ["Yemek kartı ve servis", "Hem ofis hem depo pozisyonları", "Mülakat hızlı"], ["Gece ve hafta sonu sevkiyatları", "Depoda iş kazası riski", "Mobbing şikâyetleri ortalamanın üstünde"]),
+    dalga: I("Dijital yayın, podcast ve reklam filmleri üreten bir medya ajansı; müzisyenlerle de çalışır.", 2014, "320", ["Yaratıcı ve genç ortam", "Müzisyenlere sahne ve kayıt fırsatı", "Kıyafet serbest"], ["Düzensiz, son dakika mesaileri", "Yöneticiler sert olabiliyor", "Maaş ödemeleri bazen gecikir"]),
+    ruzgargulu: I("Ege ve Marmara'da rüzgâr ve güneş santralleri kurup işleten yenilenebilir enerji şirketi. Hamburg'da mühendislik ofisi var.", 2008, "1.400", ["Servis ve özel sağlık sigortası", "Geleceği parlak bir sektör", "Saha ve ofis pozisyonları", "Mobbing oranı çok düşük"], ["Santraller şehir dışında; uzun yol", "Üç aşamalı teknik mülakat"]),
+    anadolutekstil: I("İplik, kumaş ve hazır giyim üreten, ihracata çalışan köklü bir tekstil fabrikası.", 1979, "5.600", ["İş bulmak kolay; tek aşamalı mülakat", "Bayram ikramiyesi", "Vardiya primi"], ["Düşük maaş", "Sert ustabaşılar, mobbing riski yüksek", "Siparişe göre fazla mesai"]),
+    marmaraoto: I("Otomobil fabrikalarına koltuk, kablo ve fren parçası üreten yan sanayi şirketi.", 1985, "4.100", ["Sendikalı; toplu sözleşmeyle düzenli zam", "Vardiya ve yemek", "Teknik beceri kazandırır"], ["Gürültülü, yorucu bant işi", "Vardiya düzeni sağlığı zorlar"]),
+    torosgida: I("Makarna, salça ve konserve üreten gıda şirketi; Akdeniz ve İç Anadolu'da fabrikaları var.", 1972, "2.700", ["Ürün indirimi", "Mevsimlik ek iş fırsatları", "Tek aşamalı mülakat"], ["Hasat döneminde yoğun mesai", "Maaşlar ortalamanın altında"]),
+    karadenizcay: I("Doğu Karadeniz'de çay toplama, işleme ve paketleme yapan bölgesel üretici.", 1968, "1.900", ["Lojman", "Doğa içinde huzurlu yaşam", "Samimi, aile gibi ortam"], ["Mevsimsel iş yükü", "Maaşlar düşük", "Büyük şehirlere uzak"]),
+    demlik: I("Türkiye'nin büyük şehirlerinde ve Berlin'de 140 şubesi olan kahve zinciri.", 2011, "3.300", ["Bahşiş havuzu", "Şube müdürlüğüne hızlı yükselme", "Berlin şubesine tayin imkânı"], ["Ayakta, yoğun vardiyalar", "Hafta sonları çalışma", "Maaş tabanı düşük"]),
+    firinkahve: I("Anadolu şehirlerinde fırın-kafe konseptiyle büyüyen yerel bir zincir.", 2015, "800", ["Esnek vardiya; öğrenciye uygun", "Kolay işe giriş"], ["Düşük maaş", "Kariyer basamağı az", "Mobbing şikâyetleri orta düzeyde"]),
+    derman: I("Altı ilde özel hastaneleri olan bir sağlık grubu.", 1999, "6.800", ["Nöbet ücreti", "Çok şehirde pozisyon", "Mesleki deneyim"], ["Ağır nöbetler", "Hasta yoğunluğu ve stres", "Mobbing riski yüksek"]),
+    akasya: I("Turistik bölgelerde ve Londra'da yabancı hastalara hizmet veren tıp merkezleri.", 2006, "1.200", ["Yüksek maaş", "Yabancı dil gelişir", "Yurt içi ve yurt dışı eğitim"], ["Üç aşamalı zor mülakat", "İngilizce şart gibi", "Turizm sezonunda yoğunluk"]),
+    bilge: I("Okul öncesinden liseye kadar eğitim veren özel kolejler zinciri.", 1995, "2.100", ["Çocuğuna indirimli okul", "Modern okullar, küçük sınıflar", "Mesleki eğitimler"], ["Veli baskısı", "Ders dışı etkinlik ve nöbet yükü", "Sözleşmeler yıllık"]),
+    pergel: I("Güneydoğu ve İç Anadolu'da dershane ve etüt merkezleri işleten eğitim kurumu.", 2003, "900", ["Uzun yaz tatili", "Kolay işe giriş"], ["Düşük maaş", "Hafta sonu dersleri", "İş güvencesi zayıf"]),
+    kentas: I("Kurmaca bir belediye şirketi: park bahçe, ulaşım ve sosyal tesis hizmetleri.", 1990, "8.000", ["İş güvencesi", "Her ilde kadro", "Düzenli mesai"], ["Maaş düşük, zam yavaş", "Torpil dedikodusu bol", "Kariyer basamakları kısıtlı"]),
+    devletokul: I("Kurmaca bakanlığa bağlı devlet okulları; atamayla öğretmen alır.", 1924, "1.000.000+", ["Kadro güvencesi", "Her ilde çalışma imkânı", "Uzun tatiller"], ["Kalabalık sınıflar", "İlk atamada istemediğin bir şehre gidebilirsin", "Maaş sabit"]),
+    devlethastane: I("Kurmaca sağlık bakanlığına bağlı devlet hastaneleri.", 1923, "500.000+", ["Kadro güvencesi", "Her ilde çalışma", "Emeklilik garantisi"], ["Yoğun nöbetler ve hasta sayısı", "Mobbing ve şiddet riski", "Ek ödeme sınırlı"]),
+  };
 })(globalThis.HS || (globalThis.HS = {}));

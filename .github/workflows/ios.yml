@@ -3,9 +3,8 @@
 # Not: İmzasız ipa doğrudan kurulamaz; Sideloadly / AltStore gibi bir araçla kendi
 # Apple kimliğinle imzalanarak kurulur (ayrıntı: APP_STORE.md).
 name: iOS IPA (imzasız)
+# Yalnızca elle başlatılır (GitHub › Actions › iOS IPA › Run workflow); gönderimle otomatik çalışmaz.
 on:
-  push:
-    branches: [main, claude/vibrant-goldberg-bt3zbe]
   workflow_dispatch:
 jobs:
   ipa:

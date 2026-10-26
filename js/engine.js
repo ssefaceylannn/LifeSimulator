@@ -323,8 +323,10 @@
     return r * (HS.CFG ? HS.CFG.rentScale : 1);
   }
   function rentShare(s) {
-    if (s.housing === "kira") return rentFull(s) * s.rentMult;
-    if (s.housing === "kira-paylasim") return rentFull(s) * 0.5 * s.rentMult;
+    // Kiracının kirası sözleşmeyle sabitlenir (yıllık artış sınırı: js/systems/realism.js)
+    const base = s.rentBase && s.rentCity === s.city ? s.rentBase * (HS.CFG ? HS.CFG.rentScale : 1) : rentFull(s);
+    if (s.housing === "kira") return base * s.rentMult;
+    if (s.housing === "kira-paylasim") return base * 0.5 * s.rentMult;
     return 0;
   }
   // Ev tipleri: daire 70 m², müstakil 140 m² (m² fiyatı biraz düşük), villa 250 m² (m² fiyatı yüksek).
@@ -618,14 +620,16 @@
     // Şans: sonucu zarla belirlenen seçimler. Sonuç ara sahne olarak gösterilir.
     if (fx.chance) {
       const c = fx.chance;
-      const won = rnd() < c.p;
+      // Uykusuzluk ve benzeri durumlar şansı düşürebilir (js/systems/realism.js)
+      const p = HS.chanceMod ? HS.chanceMod(s, c.p) : c.p;
+      const won = rnd() < p;
       apply(s, (won ? c.win : c.lose) || {});
       s.scenes.push({
         t: won ? c.winT || "Şans yüzüne güldü" : c.loseT || "Bu sefer olmadı",
         p: won ? c.winP || "" : c.loseP || "",
         art: won ? "✓" : "✕",
         kind: won ? "win" : "lose",
-        odds: Math.round(c.p * 100),
+        odds: Math.round(p * 100),
       });
     }
     if (fx.policy) s.policy = fx.policy;
@@ -962,7 +966,7 @@
       return {
         label: resolveText(ch.label, s),
         hint: resolveText(ch.hint || "", s),
-        odds: fx.chance ? Math.round(fx.chance.p * 100) : null,
+        odds: fx.chance ? Math.round((HS.chanceMod ? HS.chanceMod(s, fx.chance.p) : fx.chance.p) * 100) : null,
         fx,
         need: ok === true ? null : ok, // olay anındaki koşul (ör. diploma)
         off: can === true ? null : can,
@@ -1163,6 +1167,7 @@
     let n = s.job !== "none" || s.edu === "ogrenci" ? 2 : 4;
     if (s.job !== "none" && s.edu === "ogrenci") n = 1;
     if (s.children.some((k) => s.year - k.born < 6)) n -= 1;
+    if (HS.freeSlotsMod) n += HS.freeSlotsMod(s);
     return Math.max(1, n);
   }
   HS.freeSlots = freeSlots;
@@ -1262,6 +1267,7 @@
       if (b.volatile) income *= 1 + (rnd() * 2 - 1) * b.volatile;
       income = Math.max(0, income);
       if (s.edu === "ogrenci" && s.job !== "none") income *= 0.5; // yarı zamanlı
+      if (HS.taxAdj && s.job !== "none" && !s.retired) income *= HS.taxAdj(s, income);
       earn(s, s.retired ? "Emekli maaşı" : s.job !== "none" ? "Aylık maaş" : "Gelir", income);
       book(s, "Aylık yaşam giderleri", living * M);
       book(s, "Aylık kira", b.rent * M);
@@ -1364,14 +1370,14 @@
         "☼",
       );
     }
-    if (s.edu === "ogrenci" && s.eduWeeks >= 208) {
+    if (s.edu === "ogrenci" && s.eduWeeks >= (s.major ? s.major.years * 52 : 208)) {
       s.edu = "universite";
       s.skill += 4;
       note(s, "Üniversiteden mezun oldu.");
       scene(
         s,
         "Mezuniyet",
-        "Kep havaya uçtu. Diploma artık çekmecede; öğretmenlik, sağlık ve ofis işlerinin kapısı aralandı.",
+        (s.major ? s.major.name + " diploman elinde. " : "") + "Kep havaya uçtu. Diploma artık çekmecede; öğretmenlik, sağlık ve ofis işlerinin kapısı aralandı.",
         "✎",
       );
     }

@@ -262,6 +262,44 @@ const assert = (c, m) => {
   await p.click(".tab[data-tab=skills]");
   await clickRow("İngilizce");
   assert((await p.evaluate(() => HS.ui.active.courses.length)) >= 1, "kursa yazılınamadı");
+  // Şirket detayı
+  while (await p.isVisible("#event")) await p.click("#eventContinue");
+  await p.click(".tab[data-tab=work]");
+  await p.click("#panel .co-name >> nth=0");
+  assert(await p.isVisible("#infoModal"), "şirket detayı açılmadı");
+  assert((await p.textContent("#infoBody")).includes("Artıları"), "şirket artıları yok");
+  await shot(p, "07-sirket");
+  await p.click("#infoClose");
+  // YKS: hazırlık başlat, test çöz
+  await p.evaluate(() => {
+    const s = HS.ui.active;
+    s.edu = "lise";
+    s.exam = null;
+    s.free = 3;
+    s.flags.actDone = {};
+    HS.ui.render();
+  });
+  await p.click(".tab[data-tab=work]");
+  await p.click('#panel button:has-text("Üniversite sınavına (YKS) hazırlan")');
+  while (await p.isVisible("#event")) await p.click("#eventContinue");
+  assert(await p.evaluate(() => !!HS.ui.active.exam), "YKS hazırlığı başlamadı");
+  await p.click(".tab[data-tab=life]");
+  await p.click('#panel [data-a="testcoz"]');
+  assert(await p.isVisible("#pickModal"), "soru penceresi açılmadı");
+  await shot(p, "07-soru");
+  await p.click("#pickList .choice >> nth=0");
+  while (await p.isVisible("#event")) await p.click("#eventContinue");
+  assert((await p.evaluate(() => HS.ui.active.exam.qAll)) === 1, "soru cevabı işlenmedi");
+  // Takvim
+  await p.click("#calBtn");
+  assert(await p.isVisible("#calendar"), "takvim açılmadı");
+  assert((await p.$$("#calBody .cal-row")).length > 3, "takvimde kayıt yok");
+  await p.fill("#noteText", "Kuzene hediye al");
+  await p.click("#noteAdd");
+  assert((await p.textContent("#calBody")).includes("Kuzene hediye al"), "elle not eklenmedi");
+  await shot(p, "07-takvim");
+  await noOverflow(p, "takvim");
+  await p.click("#backBtn");
   // Oyun dengesi düzenleyicisi
   await p.click("#settingsBtn");
   await p.click("#cfgToggle");
