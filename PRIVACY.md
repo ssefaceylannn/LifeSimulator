@@ -1,6 +1,8 @@
 # Gizlilik — Hayat Simülatörü (prototip)
 
-Bu prototip hesap, reklam, analiz, konum, kişi listesi ya da sunucu kullanmaz. Hiçbir bilgi sunucuya gönderilmez.
+Bu prototip hesap, reklam, analiz, konum, kişi listesi ya da sunucu kullanmaz. Oyun verisi hiçbir sunucuya gönderilmez.
+
+Tek dış bağlantı yazı tipleridir: çevrimiçiyken Fredoka ve Nunito yazı tipleri Google Fonts'tan yüklenir. Bu istekte tarayıcı, her web sitesinde olduğu gibi IP adresini ve tarayıcı bilgisini Google'a iletir; oyun verisi iletilmez. Mağaza sürümünde yazı tipleri uygulamanın içine gömülmeli.
 
 Cihazda saklananlar, tarayıcının `localStorage` alanında:
 

@@ -38,23 +38,7 @@
     abroadCost: 2.5, // yurt dışında gider çarpanı (kurmaca)
   };
 
-  // Şehirler: ağustos 2026 ortalama ilan kirası (tam daire) ve
-  // eylül 2026 satılık m² ilan fiyatı. Eksik olanlar Türkiye ortalamasıyla tamamlandı.
-  // loc/abl: "İstanbul'da", "İstanbul'dan" gibi ekler için hazır biçimler.
-  HS.CITIES = {
-    İstanbul: { rent: 45510, sqm: 67949, region: "tr" },
-    Ankara: { rent: 34440, sqm: 40417, region: "tr" },
-    İzmir: { rent: 33369, sqm: 54310, region: "tr" },
-    Bursa: { rent: 24207, sqm: 43300, region: "tr" },
-    Adana: { rent: 24000, sqm: 38000, region: "tr" }, // il geneli bulunamadı: yaklaşık
-    Trabzon: { rent: 23886, sqm: 40000, region: "tr" },
-    Diyarbakır: { rent: 21968, sqm: 36000, region: "tr" },
-    // Yurt dışı şehir: değerler TL karşılığı kurmaca varsayımdır.
-    Berlin: { rent: 85000, sqm: 260000, region: "abroad", country: "Almanya" },
-  };
-  HS.HOME_CITIES = Object.keys(HS.CITIES).filter(
-    (c) => HS.CITIES[c].region === "tr",
-  );
+  // Şehir verisi: js/content/cities.js (81 il + kurmaca Berlin).
 
   // Meslekler. pay: 2026 aylık net başlangıç ücreti.
   // need(s) → true ya da oyuncuya gösterilecek gerekçe metni.
@@ -65,6 +49,7 @@
       pay: MIN_WAGE, // net asgari ücret
       prop: "KAFE",
       icon: "☕",
+      uniform: "kafe",
       student: true,
     },
     factory: {
@@ -72,6 +57,7 @@
       pay: 39600, // 2026 ilan beklentileri: 1 yıldan az deneyim
       prop: "FABRİKA",
       icon: "⚙",
+      uniform: "tulum",
     },
     music: {
       name: "Müzisyen",
@@ -104,8 +90,19 @@
       pay: 54000, // oyun varsayımı
       prop: "KLİNİK",
       icon: "✚",
+      uniform: "forma",
       need: (s) =>
         s.edu === "universite" ? true : "Üniversite diploması gerekir.",
+    },
+    memur: {
+      name: "Belediye şirketi memuru",
+      pay: 41000, // kurmaca belediye şirketi; oyun varsayımı
+      prop: "BELEDİYE",
+      icon: "▣",
+      need: (s) =>
+        s.edu === "universite" || s.skill >= 18
+          ? true
+          : "Diploma, 18 beceri ya da bir tanıdık gerekir.",
     },
     business: {
       name: "Esnaf",

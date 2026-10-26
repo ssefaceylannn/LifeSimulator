@@ -6,13 +6,18 @@
       name="viewport"
       content="width=device-width,initial-scale=1,viewport-fit=cover"
     />
-    <meta name="theme-color" content="#f3eee7" />
+    <meta name="theme-color" content="#f6f9fd" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>Hayat Simülatörü</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icon.svg" />
     <link rel="apple-touch-icon" href="icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;600;700;800&display=swap"
+    />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -20,150 +25,142 @@
       <header class="topbar">
         <button class="icon-btn" id="backBtn" aria-label="Geri">←</button>
         <div class="wordmark">hayat<span>simülatörü</span></div>
-        <button class="icon-btn" id="menuBtn" aria-label="Kayıtlar">▤</button>
+        <button class="icon-btn" id="menuBtn" aria-label="Kayıtlı hayatlar">
+          ☰
+        </button>
       </header>
 
       <section id="home" class="screen">
+        <div class="home-scene" id="homeScene"></div>
         <div class="hero">
-          <div class="hero-orb">☼</div>
-          <div class="kicker">BİR HAYAT. BİNLERCE KÜÇÜK KARAR.</div>
-          <h1>Kendine bir<br /><em>hayat kur.</em></h1>
-          <p>18 yaşında, cebinde 10.000 TL. Gerisi senin hikâyen.</p>
+          <div class="kicker">BİR HAYAT · BİNLERCE KARAR</div>
+          <h1>Kendine bir <em>hayat kur.</em></h1>
+          <p>
+            18 yaşındasın, cebinde 10.000 TL var. İş bul, âşık ol, ev al,
+            yaşlan. Her hafta yeni bir karar.
+          </p>
           <button class="primary" id="newLife">
-            YENİ HAYAT <span>→</span>
+            Yeni hayat başlat <span>→</span>
           </button>
-          <button class="secondary" id="continueLife">KAYITLARI GÖR</button>
-        </div>
-        <div class="home-note">
-          ◷ Her karar bir haftayı ilerletir.<br />
-          2026 fiyat tabanı · Eylül 2026 yıllık TÜFE %29,73<br />
-          Sonrası kurmaca ekonomi senaryosu.
+          <button class="secondary" id="continueLife">Kayıtlı hayatlar</button>
+          <p class="fine">
+            2026 fiyat tabanı · Eylül 2026 yıllık TÜFE %29,73. Sonrası kurmaca
+            senaryo.
+          </p>
         </div>
       </section>
 
       <section id="create" class="screen hidden">
-        <div class="section-kicker">YENİ BİR BAŞLANGIÇ</div>
-        <h2>Bu hayat<br /><em>kimin?</em></h2>
-        <div class="form">
-          <label
-            >AD<input
+        <div class="kicker">YENİ BİR BAŞLANGIÇ</div>
+        <h2>Bu hayat <em>kimin?</em></h2>
+        <div class="create-grid">
+          <div class="preview" id="preview"></div>
+          <div class="form">
+            <label for="firstName">Ad</label>
+            <input
               id="firstName"
               maxlength="18"
               value="Deniz"
               autocomplete="off"
-          /></label>
-          <label
-            >SOYAD<input
+            />
+            <label for="lastName">Soyad</label>
+            <input
               id="lastName"
               maxlength="22"
               value="Yılmaz"
               autocomplete="off"
-          /></label>
-          <label>ŞEHİR<select id="birthCity"></select></label>
-          <div class="label">GÖRÜNÜM</div>
-          <div class="look-picker">
-            <button data-look="woman" class="look selected">♀ Kadın</button>
-            <button data-look="man" class="look">♂ Erkek</button>
-            <button data-look="neutral" class="look">✳ Diğer</button>
+            />
           </div>
         </div>
-        <p class="smallprint">
-          Her hayat bu cihazda ayrı kaydedilir. Dilediğinde aralarında geçebilir
-          ya da birini bitirip yenisine başlayabilirsin.
-        </p>
+        <div class="form">
+          <label for="birthCity">Doğduğun şehir</label>
+          <select id="birthCity"></select>
+          <div class="label">Cinsiyet</div>
+          <div class="seg" id="lookPicker">
+            <button data-look="woman" class="selected">Kadın</button>
+            <button data-look="man">Erkek</button>
+          </div>
+          <div class="label">Ten rengi</div>
+          <div class="swatches" id="skinPicker"></div>
+          <div class="label">Saç rengi</div>
+          <div class="swatches" id="hairColorPicker"></div>
+          <div class="label">Saç modeli</div>
+          <div class="seg wrap" id="hairPicker"></div>
+        </div>
         <button class="primary" id="beginLife">
-          HAYATIMA BAŞLA <span>→</span>
+          Hayatıma başla <span>→</span>
         </button>
       </section>
 
       <section id="world" class="screen hidden">
-        <div class="world-top">
+        <div class="world-head">
           <div>
-            <div class="section-kicker" id="dateLabel">İSTANBUL · 2026</div>
+            <div class="kicker" id="dateLabel">İSTANBUL · 2026</div>
             <h2 id="personName">Deniz Yılmaz</h2>
           </div>
-          <button class="pill" id="slotPill">HAYAT 1</button>
+          <button class="chip" id="slotPill">HAYAT 1</button>
         </div>
-        <div class="character-wrap" id="scene">
-          <div class="room-glow"></div>
-          <div class="room-window">
-            <div class="window-moon" id="sky">☾</div>
-            <div class="window-city">
-              <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-            </div>
-          </div>
-          <div class="character" id="character">
-            <div class="char-hair"></div>
-            <div class="char-head">
-              <div class="eyes">· ·</div>
-              <div class="nose"></div>
-              <div class="mouth"></div>
-              <div class="lines"></div>
-            </div>
-            <div class="char-neck"></div>
-            <div class="char-body"></div>
-            <div class="char-arm left"></div>
-            <div class="char-arm right"></div>
-            <div class="char-legs"></div>
-          </div>
-          <div class="family" id="family"></div>
-          <div class="room-prop" id="roomProp">▤<small>ODA</small></div>
-          <div class="age-tag" id="ageTag">18 YAŞ</div>
+        <div class="scene" id="scene">
+          <div class="scene-art" id="sceneArt"></div>
+          <div class="badge age" id="ageTag">18 YAŞ</div>
+          <div class="badge week" id="weekLabel">1. hafta</div>
         </div>
-        <div class="life-stats">
-          <div><span>NAKİT</span><b id="cashStat">₺10.000</b></div>
-          <div>
-            <span>SAĞLIK</span><b id="healthStat">82</b
+        <div class="stats">
+          <div class="stat"><span>Nakit</span><b id="cashStat">₺10.000</b></div>
+          <div class="stat">
+            <span>Sağlık</span><b id="healthStat">82</b
             ><i class="bar"><i id="healthBar"></i></i>
           </div>
-          <div>
-            <span>MUTLULUK</span><b id="moodStat">65</b
-            ><i class="bar"><i id="moodBar"></i></i>
+          <div class="stat">
+            <span>Mutluluk</span><b id="moodStat">65</b
+            ><i class="bar mood"><i id="moodBar"></i></i>
           </div>
         </div>
         <div class="money-line" id="moneyLine"></div>
         <div id="panel">
-          <article class="story-card">
-            <div class="story-date">
-              <span id="weekLabel">1. HAFTA</span
-              ><span id="weather">☁ SERİN</span>
+          <article class="card story">
+            <div class="story-meta">
+              <span id="seasonLabel">YAZ</span><span id="tagsLine"></span>
             </div>
             <h3 id="storyTitle"></h3>
             <p id="storyText"></p>
-            <div class="story-tags" id="storyTags"></div>
           </article>
           <div class="choice-list" id="choices"></div>
           <button class="advance" id="advanceBtn">
-            BU HAFTAYI YAŞA <span>→</span>
+            Bu haftayı yaşa <span>→</span>
           </button>
+          <section class="card free" id="freeCard">
+            <div class="free-head">
+              <h3>Boş zaman</h3>
+              <div class="dots" id="freeDots" aria-live="polite"></div>
+            </div>
+            <p class="fine" id="freeHint">
+              Haftanı yaşamadan önce boş zamanında bir şeyler yapabilirsin.
+            </p>
+            <div class="acts" id="acts"></div>
+            <div class="apps" id="appsLine"></div>
+          </section>
         </div>
         <div id="tabPanel" class="tab-panel hidden"></div>
-        <nav class="tabbar">
-          <button class="tab active" data-tab="life">
-            ⌂<small>HAYAT</small>
-          </button>
-          <button class="tab" data-tab="work">▣<small>İŞ</small></button>
-          <button class="tab" data-tab="city">⌖<small>ŞEHİR</small></button>
-          <button class="tab" data-tab="people">♡<small>İLİŞKİ</small></button>
-          <button class="tab" data-tab="things">₺<small>PARA</small></button>
-        </nav>
+        <nav class="tabbar" id="tabbar"></nav>
       </section>
 
       <section id="records" class="screen hidden">
-        <div class="section-kicker">KAYITLI HAYATLAR</div>
-        <h2>Her biri<br /><em>başka bir yol.</em></h2>
+        <div class="kicker">KAYITLI HAYATLAR</div>
+        <h2>Her biri <em>başka bir yol.</em></h2>
         <div id="recordList" class="record-list"></div>
         <button class="primary" id="recordNew">
-          YENİ HAYAT AÇ <span>＋</span>
+          Yeni hayat aç <span>＋</span>
         </button>
         <button class="secondary" id="endCurrent">
-          ŞU ANKİ HAYATI SONLANDIR
+          Şu anki hayatı sonlandır
         </button>
-        <button class="secondary" id="recordBack">GERİ DÖN</button>
+        <button class="secondary" id="recordBack">Geri dön</button>
       </section>
 
       <section id="memoir" class="screen hidden">
-        <div class="section-kicker" id="memoirKicker">ANI DEFTERİ</div>
+        <div class="memoir-scene" id="memoirScene"></div>
+        <div class="kicker" id="memoirKicker">ANI DEFTERİ</div>
         <h2 id="memoirTitle"></h2>
         <div class="memoir-arch" id="memoirArch"></div>
         <div id="memoirBody" class="memoir-body"></div>
@@ -171,9 +168,9 @@
         <ul id="memoirMoments" class="memoir-moments"></ul>
         <h3 class="memoir-sub">Son profili</h3>
         <dl id="memoirProfile" class="memoir-profile"></dl>
-        <p class="smallprint" id="memoirCount"></p>
+        <p class="fine" id="memoirCount"></p>
         <button class="primary" id="memoirDone">
-          KAYITLARA DÖN <span>→</span>
+          Kayıtlara dön <span>→</span>
         </button>
       </section>
 
@@ -183,23 +180,31 @@
         role="dialog"
         aria-modal="true"
       >
-        <div class="event-art" id="eventArt">✦</div>
-        <div class="section-kicker">BİR HAYAT ANI</div>
-        <h2 id="eventTitle"></h2>
-        <p id="eventText"></p>
-        <button class="primary" id="eventContinue">
-          DEVAM ET <span>→</span>
-        </button>
+        <div class="event-card" id="eventCard">
+          <div class="event-art" id="eventArt">✦</div>
+          <div class="odds hidden" id="eventOdds"></div>
+          <div class="suspense hidden" id="suspense"><i></i><i></i><i></i></div>
+          <h2 id="eventTitle"></h2>
+          <p id="eventText"></p>
+          <button class="primary" id="eventContinue">
+            Devam et <span>→</span>
+          </button>
+        </div>
       </section>
 
       <div id="nameModal" class="modal hidden" role="dialog" aria-modal="true">
         <div class="modal-card">
-          <div class="section-kicker">BİR İSİM</div>
+          <div class="kicker">BİR İSİM</div>
           <h3>Çocuğunun adı ne olsun?</h3>
-          <input id="nameInput" maxlength="24" autocomplete="off" />
+          <input
+            id="nameInput"
+            maxlength="24"
+            autocomplete="off"
+            aria-label="Çocuğun adı"
+          />
           <div class="modal-actions">
-            <button class="secondary" id="nameCancel">VAZGEÇ</button>
-            <button class="primary" id="nameOk">TAMAM</button>
+            <button class="secondary" id="nameCancel">Vazgeç</button>
+            <button class="primary" id="nameOk">Tamam</button>
           </div>
         </div>
       </div>
@@ -211,11 +216,11 @@
         aria-modal="true"
       >
         <div class="modal-card">
-          <div class="section-kicker">EMİN MİSİN?</div>
+          <div class="kicker">EMİN MİSİN?</div>
           <h3 id="confirmText"></h3>
           <div class="modal-actions">
-            <button class="secondary" id="confirmNo">VAZGEÇ</button>
-            <button class="primary" id="confirmYes">EVET</button>
+            <button class="secondary" id="confirmNo">Vazgeç</button>
+            <button class="primary" id="confirmYes">Evet</button>
           </div>
         </div>
       </div>
@@ -223,9 +228,15 @@
       <div class="toast hidden" id="toast" role="status"></div>
     </main>
     <script src="js/content/economy.js"></script>
+    <script src="js/content/cities.js"></script>
     <script src="js/content/events.js"></script>
     <script src="js/content/events-daily.js"></script>
+    <script src="js/content/events-family.js"></script>
+    <script src="js/content/activities.js"></script>
     <script src="js/content/endings.js"></script>
+    <script src="js/art/fluent.js"></script>
+    <script src="js/art/character.js"></script>
+    <script src="js/art/scene.js"></script>
     <script src="js/engine.js"></script>
     <script src="js/ui.js"></script>
     <script>

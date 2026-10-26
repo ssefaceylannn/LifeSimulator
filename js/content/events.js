@@ -230,19 +230,30 @@
         s.edu === "lise" &&
         s.age <= 24 &&
         (s.flags.examPrep ? s.weeks >= 20 : s.weeks >= 30),
-      title: "Sınav sonuçları açıklandı",
+      title: "Sınav sonuçları açıklanıyor",
       text: (s, h) =>
-        (s.flags.examPrep
-          ? "Çalıştığın aylar karşılığını verdi; "
-          : "Hazırlıksız girmene rağmen ") +
-        "puanın " +
+        (s.flags.examPrep ? "Aylarca çalıştın. " : "Hazırlıksız girdin. ") +
+        "Sonuç sayfası yükleniyor; yerleşirsen " +
         h.ek(s.city, "gen") +
-        " bir devlet üniversitesine yetiyor. Gündüz öğretim ücretsiz; yurt ve kitap masrafı ise cebinden çıkacak.",
+        " devlet üniversitesinde gündüz öğretim ücretsiz, yurt ve kitap masrafı senden.",
       choices: (s) => [
         c(
-          "Kayıt ol",
-          "Dört yıllık eğitime başla. İşin varsa yarı zamanlıya döner.",
-          { edu: "ogrenci", cost: 2500 },
+          "Sonuca bak ve yerleştiysen kayıt ol",
+          "İşin varsa yarı zamanlıya döner.",
+          {
+            chance: {
+              p: Math.min(
+                0.9,
+                (s.flags.examPrep ? 0.6 : 0.25) + s.skill * 0.02,
+              ),
+              win: { edu: "ogrenci", cost: 2500, m: 8 },
+              lose: { m: -6 },
+              winT: "Yerleştin!",
+              winP: "Ekranda bölümünün adı yazıyor. Annen telefonda ağlıyor.",
+              loseT: "Puan yetmedi",
+              loseP: "Bu yıl olmadı. İleride ikinci şans gelebilir.",
+            },
+          },
         ),
         c("Önce çalışıp para biriktir", "Okulu şimdilik ertele.", {
           m: -1,
@@ -345,8 +356,13 @@
       id: "jobHunt",
       cooldown: 3,
       weight: (s) => (s.weeks < 12 ? 6 : 3),
-      when: (s) => !working(s) && !s.retired && s.age < HS.RETIRE_AGE,
+      when: (s) =>
+        !working(s) &&
+        !s.retired &&
+        s.age < HS.RETIRE_AGE &&
+        (s.apps || []).length < 3,
       title: "İş ilanları",
+      // Başvurular sonucu birkaç hafta sonra gelir; bazı işlerde araya mülakat girer.
       text: (s, h) =>
         s.edu === "ogrenci"
           ? "Derslerin arasında yapabileceğin yarı zamanlı ilanlar var."
@@ -363,13 +379,12 @@
           .slice(0, 4)
           .map((j) =>
             c(
-              HS.JOBS[j].name + " ol",
-              (HS.JOBS[j].volatile
-                ? "Gelir değişken; ortalama "
-                : "Aylık net ") +
+              HS.JOBS[j].name + " başvurusu",
+              (HS.JOBS[j].volatile ? "Gelir değişken, ort. " : "Aylık net ") +
                 h.money(HS.wage(s, j, 0)) +
-                ".",
-              { job: j },
+                " · kabul şansı %" +
+                Math.round(HS.appChance(s, j) * 100),
+              { apply: j },
             ),
           )
           .concat([
@@ -391,11 +406,22 @@
       text: (s) =>
         "Yöneticin seni odasına çağırdı. Bir üst pozisyon açılıyor ve adın geçiyor. Daha çok sorumluluk, daha yüksek ücret.",
       choices: [
-        c("Terfiyi kabul et", "Ücretin artar, yükün de.", {
-          promote: 1,
-          m: 4,
+        c("Terfi mülakatına gir", "Ücret %20 artar, sorumluluk da.", (s) => ({
           h: -1,
-        }),
+          chance: {
+            p: Math.min(
+              0.85,
+              0.45 + s.skill * 0.006 + (HS.outfitFits(s, s.job) ? 0.1 : 0),
+            ),
+            win: { promote: 1, m: 6 },
+            lose: { m: -4, skill: 1 },
+            winT: "Terfi aldın!",
+            winP: "Kapına yeni bir unvan yazıldı. Maaşın artıyor.",
+            loseT: "Pozisyon başkasına gitti",
+            loseP:
+              'Yöneticin "bir dahaki sefere" dedi. Deneyim yine de işe yarar.',
+          },
+        })),
         c("Şimdiki rolümde kalayım", "İş-özel hayat dengesini koru.", {
           h: 2,
           m: 1,
@@ -490,11 +516,23 @@
         h.tl(250000) +
         ". Kendi işinin patronu olmak cazip ama her ay garanti maaş yok.",
       choices: [
-        c("Dükkânı aç", "Esnaf ol; kazanç ay ay değişir.", {
+        c("Dükkânı aç", "Esnaf ol; ilk aylar belirsiz.", (s) => ({
           job: "business",
           m: 4,
           theme: "career",
-        }),
+          chance: {
+            p: Math.min(
+              0.8,
+              0.4 + s.skill * 0.01 + Math.min(0.15, s.people / 150),
+            ),
+            win: { cash: 40000, m: 6 },
+            lose: { cash: -60000, m: -6 },
+            winT: "Açılış haftası tıklım tıklım",
+            winP: "Mahalle dükkânını sevdi; kasada beklenenden fazla para var.",
+            loseT: "Açılış sönük geçti",
+            loseP: "Tabelayı kimse fark etmedi. İlk ay zararla kapandı.",
+          },
+        })),
         c("Maaşlı düzende kal", "Güvenceyi bırakma.", {
           m: 1,
           theme: "security",
@@ -630,12 +668,21 @@
       title: "Kayıt odasında fırsat",
       text: "Mahalledeki küçük kayıt odası bir şarkını kaydetmeyi önerdi.",
       choices: [
-        c("Demo kaydet", "Kalıcı bir iz bırak.", {
+        c("Demo kaydet", "Kalıcı bir iz bırak; belki tutar.", (s) => ({
           cost: 1700,
           skill: 3,
-          m: 5,
           theme: "craft",
-        }),
+          chance: {
+            p: Math.min(0.5, 0.1 + s.skill * 0.006),
+            win: { cash: 15000, people: 4, m: 8 },
+            lose: { m: 2 },
+            winT: "Şarkın dinleniyor!",
+            winP: "Demo birkaç günde binlerce kez dinlendi. Mekânlar seni arıyor.",
+            loseT: "Sessiz bir yayın",
+            loseP:
+              "Birkaç arkadaşın dışında dinleyen olmadı. Yine de kaydın elinde.",
+          },
+        })),
         c("Canlı çalmaya devam et", "Şimdilik masraf yapma.", {
           cash: 450,
           m: 1,
@@ -744,6 +791,7 @@
       choices: (s, h) => [
         c(h.ek(otherCity(s), "dat") + " git", "Yeni okul, yeni şehir.", {
           moveCity: otherCity(s),
+          keepJob: true,
           cost: 10000,
           skill: 1,
           people: -2,
@@ -856,9 +904,18 @@
         }),
         c("Teklifi kabul et", "Kolay para bazen pahalıya patlar.", {
           job: "crime",
-          cash: 4500,
           m: -4,
           risk: 1,
+          chance: {
+            p: 0.7,
+            win: { cash: 9000 },
+            lose: { cash: -5000, risk: 1, h: -3 },
+            winT: "İlk iş sorunsuz geçti",
+            winP: "Zarfı alırken elin titriyordu. Kimse bir şey sormadı.",
+            loseT: "Polis çevirmesi",
+            loseP:
+              "Son anda kurtuldun ama malı bırakmak zorunda kaldın. Borçlu çıktın.",
+          },
         }),
         c("Kesin olarak reddet", "Bu yollara girmeyeceksin.", {
           m: 2,
@@ -1642,15 +1699,23 @@
       id: "abroadJob",
       weight: 5,
       cooldown: 4,
-      when: (s) => s.abroad && s.city === "Berlin" && !working(s) && !s.retired,
+      when: (s) =>
+        s.abroad &&
+        s.city === "Berlin" &&
+        !working(s) &&
+        !s.retired &&
+        (s.apps || []).length < 3,
       title: "Berlin’de iş arayışı",
       text: "Diploman ve deneyimin burada farklı değerlendiriliyor. Hangi kapıyı çalacaksın?",
       choices: (s, h) =>
         ["cafe", "factory", "office", "nurse"].map((j) =>
           c(
-            HS.JOBS[j].name + " ol",
-            "Aylık net " + h.money(HS.wage(s, j, 0)) + ".",
-            { job: j },
+            HS.JOBS[j].name + " başvurusu",
+            "Aylık net " +
+              h.money(HS.wage(s, j, 0)) +
+              " · şans %" +
+              Math.round(HS.appChance(s, j) * 100),
+            { apply: j },
           ),
         ),
     },

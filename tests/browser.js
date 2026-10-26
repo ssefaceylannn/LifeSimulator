@@ -43,7 +43,9 @@ const assert = (c, m) => {
           r.width &&
           el.offsetParent !== null &&
           (r.right > W + 1 || r.left < -1) &&
-          !el.closest(".character-wrap")
+          !el.closest(".scene") &&
+          !el.closest(".home-scene") &&
+          !el.closest(".memoir-scene")
         )
           bad.push(el.className || el.tagName);
       });
@@ -100,16 +102,16 @@ const assert = (c, m) => {
   assert(before.length === 1 && before[0].weeks >= 55, "haftalar kaydedilmedi");
 
   // Sekmeler
-  for (const t of ["work", "city", "people", "things"]) {
+  for (const t of ["work", "style", "people", "city", "money"]) {
     await p.click(`.tab[data-tab=${t}]`);
     assert(await p.isVisible("#tabPanel"), t + " sekmesi açılmadı");
     await noOverflow(p, t + " sekmesi");
     await shot(p, "04-sekme-" + t);
   }
   // Berber: kısa kesim ve sakal
-  await p.click(".tab[data-tab=people]");
+  await p.click(".tab[data-tab=style]");
   const barberBtn = await p.$(
-    '#tabPanel .choice:not([disabled]):has-text("Berber: kazıt")',
+    '#tabPanel .choice:not([disabled]):has-text("Kazınmış saç")',
   );
   if (barberBtn) {
     await barberBtn.click();
@@ -118,8 +120,54 @@ const assert = (c, m) => {
       "berber işlemi uygulanmadı",
     );
   }
+  // Gardırop: takım elbise al ve giy
+  await p.evaluate(() => (HS.ui.active.cash = 20000000));
+  await p.click(".tab[data-tab=style]");
+  await p.click('#tabPanel [data-o="takim"]');
+  await p.click("#confirmYes");
+  assert(
+    (await p.evaluate(() => HS.ui.active.outfit)) === "takim",
+    "kıyafet giyilmedi",
+  );
+  // Araba al: sahnede görünmeli
+  await p.click(".tab[data-tab=money]");
+  await p.click('#tabPanel .choice:has-text("SUV")');
+  await p.click("#confirmYes");
+  assert(
+    (await p.evaluate(() => HS.ui.active.car)) === "suv",
+    "araba alınmadı",
+  );
+  assert(await p.$("#sceneArt .hs-car"), "araba sahnede yok");
+  // İş başvurusu: boş zaman harcar ve listede görünür
+  await p.evaluate(() => {
+    const s = HS.ui.active;
+    s.job = "none";
+    s.retired = false;
+    s.apps = [];
+    s.free = 2;
+    HS.ui.render();
+  });
+  await p.click(".tab[data-tab=work]");
+  await p.click('#tabPanel .choice:has-text("Fabrika işçisi")');
+  const st = await p.evaluate(() => ({
+    apps: HS.ui.active.apps.length,
+    free: HS.ui.active.free,
+  }));
+  assert(
+    st.apps === 1 && st.free === 1,
+    "başvuru boş zaman harcamadı: " + JSON.stringify(st),
+  );
+  // Boş zaman etkinliği
   await p.click(".tab[data-tab=life]");
   assert(await p.isVisible("#panel"), "HAYAT sekmesine dönülmedi");
+  await p.click('#acts [data-a="dinlen"]');
+  while (await p.isVisible("#event")) await p.click("#eventContinue");
+  assert(
+    (await p.evaluate(() => HS.ui.active.free)) === 0,
+    "etkinlik boş zaman harcamadı",
+  );
+  assert(await p.$("#appsLine .app-chip"), "başvuru listesi görünmüyor");
+  await shot(p, "05-bos-zaman");
 
   // Yenile ve kayıttan devam: yarım kalan olay korunmalı
   const titleBefore = await p.textContent("#storyTitle");
@@ -223,7 +271,7 @@ const assert = (c, m) => {
       await q.click("#advanceBtn");
     }
     await noOverflow(q, w + "px oyun");
-    await q.click(".tab[data-tab=things]");
+    await q.click(".tab[data-tab=money]");
     await noOverflow(q, w + "px para");
     if (SHOTS)
       await q.screenshot({ path: path.join(SHOTS, "11-dar-" + w + ".png") });

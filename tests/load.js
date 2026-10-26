@@ -19,9 +19,15 @@ module.exports = function load() {
   vm.createContext(ctx);
   for (const f of [
     "js/content/economy.js",
+    "js/content/cities.js",
     "js/content/events.js",
     "js/content/events-daily.js",
+    "js/content/events-family.js",
+    "js/content/activities.js",
     "js/content/endings.js",
+    "js/art/fluent.js",
+    "js/art/character.js",
+    "js/art/scene.js",
     "js/engine.js",
   ])
     vm.runInContext(

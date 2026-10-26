@@ -91,14 +91,18 @@
   };
 
   // ---------- Durum ----------
-  function newLife({ first, last, city, look }) {
+  function newLife({ first, last, city, look, skin, hairColor, hair }) {
     const scenarioIds = Object.keys(HS.SCENARIOS);
     return migrate({
       v: SAVE_VERSION,
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
       first: first || "Deniz",
       last: last || "Yılmaz",
-      look: look || "woman",
+      look: look === "man" ? "man" : "woman",
+      skin: skin ?? 1,
+      hairColor: hairColor || "kahve",
+      hair: hair || (look === "man" ? "short" : "long"),
+      outfits: look === "man" ? ["gunluk", "gomlek"] : ["gunluk", "elbise"],
       birthCity: city,
       city,
       age: 18,
@@ -109,6 +113,7 @@
       scenario: pick(scenarioIds),
       seed: (rnd() * 1000) | 0,
       created: Date.now(),
+      free: 4,
     });
   }
 
@@ -156,6 +161,16 @@
       divorced: false,
       children: [],
       hair: "short",
+      hairColor: "kahve",
+      skin: 1,
+      outfit: "gunluk",
+      outfits: ["gunluk"],
+      car: s.assets && s.assets.car ? "ekonomik" : null,
+      carColor: 0,
+      homeType: null,
+      homeV: 0,
+      apps: [],
+      free: 3,
       beard: false,
       transplanted: false,
       thinning: false,
@@ -188,6 +203,10 @@
       typeof c === "string" ? { name: c, born: s.year - 3, bond: 60 } : c,
     );
     if (s.job && !HS.JOBS[s.job]) s.job = "none";
+    if (s.look !== "man") s.look = "woman"; // "Diğer" seçeneği kaldırıldı
+    if (!s.outfits.includes(s.outfit)) s.outfits.push(s.outfit);
+    if (s.assets && s.assets.car && !s.car) s.car = "ekonomik";
+    if (s.assets && s.assets.house && !s.homeType) s.homeType = "daire";
     if (!HS.SCENARIOS[s.scenario]) s.scenario = "yavas";
     s.assets = Object.assign(
       { house: false, car: false, land: false, passport: false },
@@ -262,11 +281,30 @@
     if (s.housing === "kira-paylasim") return rentFull(s) * 0.5 * s.rentMult;
     return 0;
   }
-  function homePrice(s) {
-    return cityData(s).sqm * E().homeSize * s.idx.housing;
+  // Ev tipleri: daire 70 m², müstakil 140 m² (m² fiyatı biraz düşük), villa 250 m² (m² fiyatı yüksek).
+  const HOME_TYPES = {
+    daire: { name: "Daire (70 m²)", m2: 70, k: 1 },
+    mustakil: { name: "Bahçeli müstakil ev (140 m²)", m2: 140, k: 0.85 },
+    villa: { name: "Villa (250 m²)", m2: 250, k: 1.45 },
+  };
+  HS.HOME_TYPES = HOME_TYPES;
+  function homePrice(s, type) {
+    type = type || s.homeType || "daire";
+    const t = HOME_TYPES[type] || HOME_TYPES.daire;
+    return cityData(s).sqm * t.m2 * t.k * s.idx.housing;
   }
-  function carPrice(s) {
-    return E().car * s.idx.transport;
+  // Araç modelleri sahne dosyasında (HS.Art.CARS) tanımlı; fiyatlar 2026 TL.
+  const CAR_UPKEEP = {
+    bisiklet: 150,
+    scooter: 1500,
+    ekonomik: 4500,
+    pikap: 6000,
+    suv: 7000,
+    spor: 16000,
+  };
+  function carPrice(s, model = s.car || "ekonomik") {
+    const c = HS.Art && HS.Art.CARS && HS.Art.CARS[model];
+    return (c ? c.price : E().car) * s.idx.transport;
   }
   function landPrice(s) {
     return homePrice(s) * 0.35;
@@ -275,7 +313,12 @@
   function basket(s) {
     const b = E().basket;
     let transport = b.transport * s.idx.transport;
-    if (s.assets.car) transport = transport * 0.4 + 4500 * s.idx.transport;
+    if (s.car) {
+      const motor = !["bisiklet", "scooter"].includes(s.car);
+      transport =
+        transport * (motor ? 0.4 : s.car === "scooter" ? 0.6 : 0.85) +
+        (CAR_UPKEEP[s.car] || 4500) * s.idx.transport;
+    }
     if (s.policy === "transit") transport *= 0.85;
     let total = b.food * s.idx.food + transport + b.other * s.idx.cpi;
     if (s.housing === "aile") total *= E().familyContribution;
@@ -313,7 +356,7 @@
     let n = s.cash + s.savings + s.fund - s.debt;
     if (s.assets.house) n += homePrice(s) - (s.mortgage ? s.mortgage.left : 0);
     if (s.assets.land) n += landPrice(s);
-    if (s.assets.car) n += carPrice(s) * 0.5;
+    if (s.car) n += carPrice(s) * 0.5;
     return n;
   }
   Object.assign(HS, {
@@ -385,13 +428,38 @@
       if (j.startup && s.cash < j.startup * s.idx.cpi)
         return "Sermaye için " + HS.money(j.startup * s.idx.cpi) + " gerekir.";
     }
+    if (fx.buy === "house" && s.assets.house) return "Zaten bir evin var.";
+    if (fx.buy === "car" && s.car && !fx.trade)
+      return "Önce mevcut aracını sat.";
     if (fx.buy === "house" && fx.mortgage) {
-      if (s.cash < homePrice(s) * 0.3) return "Peşinat yetmiyor.";
+      if (s.cash < homePrice(s, fx.homeType) * 0.3) return "Peşinat yetmiyor.";
     } else if (fx.buy) {
-      const price = { house: homePrice, car: carPrice, land: landPrice }[
-        fx.buy
-      ](s);
+      const price =
+        fx.buy === "house"
+          ? homePrice(s, fx.homeType)
+          : fx.buy === "car"
+            ? carPrice(s, fx.model)
+            : landPrice(s);
       if (s.cash < price) return "Yeterli nakit yok.";
+    }
+    if (fx.apply) {
+      const j = HS.JOBS[fx.apply];
+      if (s.retired) return "Emekli oldun.";
+      if (s.job === fx.apply) return "Zaten bu işte çalışıyorsun.";
+      if ((s.apps || []).some((a) => a.job === fx.apply))
+        return "Bu işe zaten başvurdun.";
+      if ((s.apps || []).length >= 3) return "Aynı anda en fazla 3 başvuru.";
+      if (s.edu === "ogrenci" && !j.student)
+        return "Öğrenciyken yalnızca yarı zamanlı iş.";
+      if (j.need && !fx.torpil) {
+        const r = j.need(s);
+        if (r !== true) return r;
+      }
+    }
+    if (fx.useFree && (s.free || 0) < 1) return "Bu hafta boş zamanın kalmadı.";
+    if (fx.outfitBuy) {
+      const o = HS.Art && HS.Art.OUTFITS[fx.outfitBuy];
+      if (o && s.cash < o.price * s.idx.cpi) return "Yeterli nakit yok.";
     }
     if (fx.rent && s.cash < rentFull(s) * (fx.rent === "kira" ? 2 : 1))
       return "Depozito ve ilk kira için para yetmiyor.";
@@ -404,7 +472,7 @@
   }
   // Yaşa bağlı sağlık tavanı: iyi bakım yaşlanmayı yavaşlatır ama durdurmaz.
   function healthCap(s) {
-    return clamp(100 - Math.max(0, s.age - 35) * 0.9, 25, 100);
+    return clamp(100 - Math.max(0, s.age - 35) * 1.15, 20, 100);
   }
   HS.healthCap = healthCap;
   // Doygunluk: değer tavana yaklaştıkça artış, sıfıra yaklaştıkça düşüş zayıflar.
@@ -431,7 +499,8 @@
     fx = fx || {};
     const ok = canApply(s, fx);
     if (ok !== true) return ok;
-    const theme = autoTheme(fx);
+    // Tema yalnızca haftalık kararlardan ve büyük adımlardan birikir; boş zaman etkinlikleri saymaz.
+    const theme = fx.noTheme ? null : autoTheme(fx);
     if (theme) s.traits[theme] += fx.themeWeight || 1;
 
     if (fx.cost) pay(s, fx.cost * (fx.raw ? 1 : s.idx.cpi));
@@ -450,6 +519,50 @@
     if (fx.kidBond)
       s.children.forEach((c) => (c.bond = clamp(c.bond + fx.kidBond, 0, 100)));
     if (fx.flag) s.flags[fx.flag] = s.year;
+    if (fx.useFree) s.free = Math.max(0, (s.free || 0) - 1);
+    if (fx.apply) {
+      const interview = ["office", "teacher", "nurse", "memur"].includes(
+        fx.apply,
+      );
+      s.apps.push({
+        job: fx.apply,
+        p: fx.torpil ? 0.92 : appChance(s, fx.apply) + (fx.boost || 0),
+        due: s.weeks + (interview ? 2 : 1) + ((rnd() * 2) | 0),
+        interview,
+        torpil: !!fx.torpil,
+        from: s.weeks,
+      });
+    }
+    if (fx.boostApp) {
+      const a = s.apps.find((x) => x.job === fx.boostApp);
+      if (a) {
+        a.p = clamp(a.p + (fx.boost || 0), 0.03, 0.97);
+        a.interview = false;
+      }
+    }
+    if (fx.resolveApp) resolveApp(s, fx.resolveApp, fx.decline);
+    if (fx.outfitBuy) {
+      const o = HS.Art.OUTFITS[fx.outfitBuy];
+      pay(s, o.price * s.idx.cpi);
+      if (!s.outfits.includes(fx.outfitBuy)) s.outfits.push(fx.outfitBuy);
+      s.outfit = fx.outfitBuy;
+    }
+    if (fx.wear && s.outfits.includes(fx.wear)) s.outfit = fx.wear;
+    if (fx.hairColor) s.hairColor = fx.hairColor;
+    if (fx.carColor !== undefined) s.carColor = fx.carColor;
+    // Şans: sonucu zarla belirlenen seçimler. Sonuç ara sahne olarak gösterilir.
+    if (fx.chance) {
+      const c = fx.chance;
+      const won = rnd() < c.p;
+      apply(s, (won ? c.win : c.lose) || {});
+      s.scenes.push({
+        t: won ? c.winT || "Şans yüzüne güldü" : c.loseT || "Bu sefer olmadı",
+        p: won ? c.winP || "" : c.loseP || "",
+        art: won ? "✓" : "✕",
+        kind: won ? "win" : "lose",
+        odds: Math.round(c.p * 100),
+      });
+    }
     if (fx.policy) s.policy = fx.policy;
 
     // Eğitim
@@ -480,6 +593,11 @@
           s.lastJob = fx.job;
           const j = HS.JOBS[fx.job];
           if (j.startup) pay(s, j.startup * s.idx.cpi);
+          // İş kıyafeti işveren tarafından verilir
+          if (j.uniform && !s.outfits.includes(j.uniform))
+            s.outfits.push(j.uniform);
+          if (j.uniform) s.outfit = j.uniform;
+          s.apps = s.apps.filter((a) => a.job !== fx.job);
           note(s, j.name + " olarak çalışmaya başladı.");
         } else note(s, "İşinden ayrıldı.");
       }
@@ -567,6 +685,8 @@
     if (fx.debtGift) s.debt = Math.max(0, s.debt - fx.debtGift * s.idx.cpi);
     if (fx.buy) {
       if (fx.buy === "house") {
+        s.homeType = fx.homeType || "daire";
+        s.homeV = (s.homeV || 0) + 1;
         const price = homePrice(s);
         if (fx.mortgage) {
           const down = price * 0.3,
@@ -583,19 +703,36 @@
         s.assets.house = true;
         s.housing = "ev";
         s.rentMult = 1;
-        note(s, ek(s.city, "loc") + " kendi evini aldı.");
+        note(
+          s,
+          ek(s.city, "loc") +
+            " kendi evini aldı (" +
+            HOME_TYPES[s.homeType].name
+              .split(" (")[0]
+              .toLocaleLowerCase("tr-TR") +
+            ").",
+        );
         scene(
           s,
           "Anahtar teslimi",
           "Boş odalarda sesin yankılanıyor. Duvarlar henüz çıplak ama burası artık senin.",
           "⌂",
         );
+      } else if (fx.buy === "car") {
+        if (s.car && fx.trade) s.cash += carPrice(s) * 0.55; // eskisini takasla
+        const model = fx.model || "ekonomik";
+        s.cash -= carPrice(s, model);
+        s.car = model;
+        s.carColor = fx.carColor ?? (rnd() * 6) | 0;
+        s.assets.car = !["bisiklet"].includes(model);
+        note(s, HS.Art.CARS[model].name + " aldı.");
       } else {
-        s.cash -= fx.buy === "car" ? carPrice(s) : landPrice(s);
-        s.assets[fx.buy] = true;
-        note(s, fx.buy === "car" ? "Araba aldı." : "Arsa aldı.");
+        s.cash -= landPrice(s);
+        s.assets.land = true;
+        note(s, "Arsa aldı.");
       }
     }
+    if (fx.sell === "car" && s.car) s.assets.car = true; // bisiklet de satılabilir
     if (fx.sell && s.assets[fx.sell]) {
       const v =
         fx.sell === "house"
@@ -607,7 +744,10 @@
       if (fx.sell === "house") {
         s.mortgage = null;
         s.housing = "kira";
+        s.homeType = null;
+        s.homeV++;
       }
+      if (fx.sell === "car") s.car = null;
       if (fx.sell !== "land" || !fx.sellShare || fx.sellShare >= 1)
         s.assets[fx.sell] = false;
       note(
@@ -620,6 +760,7 @@
       s.cash -= rentFull(s) * (fx.rent === "kira" ? 2 : 1);
       s.housing = fx.rent;
       s.rentMult = 1;
+      s.homeV++;
       note(
         s,
         fx.rent === "kira"
@@ -630,6 +771,7 @@
     if (fx.moveHome) {
       s.housing = "aile";
       s.rentMult = 1;
+      s.homeV++;
     }
     if (fx.sharedFlat && s.housing === "kira") s.housing = "kira-paylasim";
     if (fx.landGift) {
@@ -648,6 +790,7 @@
     if (fx.emigrate) {
       s.city = fx.emigrate;
       s.abroad = true;
+      s.homeV++;
       if (s.housing === "aile") s.housing = "kira-paylasim";
       if (s.job !== "none") s.job = "none";
       s.jobLevel = 0;
@@ -664,12 +807,15 @@
     if (fx.returnHome) {
       s.city = s.birthCity;
       s.returned = true;
+      s.homeV++;
       if (s.job !== "none") s.job = "none";
       note(s, ek(s.city, "dat") + " geri döndü.");
     }
     if (fx.moveCity && fx.moveCity !== s.city) {
       s.city = fx.moveCity;
       s.moved = true;
+      s.homeV++;
+      if (s.job !== "none" && !fx.job && !fx.keepJob) s.job = "none";
       if (s.housing === "aile") s.housing = "kira-paylasim";
       if (s.assets.house) s.housing = "kira";
       note(s, ek(s.city, "dat") + " taşındı.");
@@ -725,6 +871,7 @@
       return {
         label: resolveText(ch.label, s),
         hint: resolveText(ch.hint || "", s),
+        odds: fx.chance ? Math.round(fx.chance.p * 100) : null,
         fx,
         need: ok === true ? null : ok, // olay anındaki koşul (ör. diploma)
         off: can === true ? null : can,
@@ -839,6 +986,136 @@
   }
   HS.quickAction = quickAction;
 
+  // ---------- İş başvuruları ----------
+  // Kabul şansı: işin zorluğu, beceri, eğitim, çevre, kıyafet ve yaş.
+  const APP_BASE = {
+    cafe: 0.7,
+    factory: 0.6,
+    music: 0.35,
+    office: 0.3,
+    teacher: 0.4,
+    nurse: 0.45,
+    memur: 0.25,
+    crime: 0.9,
+  };
+  function outfitFits(s, job) {
+    const o = HS.Art && HS.Art.OUTFITS[s.outfit];
+    return (
+      !!o &&
+      ((o.jobs || []).includes(job) ||
+        (o.formal && ["office", "teacher", "memur"].includes(job)))
+    );
+  }
+  function appChance(s, job) {
+    let p = APP_BASE[job] ?? 0.4;
+    p += Math.min(0.25, s.skill * 0.006);
+    if (
+      s.edu === "universite" &&
+      ["office", "teacher", "nurse", "memur"].includes(job)
+    )
+      p += 0.15;
+    p += Math.min(0.1, s.people / 300);
+    if (outfitFits(s, job)) p += 0.1;
+    p -= Math.max(0, s.age - 45) * 0.01;
+    if (s.flags.bilinen) p += 0.05; // önceki işten iyi referans
+    return clamp(p, 0.05, 0.95);
+  }
+  function resolveApp(s, job, decline) {
+    const a = s.apps.find((x) => x.job === job);
+    if (!a) return;
+    s.apps = s.apps.filter((x) => x !== a);
+    const j = HS.JOBS[job];
+    if (decline) {
+      note(s, j.name + " başvurusunu geri çekti.");
+      return;
+    }
+    const won = rnd() < a.p;
+    if (won) {
+      apply(s, { job });
+      if (a.torpil) s.torpilJob = job;
+      s.mood = clamp(s.mood + 8, 0, 100);
+      s.scenes.push({
+        t: "İşe alındın!",
+        p:
+          j.name +
+          " olarak başlıyorsun. Aylık net " +
+          HS.money(wage(s, job, 0)) +
+          "." +
+          (j.uniform ? " İş kıyafetin dolabında." : ""),
+        art: "✓",
+        kind: "win",
+        odds: Math.round(a.p * 100),
+      });
+    } else {
+      s.mood = clamp(s.mood - 4, 0, 100);
+      s.skill = clamp(s.skill + 1, 0, 100); // her mülakat bir deneyim
+      s.scenes.push({
+        t: "Bu sefer olmadı",
+        p:
+          j.name +
+          " başvurun olumsuz sonuçlandı. Becerini geliştirmek, uygun kıyafet ve çevre şansını artırır.",
+        art: "✕",
+        kind: "lose",
+        odds: Math.round(a.p * 100),
+      });
+    }
+  }
+  HS.appChance = appChance;
+  HS.outfitFits = outfitFits;
+
+  // ---------- Boş zaman ----------
+  // Her hafta karar dışında harcanabilecek boş zaman. Çalışan ve öğrenci 2,
+  // işsiz ve emekli 4, diğer durumlar 3; küçük çocuk 1 azaltır.
+  function freeSlots(s) {
+    let n = s.job !== "none" || s.edu === "ogrenci" ? 2 : 4;
+    if (s.job !== "none" && s.edu === "ogrenci") n = 1;
+    if (s.children.some((k) => s.year - k.born < 6)) n -= 1;
+    return Math.max(1, n);
+  }
+  HS.freeSlots = freeSlots;
+  // Etkinlik: boş zaman harcar; bazen beklenmedik bir şey olur.
+  function doActivity(s, id) {
+    const a = (HS.ACTIVITIES || []).find((x) => x.id === id);
+    if (!a) return { ok: false, reason: "Etkinlik bulunamadı." };
+    if ((s.free || 0) < 1)
+      return { ok: false, reason: "Bu hafta boş zamanın kalmadı." };
+    if (a.when && !a.when(s)) return { ok: false, reason: "Şu an yapılamaz." };
+    s.flags.actDone = s.flags.actDone || {};
+    if (a.oncePerWeek !== false && s.flags.actDone[id])
+      return { ok: false, reason: "Bunu bu hafta zaten yaptın." };
+    const fx = typeof a.fx === "function" ? a.fx(s, ctx(s)) : { ...a.fx };
+    const can = canApply(s, fx);
+    if (can !== true) return { ok: false, reason: can };
+    apply(s, { ...fx, noTheme: true });
+    s.free--;
+    s.flags.actDone[id] = true;
+    let text = typeof a.done === "function" ? a.done(s, ctx(s)) : a.done || "";
+    // Rastgele sürprizler
+    const surprise = (a.surprises || []).find(
+      (x) => (!x.when || x.when(s)) && rnd() < x.p,
+    );
+    if (surprise) {
+      apply(s, {
+        ...(typeof surprise.fx === "function"
+          ? surprise.fx(s, ctx(s))
+          : surprise.fx || {}),
+        noTheme: true,
+      });
+      s.scenes.push({
+        t: surprise.t,
+        p:
+          typeof surprise.text === "function"
+            ? surprise.text(s, ctx(s))
+            : surprise.text,
+        art: surprise.art || "✦",
+        kind: surprise.kind || null,
+      });
+    }
+    refresh(s);
+    return { ok: true, text };
+  }
+  HS.doActivity = doActivity;
+
   function week(s) {
     s.weeks++;
     s.week++;
@@ -851,6 +1128,8 @@
     }
     weeklyMoney(s);
     weeklyLife(s);
+    s.free = freeSlots(s);
+    s.flags.actDone = {};
     const end = deathCheck(s);
     if (end) return { ended: endLife(s, end) };
     if (s.weeks % 26 === 0) halfYearScene(s);
@@ -945,7 +1224,7 @@
     const cap = healthCap(s);
     if (s.health > cap) s.health -= (s.health - cap) * 0.02;
     // İlişki bağı ilgi görmezse yavaşça zayıflar.
-    if (s.partner) s.partner.bond = clamp(s.partner.bond - 0.25, 0, 100);
+    if (s.partner) s.partner.bond = clamp(s.partner.bond - 0.35, 0, 100);
     // Arkadaşlıklar da emek ister: ilgilenilmeyen çevre yıllar içinde küçülür.
     s.people *= 0.97;
     s.children.forEach((c) => (c.bond = clamp(c.bond - 0.05, 0, 100)));

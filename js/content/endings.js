@@ -69,6 +69,7 @@
           "office",
           "teacher",
           "nurse",
+          "memur",
           "business",
           "crime",
         ].forEach((j) =>
@@ -138,7 +139,7 @@
       name: "Çevre",
       values: ["yalniz", "az-oz", "kalabalik"],
       of: (s) =>
-        s.people < 8 ? "yalniz" : s.people < 22 ? "az-oz" : "kalabalik",
+        s.people < 15 ? "yalniz" : s.people < 45 ? "az-oz" : "kalabalik",
     },
     {
       id: "servet",
@@ -229,6 +230,7 @@
     teacher: ["okulda", "teneffüs zilleri ve öğrenci defterleri"],
     nurse: ["klinikte", "nöbet geceleri ve iyileşen hastalar"],
     business: ["dükkânında", "kepenk açıp kapatarak geçen yıllar"],
+    memur: ["belediye şirketinde", "dosyalar, mühürler ve çay molaları"],
     crime: ["gece işlerinde", "kimseye anlatılamayan geceler"],
   };
   const ARCH_NOUN = {
@@ -240,6 +242,7 @@
     teacher: "bir öğretmen",
     nurse: "bir şifacı",
     business: "bir esnaf",
+    memur: "bir memur",
     crime: "bir gece insanı",
   };
   const ARCH_ADJ = {
@@ -597,6 +600,7 @@
     teacher: "öğretmenlik",
     nurse: "sağlık",
     business: "esnaflık",
+    memur: "memurluk",
     crime: "gece işleri",
     lise: "lise",
     universite: "üniversite",

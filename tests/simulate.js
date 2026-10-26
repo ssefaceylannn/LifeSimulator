@@ -56,8 +56,10 @@ const keys = new Set(),
   eventCount = new Map(),
   worth = {},
   traitSum = {},
+  dummyUnused = 0,
   dimCount = {};
-let weeks = 0;
+let weeks = 0,
+  actCount = 0;
 const t0 = Date.now();
 for (let n = 0; n < N; n++) {
   const strat = n % 3 === 0 ? "rastgele" : "kişilik";
@@ -72,6 +74,13 @@ for (let n = 0; n < N; n++) {
   // Sekme eylemlerini taklit et: zaman zaman ev/araba al, birikim yap.
   let guard = 0;
   while (s.alive && guard++ < 6000) {
+    // Boş zaman: botlar rastgele etkinlik yapar (sürprizler dahil)
+    for (let k = 0; k < 3 && s.free > 0; k++) {
+      const acts = HS.ACTIVITIES.filter((a) => !a.when || a.when(s));
+      const a = acts[(Math.random() * acts.length) | 0];
+      const r = HS.doActivity(s, a.id);
+      if (r.ok) actCount++;
+    }
     const ev = s.current;
     eventCount.set(ev.id, (eventCount.get(ev.id) || 0) + 1);
     const open = ev.c.map((c, i) => (c.off ? -1 : i)).filter((i) => i >= 0);
@@ -198,6 +207,12 @@ console.log(
   Object.fromEntries(
     Object.entries(traitSum).map(([k, v]) => [k, Math.round(v)]),
   ),
+);
+console.log(
+  "Yapılan etkinlik:",
+  actCount,
+  "| hafta başına",
+  (actCount / weeks).toFixed(2),
 );
 console.log("Görülen farklı olay:", ev.length, "/", HS.EVENTS.length + 2);
 console.log(

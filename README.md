@@ -1,6 +1,6 @@
 # Hayat Simülatörü — oynanabilir web prototipi
 
-Telefonda dikey ekranda oynanan, Türkçe bir yaşam simülasyonu. Oyuncu adını, soyadını, şehrini ve görünümünü seçer; 18 yaşında, cebinde 10.000 TL ile başlar. Her ana karar bir haftayı ilerletir. Oyun tarayıcıda çalışır; derleme adımı ya da harici oyun motoru yoktur.
+Telefonda dikey ekranda oynanan, Türkçe bir yaşam simülasyonu. Oyuncu adını, soyadını, doğduğu ili (81 il), cinsiyetini (kadın/erkek), ten ve saç rengini, saç modelini seçer; 18 yaşında, cebinde 10.000 TL ile başlar. Her ana karar bir haftayı ilerletir; kararlar arasında boş zamanında etkinlikler yapar. Karakter, sokakta evinin önünde 2D animasyonlu bir sahnede görünür. Oyun tarayıcıda çalışır; derleme adımı ya da harici oyun motoru yoktur.
 
 > **Durum:** Bu bir **prototip**tir. Tarayıcıda oynanabilir ve otomatik testlerden geçer, ama App Store'a ya da Google Play'e gönderilmeye hazır **değildir**. Ayrıntılar aşağıda, "Neler hâlâ prototip" bölümünde.
 
@@ -11,13 +11,17 @@ Telefonda dikey ekranda oynanan, Türkçe bir yaşam simülasyonu. Oyuncu adın�
 ## Neler tamamlandı (çalışıyor ve test ediliyor)
 
 - **Haftalık karar döngüsü.** Her seçim haftayı ilerletir. Seçimin etkisi, maaş, giderler, faiz, borç, sağlık ve ilişkiler o hafta işlenir.
-- **Meslekler ve iş yeri olayları.** Kafe, fabrika, müzik, ofis, öğretmenlik, sağlık, esnaflık ve riskli "gece işleri" var. Her mesleğin kendi olayları, ücreti, kademe atlaması ve ortamı var: karakterin kıyafeti, sahne rengi ve odadaki eşya mesleğe göre değişir.
+- **Boş zaman.** Her hafta karardan önce 1-4 boş zaman hakkı var (çalışan ve öğrencide az, işsiz ve emeklide çok, küçük çocuk varsa bir eksik). Spor, ders, arkadaşlar, aile ziyareti, partnerle vakit, çocuklarla oyun, ek iş, şehri gezme, gönüllülük, dinlenme ve piyango bileti gibi etkinlikler var. Bazılarında beklenmedik sürprizler çıkar: biriyle tanışmak, sakatlanmak, cüzdan bulmak, telefonun çalınması, ikramiye.
+- **Sonucu belli olmayan kararlar.** İş başvurusu yapılır; sonuç 1-3 hafta sonra telefonla gelir, ofis/öğretmenlik/sağlık/memurluk işlerinde araya mülakat girer. Kabul şansı beceriye, eğitime, çevreye, yaşa ve **kıyafetin işe uygunluğuna** bağlı ve ekranda yüzde olarak görünür. Üniversite sınavı, terfi mülakatı, dükkân açılışı, demo kaydı, riskli teklifler, evlenme teklifi ve akraba borçları da şansla sonuçlanır; sonuç kısa bir bekleyişin ardından açıklanır.
+- **Akrabalar ve torpil.** Dayın belediye şirketinde torpille iş ayarlamayı teklif eder; kabul edersen iş yerinde dedikodu çıkar, dayın da bir gün iyiliğinin karşılığını ister. Teyzenin görücü ayarlaması, bayram ziyaretleri ve "ne zaman evleniyorsun" soruları, amcanın borç istemesi, kuzenle kıyaslanmak, pazar kahvaltıları ve miras kavgası da var.
+- **Meslekler ve iş yeri olayları.** Kafe, fabrika, müzik, ofis, öğretmenlik, sağlık, belediye şirketi memurluğu, esnaflık ve riskli "gece işleri" var. Her mesleğin kendi olayları, ücreti ve kademe atlaması var. Sahnede iş yerinin binası görünür; işe girince iş kıyafeti dolaba eklenir.
 - **Eğitim.** Üniversite sınavı, dört yıllık öğrencilik, final haftaları, staj ve okulu bırakma seçeneği var. Diploma öğretmenlik, sağlık ve ofis işlerinin kapısını açar.
 - **İlişkiler, evlilik ve çocuklar.** Adı olan bir partnerle tanışılır. İlişki bağı ilgi gösterilmezse zayıflar; sonunda tartışma, ayrılık ya da boşanma gelebilir. Evlilikte nikâh büyük ya da küçük olabilir. Çocuğun adı önerilenlerden seçilir ya da elle yazılır. Çocukların okul, ergenlik, üniversite ve düğün dönemeçleri var; ileride torun da gelebilir.
-- **Sağlık, mutluluk ve yaşlanma.** Sağlığın yaşa bağlı bir tavanı var. Mutluluk; ilişkilere, çevreye, borca, işe ve sağlığa göre bir dengeye doğru kayar. Karakter yaşlandıkça saçı ağarır, yüzünde çizgiler belirir ve boyu kısalır. Saç seyrelebilir.
-- **Berber ve görünüm.** Kısa, uzun, kıvırcık ya da kazınmış saç seçilebilir; sakal bırakılıp kestirilebilir; saç ekimi yaptırılabilir.
-- **Para ve varlıklar.** Mevduat, dalgalı endeks fonu ve faiz işleyen borç var; borç yapılandırılabilir. Aile evinde yaşanabilir, kiraya çıkılabilir (ev arkadaşıyla ya da tek başına), ev peşin ya da 15 yıllık krediyle alınabilir. Araba ve arsa da alınıp satılabilir.
-- **Yer değiştirme.** Türkiye'de yedi şehir arasında taşınılabilir. Pasaport çıkarılıp kurmaca bir yurt dışı şehrine (Berlin) göç edilebilir ve geri dönülebilir.
+- **Sağlık, mutluluk ve yaşlanma.** Sağlığın yaşa bağlı bir tavanı var. Mutluluk; ilişkilere, çevreye, borca, işe ve sağlığa göre bir dengeye doğru kayar. Karakter yaşlandıkça saçı ağarır, alnında ve göz kenarında çizgiler belirir, gözlük takar, ileri yaşta hafifçe öne eğilir. Erkek karakterde saç seyrelebilir. Yüz ifadesi ruh hâline göre değişir.
+- **Stil: gardırop ve berber.** 13 kıyafet var (tişört-kot, gömlek, takım elbise, kafe önlüğü, iş tulumu, deri ceket, hırka, sağlık forması, esnaf yeleği, kapüşonlu, elbise, eşofman, örgü yelek). Satın alınıp giyilir ve sahnede görünür; işe uygun kıyafet başvuruda ve terfide şansı artırır. Berberde 5 saç modeli, sakal, saç boyası ve saç ekimi var.
+- **Para ve varlıklar.** Mevduat, dalgalı endeks fonu ve faiz işleyen borç var; borç yapılandırılabilir. Aile evinde yaşanabilir, kiraya çıkılabilir (ev arkadaşıyla ya da tek başına). Daire, bahçeli müstakil ev ya da villa peşin veya 15 yıllık krediyle alınabilir. 6 araç modeli var (bisiklet, scooter, ekonomik otomobil, pikap, SUV, spor araba); takaslanabilir ve boyatılabilir. Arsa da alınıp satılabilir.
+- **Sokak sahnesi.** Karakter evinin önünde durur. Arkadaki bina barınmaya göre değişir: aile apartmanı (balkon, çamaşır ipi, çanak anten), ev arkadaşıyla eski blok, modern kiralık blok, satın alınmış daire, bahçeli müstakil ev, villa ya da yurt dışında tuğla sıra evler. Her taşınmada bina rengi değişir. Araba yolda, bisiklet/scooter kaldırımda durur. Partner ve çocuklar yanındadır, kedi sahiplenilirse o da görünür. Gökyüzü mevsime göre değişir; soğuk bölgelerde kışın kar yağar. Uzak planda ilin özellikleri görünür: deniz ve vapur, dağ, büyükşehir silueti, kale, cami, köprü, kule, saat kulesi, palmiye. Karakter nefes alır, göz kırpar, iyi bir kararda zıplar, kötü haberde omuz düşürür.
+- **Yer değiştirme.** 81 il arasında taşınılabilir. Pasaport çıkarılıp kurmaca bir yurt dışı şehrine (Berlin) göç edilebilir ve geri dönülebilir.
 - **Kurmaca siyaset ve ekonomi.** Dört yılda bir, hayal ürünü partiler ve adaylarla seçim yapılır; seçilen politika ekonomiye etki eder. 2027 ve sonrası için her hayata üç kurmaca ekonomi senaryosundan biri atanır.
 - **Ara sahneler.** Mezuniyet, nikâh, doğum, ev alma, göç ve emeklilik gibi anlarda ve her altı ayda bir kısa ara sahne gösterilir.
 - **Kayıtlar.** Her hayat bu cihazda ayrı kaydedilir. Kayıtlar arasında geçilebilir, kayıt silinebilir ve hayat istenen anda sonlandırılabilir. Kayıttan devam edilince yarım kalan haftanın olayı korunur. Eski sürümün kayıtları otomatik dönüştürülür.
@@ -30,7 +34,7 @@ Sonlar yalnızca numaralanmaz. Final anlatısı, `js/content/endings.js` içinde
 | Boyut | Değişken sayısı | Neye göre belirlenir |
 |---|---|---|
 | Hayatın kapanışı | 8 | Ölüm/kapanış nedeni ve yaş |
-| Meslek ve yükseliş | 25 | En uzun çalışılan iş × kademe ve beceri |
+| Meslek ve yükseliş | 28 | En uzun çalışılan iş × kademe ve beceri |
 | Eğitim | 3 | Lise, üniversite ya da yarım kalan üniversite |
 | Aşk hayatı | 6 | Hiç, ayrılıklar, boşanma, evlenmeden birlikte, yakın ya da mesafeli evlilik |
 | Çocuklar | 5 | Sayı × ebeveynle bağ |
@@ -41,7 +45,7 @@ Sonlar yalnızca numaralanmaz. Final anlatısı, `js/content/endings.js` içinde
 | Baskın yaşam teması | 8 | Kararların biriktirdiği eğilim (kariyer, aile, risk, yolculuk…) |
 | Risk geçmişi | 3 | Temiz, riskten dönen, gölgeli |
 
-Mantıksal olarak imkânsız birleşimler (ör. temiz geçmişle "suç" sonu) çıkarıldığında **447.120.000 geçerli profil** kalır.
+Mantıksal olarak imkânsız birleşimler (ör. temiz geçmişle "suç" sonu) çıkarıldığında **500.774.400 geçerli profil** kalır.
 
 Her boyut finale kendi cümlelerini ekler, ve bazı boyutlar birbirinin metnini değiştirir:
 
@@ -51,24 +55,32 @@ Her boyut finale kendi cümlelerini ekler, ve bazı boyutlar birbirinin metnini 
 
 Anahtar, boyut değerlerinin birleşimidir. `tests/simulate.js` testi, farklı anahtarların farklı metin ürettiğini doğrular. Bu cihazda keşfedilen farklı son profilleri ayrıca sayılır.
 
-**Dürüst not:** 447 milyon, sistemin ürettiği **birleşim** sayısıdır; elle yazılmış 447 milyon ayrı sahne değildir. Bir hayatta hangi değerlerin çıktığı oyuncunun kararlarına bağlıdır. Otomatik testte farklı oyun tarzına sahip 200 bot hayatı, 200 hayatta yaklaşık 180 farklı profile ulaştı.
+**Not:** 500 milyon, sistemin ürettiği **birleşim** sayısıdır; elle yazılmış 500 milyon ayrı sahne değildir. Bir hayatta hangi değerlerin çıktığı oyuncunun kararlarına bağlıdır. Otomatik testte farklı oyun tarzına sahip 200 bot hayatı yaklaşık 150-160 farklı profile ulaştı. Boş zaman etkinlikleri ilişki ve çevre puanlarını yükselttiği için, sık etkinlik yapan hayatlar birbirine biraz daha çok benziyor.
 
 ## Ekonomi
 
-2026 değerleri gerçek verilerle kalibre edilmiştir: TÜİK Eylül 2026 TÜFE (genel ve kategori bazlı), 2026 net asgari ücret, Ağustos 2026 il bazlı kiralar, m² konut fiyatları, en ucuz sıfır araç, toplu taşıma abonmanı, pasaport harcı, en düşük emekli aylığı ve mevduat faizi. Kaynaklar ve hangi rakamın ne kadar kesin olduğu [ECONOMY.md](ECONOMY.md) dosyasında.
+2026 değerleri gerçek verilerle kalibre edilmiştir: TÜİK Eylül 2026 TÜFE (genel ve kategori bazlı), 2026 net asgari ücret, **81 ilin** ortalama ilan kirası ve m² konut fiyatı (Ağustos-Ekim 2026), en ucuz sıfır araç, toplu taşıma abonmanı, pasaport harcı, en düşük emekli aylığı ve mevduat faizi. Kaynaklar ve hangi rakamın ne kadar kesin olduğu [ECONOMY.md](ECONOMY.md) dosyasında.
 
 2027 ve sonrası **kurmaca bir senaryodur**; gerçek tahmin değildir. Kişiler, partiler, kurumlar, bankalar ve markalar hayal ürünüdür.
 
 ## Proje yapısı
 
 ```
-index.html, style.css          Arayüz ve mobil düzen
-js/content/economy.js          2026 ekonomi verisi, meslekler, şehirler, senaryolar, kurmaca partiler
+index.html, style.css          Arayüz ve mobil düzen (beyaz-mavi tema)
+js/content/economy.js          2026 ekonomi verisi, meslekler, senaryolar, kurmaca partiler
+js/content/cities.js           81 il: kira, m² fiyatı, bölge ve sahne özellikleri
 js/content/events.js           Hikâye olayları (veri)
 js/content/events-daily.js     Gündelik olaylar ve aile evinden ayrılma (veri)
+js/content/events-family.js    İş başvurusu, mülakat, akrabalar ve torpil (veri)
+js/content/activities.js       Boş zaman etkinlikleri ve sürprizleri (veri)
 js/content/endings.js          Son profili boyutları ve final anlatısı
+js/art/character.js            Parçalı SVG karakter, kıyafetler, saç ve yaşlanma
+js/art/scene.js                Sokak sahnesi: ev, araba, iş yeri, şehir silueti, mevsim
+js/art/fluent.js               Gömülü Fluent Emoji çizimleri (scripts/build-art.js üretir)
+assets/fluent/                 Kullanılan Fluent Emoji SVG'leri, sınır ölçüleri ve lisansı
 js/engine.js                   Oyun motoru (DOM'suz; Node'da da çalışır)
-js/ui.js                       Ekranlar, sekmeler, kayıt, anı defteri
+js/ui.js                       Ekranlar, sekmeler, boş zaman, kayıt, anı defteri
+scripts/                       Çizim gömme/ölçme ve tek dosya derleme betikleri
 sw.js, manifest.webmanifest    Çevrimdışı web uygulaması
 tests/                         Simülasyon ve tarayıcı testleri
 ```
@@ -92,7 +104,9 @@ HS.EVENTS.push({
 });
 ```
 
-Kullanılabilen etki anahtarları (`cash`, `cost`, `h`, `m`, `skill`, `people`, `bond`, `job`, `edu`, `partner`, `marry`, `child`, `buy`, `emigrate` vb.) `js/engine.js` içindeki `apply()` fonksiyonunda listelenir. Tutarlar 2026 TL'si olarak yazılır ve oyun yılına göre enflasyonla ölçeklenir.
+Sonucu şansa bağlı bir seçim için `fx.chance` kullanılır: `{ p: 0.6, win: {...}, lose: {...}, winT, winP, loseT, loseP }`. Oyuncu yüzdeyi görür, sonuç kısa bir bekleyişten sonra açıklanır. Yeni boş zaman etkinliği `HS.ACTIVITIES` listesine, yeni kıyafet `HS.Art.OUTFITS` içine eklenir.
+
+Kullanılabilen etki anahtarları (`cash`, `cost`, `h`, `m`, `skill`, `people`, `bond`, `job`, `apply`, `edu`, `partner`, `marry`, `child`, `buy`, `emigrate`, `chance` vb.) `js/engine.js` içindeki `apply()` fonksiyonunda listelenir. Tutarlar 2026 TL'si olarak yazılır ve oyun yılına göre enflasyonla ölçeklenir.
 
 ## Testler
 
@@ -103,15 +117,17 @@ node tests/browser.js        # Chromium'da uçtan uca akış + 320/360/390 px ta
 
 Simülasyon testi şunları denetler: hiçbir değerin NaN ya da negatif olmaması, her hayatın bitmesi, final metninde `undefined` olmaması ve farklı profillerin farklı metin üretmesi. Ayrıca ölüm yaşı dağılımını, son türlerini, boyut çeşitliliğini, 40 yaşındaki ortalama serveti ve hiç görülmeyen olayları raporlar.
 
-Tarayıcı testi şunları dener: karakter oluşturma, 60 hafta oynama, tüm sekmeler, berber, sayfayı yenileyip kayıttan devam etme (yarım kalan olay korunmalı), çocuğa elle isim verme, ikinci hayat açıp hayatlar arasında geçme, hayatı sonlandırma, anı defteri ve dar ekranlarda yatay taşma olmaması.
+Tarayıcı testi şunları dener: karakter oluşturma, 60 hafta oynama, tüm sekmeler, berber, kıyafet alıp giyme, araba alıp sahnede görme, iş başvurusu, boş zaman etkinliği, sayfayı yenileyip kayıttan devam etme (yarım kalan olay korunmalı), çocuğa elle isim verme, ikinci hayat açıp hayatlar arasında geçme, hayatı sonlandırma, anı defteri ve dar ekranlarda yatay taşma olmaması.
 
 ## Neler hâlâ prototip
 
 - **Mağaza sürümü yok.** iOS ya da Android uygulama kabuğu (ör. Capacitor), imzalama, mağaza ekran görüntüleri, yaş derecelendirmesi ve mağaza gizlilik beyanı yapılmadı. Bkz. [APP_STORE.md](APP_STORE.md).
 - **Gerçek cihaz testi yapılmadı.** Mobil düzen, Chromium'un mobil emülasyonunda (320, 360 ve 390 px) test edildi; gerçek iPhone/Android Safari ve Chrome'da denenmedi.
-- **Görseller basit.** Karakter ve ortam CSS şekillerinden oluşuyor. Profesyonel illüstrasyon, animasyon ve ses yok.
-- **Denge ilk aşamada.** Ekonomi ve olay ağırlıkları bot simülasyonlarıyla ayarlandı, gerçek oyuncu testiyle değil. Örneğin riskli işleri seçen oyuncular için "suç" sonu hâlâ sık. Servet dağılımı da gerçek oyuncu verisiyle doğrulanmadı.
-- **İçerik hacmi sınırlı.** 113 olay var. Uzun hayatlarda gündelik olaylar tekrar etmeye başlar.
+- **Görseller kod ile çizildi.** Karakter ve binalar elle yazılmış SVG; ev, araba, ağaç ve iş yeri çizimleri Microsoft Fluent Emoji setinden (MIT lisansı, `assets/fluent/LICENSE`). Animasyonlar basit (nefes, göz kırpma, zıplama, bulut ve vapur). Profesyonel illüstrasyon, iskelet animasyonu ve ses yok.
+- **Yazı tipleri çevrimiçi.** Fredoka ve Nunito, Google Fonts'tan yüklenir; çevrimdışıyken sistem yazı tipine düşer.
+- **Denge ilk aşamada.** Ekonomi ve olay ağırlıkları bot simülasyonlarıyla ayarlandı, gerçek oyuncu testiyle değil. Örneğin riskli teklifleri kabul eden botlarda "suç" sonu hâlâ çok sık (yaklaşık üçte bir). Servet dağılımı da gerçek oyuncu verisiyle doğrulanmadı.
+- **İçerik hacmi sınırlı.** 125 olay ve 11 boş zaman etkinliği var. Uzun hayatlarda gündelik olaylar tekrar etmeye başlar.
+- **İl verisi karışık kaynaklı.** 81 ilin kira ve m² değerleri ilan fiyatıdır ve farklı raporlardan gelir (bkz. ECONOMY.md); Şırnak kirası tahmindir.
 - **Yurt dışı tek şehir.** Yurt dışı yalnızca kurmaca bir Berlin; yabancı para birimi modellenmiyor (TL karşılığı çarpanlarla).
 - **Eş ve çocukların kendi hayatları yok.** Bir "bağ" değeriyle ve dönemeç olaylarıyla temsil ediliyorlar; kendi meslekleri ya da gelirleri simüle edilmiyor (evlilikte ev giderinin yarısını eşin karşıladığı varsayılıyor).
 - **Erişilebilirlik kısmi.** Ekran okuyucu ve klavye için temel etiketler var, ama ayrıntılı bir erişilebilirlik denetimi yapılmadı.
