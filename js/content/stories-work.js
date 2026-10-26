@@ -13,6 +13,7 @@
   const team = (s) => isWork(s) && !["music", "business"].includes(s.job);
   const stu = (s) => s.edu === "ogrenci";
   const coName = (s) => (s.company && HS.co(s.company) ? HS.co(s.company).name : "iş yeri");
+  const coLoc = (s) => (s.company && HS.co(s.company) ? HS.ek(HS.co(s.company).name, "loc") : "iş yerinde");
   const P = (s, v) => (s.company ? { payAdj: v } : {});
   const N = (s, r) => HS.castName(s, r);
   const rel = (s, r) => HS.castRel(s, r);
@@ -24,6 +25,7 @@
   const place = (s) => PLACE[s.job] || "iş yeri";
   const done = (s, id) => HS.done(s, id);
   const flag = (s, k) => !!(s.flags && s.flags[k]);
+  const ek2 = (w, k) => HS.ek(w, k); // h dışından ek (partner adı, şirket adı)
 
   // ==========================================================
   // 1) İş arkadaşı üçlemesi: ilk gün yardımı → terfi yarışı → örtbas
@@ -34,7 +36,7 @@
     room: "is",
     title: "Yeni yerde ilk günler",
     text: (s, h) =>
-      h.ek(coName(s), "loc") + " daha kimin nerede oturduğunu bilmiyorsun. " + h.cast("isArk").name +
+      coLoc(s) + " daha kimin nerede oturduğunu bilmiyorsun. " + h.cast("isArk").name +
       " yanına geldi: \"Şifreler, yemekhane, kimin kahvesine dokunulmaz… Hepsini bir öğlende anlatırım.\"",
     choices: (s, h) => [
       c("Öğle yemeğini sen ısmarla", "₺900 · iyi bir başlangıç", { cost: 900, m: 3, people: 1, rel: { isArk: 12 }, set: { yemek: 1 }, go: "kahve" }),
@@ -226,8 +228,6 @@
       },
     },
   });
-  // Partner adı ekleri için kısa yol (h dışından)
-  const ek2 = (w, k) => HS.ek(w, k);
 
   // ==========================================================
   // 3) Küçülme söylentisi (performans + önceki tavırlar)
@@ -391,7 +391,7 @@
         title: "Söz yayıldı",
         text: (s, h) =>
           (s.partner
-            ? ek2(s.partner.name, "gen") + " bir arkadaşı " + ek2(coName(s), "loc") + " çalışıyormuş. Akşam yemeğinde soru geldi: \"" + h.cast("isArk").name + " kim?\""
+            ? ek2(s.partner.name, "gen") + " bir arkadaşı " + coLoc(s) + " çalışıyormuş. Akşam yemeğinde soru geldi: \"" + h.cast("isArk").name + " kim?\""
             : h.cast("isArk").name + " de duymuş; yüzü kızarmış. \"Ne diyeceğiz şimdi?\"") +
           (h.d.tavir === "yuz" ? " En azından ofiste herkes kimin konuştuğunu öğrendi." : ""),
         choices: (s, h) =>
@@ -422,7 +422,7 @@
       c("Hibrit için gerekçe yaz", "Müzakere · şans", {
         chance: {
           p: clamp(0.3 + perf(s) / 200 + sk(s, "muzakere") / 100, 0.2, 0.8),
-          win: { m: 4, sk: { muzakere: 2, yazisma: 0 }, end: "hibrit" },
+          win: { m: 4, sk: { muzakere: 2 }, end: "hibrit" },
           lose: { rel: { yonetici: -4 }, cost: 2500, end: "uydu" },
           winT: "İki gün evden onaylandı",
           winP: "Verilerinle gelen tek kişi sendin.",
@@ -828,8 +828,8 @@
       faiz: {
         gap: 5,
         when: stu,
-        title: "Yurt odasında finans dersi",
-        text: (s, h) => "Oda arkadaşın kredi parasını vadeli mevduata yatırıyor: \"Faizsiz kredi, %40 faizli hesap. Bedava para.\" Senin para ise çoktan kantinde, kırtasiyede ve kargo kapılarında eridi.",
+        title: "Kantinde finans dersi",
+        text: (s, h) => "Sınıftan bir arkadaşın kredi parasını vadeli mevduata yatırıyor: \"Faizsiz kredi, %40 faizli hesap. Bedava para.\" Senin para ise çoktan kantinde, kırtasiyede ve kargo kapılarında eridi.",
         choices: (s, h) => [
           c("Kalanı mevduata koy", "Finans +", { sk: { finans: 3 }, cash: 2500, flag: "kykBiriktirdi", end: "biriktirdi" }),
           c("Harca: dizüstü taksiti, kitaplar", "Moral +", { m: 3, cost: 1500, end: "harcadi" }),
@@ -1052,7 +1052,7 @@
             chance: {
               p: clamp(0.45 + perf(s) / 200, 0.3, 0.85),
               win: { ...P(s, 1.1), esteem: 6, flag: "yuksekLisans", end: "zam" },
-              lose: { esteem: 2, flag: "yuksekLisans", flag2: 1, end: "diploma" },
+              lose: { esteem: 2, flag: "yuksekLisans", end: "diploma" },
               winT: "%10 zam",
               loseT: "\"Bütçe yok\"",
             },
