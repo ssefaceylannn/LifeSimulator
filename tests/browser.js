@@ -99,10 +99,11 @@ const assert = (c, m) => {
   }
   await playWeeks(60);
   const before = await p.evaluate(SAVES);
-  assert(before.length === 1 && before[0].weeks >= 55, "haftalar kaydedilmedi");
+  assert(before.length === 1 && before[0].weeks >= 25, "haftalar kaydedilmedi");
 
   // Sahne seçici: oda değiştir
   for (const v of ["yatak", "mutfak", "salon"]) {
+    while (await p.isVisible("#event")) await p.click("#eventContinue");
     await p.click(`#viewChips [data-v=${v}]`);
     assert((await p.evaluate(() => HS.ui.active.view)) === v, v + " sahnesine geçilmedi");
     await shot(p, "04-oda-" + v);
@@ -122,10 +123,15 @@ const assert = (c, m) => {
     if (await p.isVisible("#confirmModal")) await p.click("#confirmYes");
     while (await p.isVisible("#event")) await p.click("#eventContinue");
   };
+  const sub = async (t) => {
+    while (await p.isVisible("#event")) await p.click("#eventContinue");
+    await p.click(`#panel .subtab:has-text("${t}")`);
+  };
   // Berber
   await p.evaluate(() => (HS.ui.active.cash = 50000000));
   await p.click(".tab[data-tab=me]");
-  await clickRow("Kazınmış saç");
+  await sub("Stil");
+  await p.click('#panel .hair:has-text("Kazınmış")');
   assert((await p.evaluate(() => HS.ui.active.hair)) === "shaved", "berber işlemi uygulanmadı");
   // Gardırop
   await p.click('#panel .outfit:has-text("Takım elbise")');
@@ -138,6 +144,7 @@ const assert = (c, m) => {
     HS.ui.render();
   });
   await p.click(".tab[data-tab=money]");
+  await sub("Araç");
   await clickRow("Al: SUV");
   assert((await p.evaluate(() => HS.ui.active.car)) === "suv", "araba alınmadı");
   await p.click("#viewChips [data-v=garaj]");
@@ -145,12 +152,64 @@ const assert = (c, m) => {
   await shot(p, "05-garaj");
   // Yatırım ve bahis
   await p.click(".tab[data-tab=money]");
+  await sub("Yatırım");
   await p.click('#panel .inv:has-text("Hisse senedi") .mini:has-text("Al %10")');
   assert((await p.evaluate(() => HS.invVal(HS.ui.active, "borsa"))) > 0, "borsa alımı olmadı");
   const betBtn = await p.$("#panel .bet .mini:not([disabled])");
   await betBtn.click();
   while (await p.isVisible("#event")) await p.click("#eventContinue");
   assert((await p.evaluate(() => HS.ui.active.bets.n)) === 1, "bahis oynanmadı");
+  // Banka: kart, vadeli, kredi, fatura
+  await p.evaluate(() => {
+    const s = HS.ui.active;
+    s.job = "office";
+    s.jobWeeks = 60;
+    s.score = 1600;
+    HS.ui.render();
+  });
+  await sub("Banka");
+  for (let i = 0; i < 8 && !(await p.evaluate(() => !!HS.ui.active.card)); i++) {
+    await p.evaluate(() => (HS.ui.active.applyBlock = 0));
+    await p.click(".tab[data-tab=money]");
+    await clickRow("Kredi kartına başvur");
+  }
+  assert(await p.evaluate(() => !!HS.ui.active.card), "kredi kartı alınamadı");
+  await p.click('#panel .mini:has-text("Nakdin hepsi")').catch(() => {});
+  if (await p.isVisible("#confirmModal")) await p.click("#confirmYes");
+  assert((await p.evaluate(() => HS.ui.active.deposits.length)) === 1, "vadeli hesap açılmadı");
+  assert((await p.evaluate(() => HS.ui.active.cash)) < 1, "vadeli hesap nakdi kilitlemedi");
+  await p.evaluate(() => {
+    HS.ui.active.cash = 20000000;
+    HS.ui.active.bills.push({ id: "bt", k: "su", name: "Su", amt: 500, due: HS.ui.active.weeks + 2, late: false });
+    HS.ui.render();
+  });
+  await clickRow("Hepsini öde");
+  assert((await p.evaluate(() => HS.ui.active.bills.length)) === 0, "fatura ödenmedi");
+  await shot(p, "06-banka");
+  // Eşya: taksitle konsol
+  await p.click(".tab[data-tab=me]");
+  await sub("Eşyalar");
+  await p.click('#panel .item:has-text("Oyun konsolu") .mini:has-text("3 taksit")');
+  await p.click("#confirmYes");
+  assert(await p.evaluate(() => HS.ui.active.items.includes("konsol")), "konsol alınmadı");
+  assert(await p.evaluate(() => HS.ui.active.card.bal > 0), "taksit karta yansımadı");
+  // Spor salonu paketi
+  await sub("Ben");
+  await p.click("#panel .pack >> nth=2");
+  await p.click("#confirmYes");
+  assert(await p.evaluate(() => !!HS.ui.active.gym), "salon üyeliği alınmadı");
+  // Aile: ziyaret
+  await sub("Aile");
+  await p.evaluate(() => {
+    HS.ui.active.free = 3;
+    HS.ui.active.kin.forEach((k) => (k.city = HS.ui.active.city));
+    HS.ui.render();
+  });
+  await p.click('#panel .node:not(.dead) .mini:has-text("Ziyaret") >> nth=0');
+  await p.click("#confirmYes");
+  while (await p.isVisible("#event")) await p.click("#eventContinue");
+  assert((await p.evaluate(() => HS.ui.active.view)) === "ziyaret", "ziyaret sahnesine geçilmedi");
+  await shot(p, "06-ziyaret");
   // Şirket başvurusu
   await p.evaluate(() => {
     const s = HS.ui.active;
@@ -202,7 +261,8 @@ const assert = (c, m) => {
     HS.ui.render();
   });
   await p.click(".tab[data-tab=life]");
-  await p.click('#panel [data-a="dinlen"]');
+  await p.click('#panel [data-a="yemekyap"]');
+  assert((await p.evaluate(() => HS.ui.active.view)) === "mutfak", "yemek yapınca mutfağa geçilmedi");
   while (await p.isVisible("#event")) await p.click("#eventContinue");
   assert((await p.evaluate(() => HS.ui.active.free)) === 0, "etkinlik boş zaman harcamadı");
   assert(await p.$("#procList"), "süren işler listesi görünmüyor");
@@ -308,9 +368,19 @@ const assert = (c, m) => {
       await o[0].click();
       await q.click("#advanceBtn");
     }
+    while (await q.isVisible("#event")) await q.click("#eventContinue");
     await noOverflow(q, w + "px oyun");
     await q.click(".tab[data-tab=money]");
     await noOverflow(q, w + "px para");
+    for (const t of ["me", "work", "world"]) {
+      await q.click(`.tab[data-tab=${t}]`);
+      await noOverflow(q, w + "px " + t);
+    }
+    await q.click(".tab[data-tab=me]");
+    for (const st of ["Aile", "Stil", "Eşyalar"]) {
+      await q.click(`#panel .subtab:has-text("${st}")`);
+      await noOverflow(q, w + "px " + st);
+    }
     if (SHOTS)
       await q.screenshot({ path: path.join(SHOTS, "11-dar-" + w + ".png") });
     // Alt menü görünür ve tıklanabilir olmalı

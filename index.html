@@ -11,7 +11,7 @@
     <link rel="apple-touch-icon" href="icon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;600;700;800&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@500;600;700;800&display=swap" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -72,6 +72,7 @@
           <div>
             <div class="kicker" id="dateLabel">İSTANBUL</div>
             <h2 id="personName">Deniz Yılmaz</h2>
+            <button class="lv-badge" id="lvBadge" aria-label="Seviye"><b id="lvNum">1</b><i><i id="lvBar"></i></i></button>
             <div class="subtitle" id="titleLine"></div>
           </div>
           <button class="chip" id="slotPill">HAYAT 1</button>
@@ -86,6 +87,7 @@
           <div class="stat"><span>Nakit</span><b id="cashStat">₺10.000</b></div>
           <div class="stat"><span>Sağlık</span><b id="healthStat">82</b><i class="bar"><i id="healthBar"></i></i></div>
           <div class="stat"><span>Mutluluk</span><b id="moodStat">65</b><i class="bar mood"><i id="moodBar"></i></i></div>
+          <div class="stat"><span>Stres</span><b id="stressStat">25</b><i class="bar stress"><i id="stressBar"></i></i></div>
         </div>
         <div class="money-line" id="moneyLine"></div>
         <div id="panel"></div>
@@ -183,6 +185,7 @@
     <script src="js/content/events.js"></script>
     <script src="js/content/events-daily.js"></script>
     <script src="js/content/events-family.js"></script>
+    <script src="js/content/events-life.js"></script>
     <script src="js/content/activities.js"></script>
     <script src="js/content/endings.js"></script>
     <script src="js/art/fluent.js"></script>
@@ -198,6 +201,10 @@
     <script src="js/systems/migration.js"></script>
     <script src="js/systems/housing.js"></script>
     <script src="js/systems/music.js"></script>
+    <script src="js/systems/time.js"></script>
+    <script src="js/systems/bank.js"></script>
+    <script src="js/systems/life.js"></script>
+    <script src="js/systems/family.js"></script>
     <script src="js/systems/achievements.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/ui.js"></script>

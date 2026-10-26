@@ -87,7 +87,7 @@
   HS.CAN.moveCity = (s, to, fx) => {
     if (to === s.city) return "Zaten buradasın.";
     const k = HS.moveCost(s, to, fx.relocationPaid);
-    return s.cash < k.total ? "Taşınma için yaklaşık " + HS.money(k.total) + " gerekiyor." : true;
+    return HS.fundsOf(s) < k.total ? HS.short(s, k.total) : true;
   };
 
   // ---- Yatırım amaçlı mülk ----
@@ -95,7 +95,7 @@
   HS.propRent = (s, p) => (HS.CITIES[p.city]?.rent || 20000) * TYPE_RENT[p.type] * s.idx.housing;
   HS.CAN.buyProp = (s, v) => {
     const price = HS.propPrice(s, v.city, v.type) * (1 + C().saleCommission + 0.02);
-    return s.cash < price ? "Tapu harcı ve komisyon dahil " + HS.money(price) + " gerekiyor." : true;
+    return HS.fundsOf(s) < price ? HS.short(s, price) : true;
   };
   HS.FX.buyProp = (s, v) => {
     const price = HS.propPrice(s, v.city, v.type);
@@ -159,7 +159,7 @@
   // ---- Ehliyet ----
   const motor = (m) => m && m !== "bisiklet";
   HS.CAN.buy = (s, v, fx) => (v === "car" && motor(fx.model) && s.license !== "var" ? "Önce ehliyet almalısın (PARA > Ehliyet)." : true);
-  HS.CAN.license = (s) => (s.license !== "yok" ? "Ehliyet sürecin zaten başladı." : s.age < 18 ? "18 yaş gerekir." : s.cash < (C().drivingCourse + C().eExam) * s.idx.cpi ? "Kurs ve sınav ücreti için para yetmiyor." : true);
+  HS.CAN.license = (s) => (s.license !== "yok" ? "Ehliyet sürecin zaten başladı." : s.age < 18 ? "18 yaş gerekir." : HS.fundsOf(s) < (C().drivingCourse + C().eExam) * s.idx.cpi ? HS.short(s, (C().drivingCourse + C().eExam) * s.idx.cpi) : true);
   HS.FX.license = (s) => {
     HS.book(s, "Sürücü kursu", (C().drivingCourse + C().eExam) * s.idx.cpi);
     s.license = "kurs";
@@ -208,7 +208,7 @@
       HS.book(s, "Yoklama kaçağı idari para cezası", 3500 * s.idx.cpi);
     }
   };
-  HS.CAN.mil = (s, v) => (v === "bedelli" && s.cash < C().bedelli * s.idx.cpi ? "Bedelli için " + HS.money(C().bedelli * s.idx.cpi) + " gerekiyor." : true);
+  HS.CAN.mil = (s, v) => (v === "bedelli" && HS.fundsOf(s) < C().bedelli * s.idx.cpi ? HS.short(s, C().bedelli * s.idx.cpi) : true);
   HS.HOOKS.weekly.push((s) => {
     if (s.mil === "serving") {
       s.free = Math.min(s.free, 1);

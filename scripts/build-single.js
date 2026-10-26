@@ -22,7 +22,7 @@ const js = scripts
 
 const out =
   "<title>Hayat Simülatörü</title>\n" +
-  '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;600;700;800&display=swap" />\n' +
+  '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@500;600;700;800&display=swap" />\n' +
   '<meta name="theme-color" content="#f4f8fd" />\n' +
   "<style>\n" +
   read("style.css") +

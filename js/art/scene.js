@@ -155,7 +155,7 @@
         block(205, 78, 150, 122, w) +
         `<path d="M330 72v-10M322 60q8-8 16 0" stroke="#8a96a8" stroke-width="2" fill="none"/>` +
         windowsGrid(216, 88, 4, 3, 18, 20, 34, 34, "#9fc3e6") +
-        `<g fill="none" stroke="${shadeOf(w, 0.35)}" stroke-width="1.6">${[110, 144].map((y) => `<path d="M212 ${y}h136M212 ${y - 6}h136${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => `M${214 + i * 17} ${y - 6}v6`).join("")}`).join("")}</g>` +
+        `<g fill="none" stroke="${shadeOf(w, 0.35)}" stroke-width="1.6">${[110, 144].map((y) => `<path d="M212 ${y}h136M212 ${y - 6}h136${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => `M${214 + i * 17} ${y - 6}v6`).join("")}"/>`).join("")}</g>` +
         `<path d="M218 117q15 6 30 0" stroke="#9aa6b5" fill="none"/><rect x="222" y="117" width="7" height="9" fill="#e85d75"/><rect x="236" y="118" width="7" height="8" fill="#4a86d8"/>` +
         `<g>${[300, 318].map((x) => `<rect x="${x}" y="136" width="8" height="7" fill="#c46a3d"/><circle cx="${x + 4}" cy="133" r="5" fill="#5aa65a"/><circle cx="${x + 2}" cy="131" r="1.5" fill="#e85d75"/>`).join("")}</g>` +
         door(268, 26, 32, "#7a5638", shadeOf(w, 0.3))
@@ -339,6 +339,42 @@
   Art.hash = hashStr;
   const put = (cls, cx, by, k, inner) => `<g class="${cls}" transform="translate(${(cx - 60 * k).toFixed(1)} ${(by - 214 * k).toFixed(1)}) scale(${k})">${inner}</g>`;
   Art.put = put;
+  Art.childLook = function (s, c, P = Art.fromState(s)) {
+    const a = s.year - c.born;
+    const h = hashStr(c.name);
+    const kp = {
+      gender: h % 2 ? "man" : "woman",
+      skin: P.skin,
+      hair: a < 4 ? "short" : pick(h % 2 ? ["short", "curly", "sidepart", "afro"] : ["long", "braid", "bun", "curly", "ponytail", "bob"], h >>> 3),
+      hairColor: P.hairColor,
+      age: a,
+      outfit: pick(["gunluk", "esofman", "kapusonlu", "ceket", "elbise"], h >>> 5),
+      mood: 1,
+      eyeColor: (h >>> 7) % 4,
+      fat: 0.25,
+    };
+    if (kp.outfit === "elbise" && kp.gender === "man") kp.outfit = "gunluk";
+    if (a >= 18) Object.assign(kp, { outfit: pick(["gomlek", "ceket", "gunluk"], h), mood: c.bond >= 50 ? 1 : 0 });
+    return kp;
+  };
+  Art.partnerLook = function (s, P = Art.fromState(s)) {
+    const pp = {
+      gender: P.gender === "man" ? "woman" : "man",
+      skin: (s.seed + 1) % 4,
+      hair: P.gender === "man" ? pick(["long", "bun", "curly", "braid", "wavy", "bob", "ponytail"], s.seed) : pick(["short", "curly", "shaved", "sidepart", "pompadour"], s.seed),
+      hairColor: pick(Object.keys(Art.HAIR_COLORS), s.seed + 2),
+      gray: P.gray * 0.9,
+      beard: P.gender !== "man" && s.seed % 3 === 0,
+      age: s.age,
+      outfit: pick(["gomlek", "hirka", "gunluk", "elbise", "ceket"], s.seed + (s.partner.married ? 1 : 0)),
+      mood: s.partner.bond >= 55 ? 1 : s.partner.bond < 30 ? -1 : 0,
+      glasses: s.age >= 60,
+      eyeColor: (s.seed + 3) % 4,
+      fat: Math.min(0.8, 0.25 + Math.max(0, s.age - 30) / 120),
+    };
+    if (pp.outfit === "elbise" && pp.gender === "man") pp.outfit = "gomlek";
+    return pp;
+  };
   Art.cast = function (s, cx, by, k, opt = {}) {
     const P = Art.fromState(s);
     let o = "";
@@ -351,62 +387,52 @@
           const a = s.year - c.born;
           const sc = (a < 4 ? 0.42 : a < 11 ? 0.55 : 0.72) * k;
           const h = hashStr(c.name);
-          const kp = {
-            gender: h % 2 ? "man" : "woman",
-            skin: P.skin,
-            hair: a < 4 ? "short" : pick(h % 2 ? ["short", "curly", "short"] : ["long", "braid", "bun", "curly"], h >> 3),
-            hairColor: P.hairColor,
-            age: a,
-            outfit: pick(["gunluk", "esofman", "kapusonlu", "ceket", "elbise"], h >> 5),
-            mood: 1,
-            eyeColor: (h >>> 7) % 4,
-            fat: 0.25,
-          };
+          const kp = Art.childLook(s, c, P);
           if (kp.outfit === "elbise" && kp.gender === "man") kp.outfit = "gunluk";
           o += put("hs-kid", cx - (58 + i * 40) * k, by, sc, Art.person(kp));
         });
     o += put("hs-me", cx, by, k, Art.person(P));
     if (s.partner && !opt.solo) {
-      const pp = {
-        gender: P.gender === "man" ? "woman" : "man",
-        skin: (s.seed + 1) % 4,
-        hair: P.gender === "man" ? pick(["long", "bun", "curly", "braid"], s.seed) : pick(["short", "curly", "shaved"], s.seed),
-        hairColor: pick(Object.keys(Art.HAIR_COLORS), s.seed + 2),
-        gray: P.gray * 0.9,
-        beard: P.gender !== "man" && s.seed % 3 === 0,
-        age: s.age,
-        outfit: pick(["gomlek", "hirka", "gunluk", "elbise", "ceket"], s.seed + (s.partner.married ? 1 : 0)),
-        mood: s.partner.bond >= 55 ? 1 : s.partner.bond < 30 ? -1 : 0,
-        glasses: s.age >= 60,
-        eyeColor: (s.seed + 3) % 4,
-        fat: Math.min(0.8, 0.25 + Math.max(0, s.age - 30) / 120),
-      };
+      const pp = Art.partnerLook(s, P);
       if (pp.outfit === "elbise" && pp.gender === "man") pp.outfit = "gomlek";
       o += put("hs-partner", cx + 70 * k, by, k * 0.95, Art.person(pp));
     }
     return o;
   };
 
-  // Sabah işe gidiş şeridi: solda ev, sağda iş yeri; araç/yaya .hs-mover ile hareket eder.
-  Art.commute = function (s) {
-    const ht = Art.homeType(s);
+  // İşe gidiş / eve dönüş: araç yolda sabit durur ve hafifçe sarsılır; şehir, ağaçlar ve
+  // yol çizgileri arkada kayar (paralaks). phase: "sabah" | "aksam".
+  Art.commute = function (s, phase = "sabah") {
+    const eve = phase === "aksam";
     const wk = s.edu === "ogrenci" && s.job === "none" ? "school" : WORK[s.job] || (s.job === "music" ? "stadium" : "office-building");
     const vehicle = s.car && Art.CARS[s.car] ? Art.CARS[s.car] : null;
     const hue = Art.CAR_COLORS[(s.carColor || 0) % Art.CAR_COLORS.length];
-    const P = Art.fromState(s);
-    let o = `<svg viewBox="0 0 400 170" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="İşe gidiş">`;
-    o += `<defs><linearGradient id="hsDawn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ec2f2"/><stop offset="1" stop-color="#fde3c3"/></linearGradient></defs>`;
-    o += `<rect width="400" height="170" fill="url(#hsDawn)"/>` + G("sun", 200, 70, 34, 'opacity=".95"');
-    o += `<g fill="#c4d5ea">${[30, 70, 110, 250, 290, 330].map((x, i) => `<rect x="${x}" y="${60 + (i % 3) * 10}" width="26" height="${60 - (i % 3) * 10}"/>`).join("")}</g>`;
-    o += `<rect y="118" width="400" height="12" fill="#e4e9f0"/><rect y="130" width="400" height="40" fill="#5b6576"/><path d="M0 150h400" stroke="#e9eef5" stroke-width="2" stroke-dasharray="14 12"/>`;
-    o += `<g transform="translate(-115 -2) scale(.6)">${HOMES[ht](s.homeV || 0)}</g>`;
-    o += G(wk, 350, 122, 70);
+    const id = "cm" + skyId++;
+    const sky = eve ? ["#4b4f8f", "#f2a46b"] : ["#8ec2f2", "#fde3c3"];
+    let o = `<svg viewBox="0 0 400 170" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${eve ? "Eve dönüş" : "İşe gidiş"}" overflow="hidden">`;
+    o += `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky[0]}"/><stop offset="1" stop-color="${sky[1]}"/></linearGradient><clipPath id="${id}c"><rect width="400" height="170"/></clipPath></defs>`;
+    o += `<g clip-path="url(#${id}c)"><rect width="400" height="170" fill="url(#${id})"/>`;
+    o += eve ? `<circle cx="300" cy="96" r="22" fill="#ffcf8a" opacity=".9"/>` : G("sun", 300, 70, 34, 'opacity=".95"');
+    // uzak siluet (yavaş)
+    const far = (x0) => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => `<rect x="${x0 + i * 40}" y="${56 + ((i * 7) % 4) * 9}" width="30" height="${70 - ((i * 7) % 4) * 9}" fill="${eve ? "#5d5f93" : "#c4d5ea"}"/>` + (eve ? [0, 1, 2].map((j) => `<rect x="${x0 + i * 40 + 6 + j * 8}" y="${66 + ((i * 7) % 4) * 9}" width="4" height="4" fill="#ffd77a" opacity="${(i + j) % 3 ? 0.85 : 0.2}"/>`).join("") : "")).join("");
+    o += `<g class="hs-scroll slow">${far(0)}${far(400)}</g>`;
+    // orta plan: ağaç ve lambalar (orta hız)
+    const mid = (x0) => [0, 1, 2, 3].map((i) => G(i % 2 ? "deciduous-tree" : "evergreen-tree", x0 + 40 + i * 100, 122, 36) + `<rect x="${x0 + 90 + i * 100}" y="86" width="3" height="36" fill="#56606f"/><ellipse cx="${x0 + 91.5 + i * 100}" cy="86" rx="6" ry="2.4" fill="${eve ? "#ffe9a8" : "#9aa3ad"}"/>`).join("");
+    o += `<g class="hs-scroll mid">${mid(0)}${mid(400)}</g>`;
+    // yol
+    o += `<rect y="118" width="400" height="10" fill="#e4e9f0"/><rect y="128" width="400" height="42" fill="#5b6576"/>`;
+    o += `<g class="hs-scroll fast">${Array.from({ length: 20 }, (_, i) => `<rect x="${i * 40}" y="147" width="22" height="3" fill="#e9eef5"/>`).join("")}</g>`;
+    // araç
     let mover;
-    if (vehicle && !vehicle.small) mover = `<g style="filter:hue-rotate(${hue}deg)">${G(vehicle.art, 0, 160, 72)}</g>`;
-    else if (vehicle) mover = `<g transform="translate(-14 2)"><g transform="translate(0 46) scale(.36)">${Art.person(P)}</g></g>` + G(vehicle.art, 6, 126, 34);
-    else mover = G("bus", 0, 160, 70);
-    o += `<g class="hs-mover">${mover}</g>`;
-    return o + "</svg>";
+    const flip = (inner, cx) => `<g transform="translate(${cx * 2} 0) scale(-1 1)">${inner}</g>`;
+    if (vehicle && !vehicle.small) mover = `<g style="filter:hue-rotate(${hue}deg)">${G(vehicle.art, 200, 160, 110)}</g>`;
+    else if (vehicle) mover = Art.put("", 196, 150, 0.36, Art.person(Art.fromState(s))) + G(vehicle.art, 200, 160, 56);
+    else mover = G("bus", 200, 162, 120) + (s.job === "factory" || (s.job === "office" && s.company) ? `<rect x="168" y="112" width="40" height="11" rx="3" fill="#fff"/><text x="188" y="120.5" font-size="8" font-weight="800" text-anchor="middle" fill="#2f6fe4" font-family="Nunito, sans-serif">SERVİS</text>` : "");
+    o += `<ellipse cx="200" cy="162" rx="54" ry="4" fill="#000" opacity=".22"/><g class="hs-bounce">${mover}</g>`;
+    // varış noktası rozeti
+    o += `<g transform="translate(${eve ? 18 : 330} 14)"><rect width="52" height="44" rx="10" fill="#fff" opacity=".88"/>${G(eve ? "house" : wk, 26, 40, 34)}</g>`;
+    if (eve) o += `<rect width="400" height="170" fill="#1b1d4a" opacity=".12"/>`;
+    return o + "</g></svg>";
   };
 
   // Ufak resim (seçenek ve etkinlik simgeleri için)

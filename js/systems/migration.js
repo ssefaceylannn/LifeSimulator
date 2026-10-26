@@ -77,7 +77,7 @@
     }
     if ((s.free || 0) < 1) return "Bu hafta boş zamanın kalmadı.";
     const cost = tl(s, typeof d.cost === "function" ? d.cost() : d.cost);
-    if (s.cash < cost) return "Bu evrak için " + HS.money(cost) + " gerekiyor.";
+    if (HS.fundsOf(s) < cost) return HS.short(s, cost);
     if (d.fundsCheck) {
       const need = cur(country(s), country(s).funds);
       if (s.cash + s.savings < need) return "Hesabında en az " + HS.money(need) + " görünmeli.";
@@ -121,7 +121,7 @@
     v.docs[id] = d.weeks ? "hazirlaniyor" : "hazir";
     v.ready[id] = s.weeks + d.weeks;
   };
-  HS.CAN.visaAppt = (s) => (!s.visa || s.visa.stage !== "evrak" ? "Dosya bu aşamada değil." : !HS.visaDocsReady(s) ? "Önce bütün evrakları hazırla." : s.cash < tl(s, C().agencyEUR * HS.FX_RATES.EUR) ? "Hizmet bedeli için para yetmiyor." : true);
+  HS.CAN.visaAppt = (s) => (!s.visa || s.visa.stage !== "evrak" ? "Dosya bu aşamada değil." : !HS.visaDocsReady(s) ? "Önce bütün evrakları hazırla." : HS.fundsOf(s) < tl(s, C().agencyEUR * HS.FX_RATES.EUR) ? HS.short(s, tl(s, C().agencyEUR * HS.FX_RATES.EUR)) : true);
   HS.FX.visaAppt = (s) => {
     const fee = C().agencyEUR * HS.FX_RATES.EUR * s.idx.cpi;
     HS.book(s, "Vize randevu hizmet bedeli", fee);
@@ -294,7 +294,7 @@
     s.visa = { country: k, stage: "degerlendirme", docs: {}, ready: {}, tries: 0, fees: 0, sponsor: true, decideAt: s.weeks + 4 };
   };
   // Seyahat (turist/Schengen) vizesi: tatil ve turneler için
-  HS.CAN.travelVisa = (s) => (!s.assets.passport ? "Önce pasaport gerekir." : s.cash < tl(s, (C().schengenEUR + C().agencyEUR) * HS.FX_RATES.EUR) ? "Vize ücreti için para yetmiyor." : true);
+  HS.CAN.travelVisa = (s) => (!s.assets.passport ? "Önce pasaport gerekir." : HS.fundsOf(s) < tl(s, (C().schengenEUR + C().agencyEUR) * HS.FX_RATES.EUR) ? HS.short(s, tl(s, (C().schengenEUR + C().agencyEUR) * HS.FX_RATES.EUR)) : true);
   HS.FX.travelVisa = (s) => {
     HS.book(s, "Schengen vizesi", tl(s, (C().schengenEUR + C().agencyEUR) * HS.FX_RATES.EUR));
     const p = clamp(0.82 - (s.riskEver > 0 ? 0.3 : 0) + (s.job !== "none" ? 0.08 : -0.1), 0.2, 0.95);

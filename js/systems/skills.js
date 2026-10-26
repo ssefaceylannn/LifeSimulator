@@ -139,7 +139,7 @@
     if (!c) return "Kurs bulunamadı.";
     if (s.courses.some((x) => x.id === id)) return "Bu kursa zaten devam ediyorsun.";
     if (s.courses.length >= 2) return "Aynı anda en fazla 2 kurs.";
-    if (s.cash < c.cost * s.idx.cpi) return "Kurs ücreti için para yetmiyor.";
+    if (HS.fundsOf(s) < c.cost * s.idx.cpi) return HS.short(s, c.cost * s.idx.cpi);
     return true;
   };
   HS.FX.course = (s, id) => {

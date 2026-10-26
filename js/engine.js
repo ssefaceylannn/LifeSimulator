@@ -22,7 +22,7 @@
   HS.FX = HS.FX || {};
   HS.CAN = HS.CAN || {};
   HS.HOOKS = HS.HOOKS || {};
-  for (const k of ["newLife", "migrate", "weekly", "monthly", "yearly", "worth"])
+  for (const k of ["newLife", "migrate", "weekly", "monthly", "yearly", "worth", "event", "half"])
     HS.HOOKS[k] = HS.HOOKS[k] || [];
   const runHooks = (k, s) => HS.HOOKS[k].forEach((f) => f(s));
   HS.clamp = clamp;
@@ -457,12 +457,18 @@
     if (fx.h >= 3) return "care";
     return null;
   }
+  // Kullanılabilir para: nakit + (varsa) kredi kartının boş limiti.
+  const funds = (s) => (HS.funds ? HS.funds(s) : s.cash);
+  // Parası yetmeyen için açıklama: fiyat ve eksik tutar (arayüz ilerleme çubuğu çizer).
+  const short = (s, price) => "Fiyatı " + HS.money(price) + " · " + HS.money(Math.max(0, price - funds(s))) + " eksik";
+  HS.short = short;
+  HS.fundsOf = funds;
   // Seçim yapılabilir mi? true ya da gerekçe metni döner.
   function canApply(s, fx) {
     if (!fx) return true;
     // cost/cash 2026 TL cinsinden yazılır ve enflasyonla ölçeklenir (raw hariç).
-    if (fx.cost && s.cash < fx.cost * (fx.raw ? 1 : s.idx.cpi))
-      return "Yeterli nakit yok.";
+    if (fx.cost && funds(s) < fx.cost * (fx.raw ? 1 : s.idx.cpi))
+      return short(s, fx.cost * (fx.raw ? 1 : s.idx.cpi));
     if (fx.job && fx.job !== "none") {
       const j = HS.JOBS[fx.job];
       if (s.retired) return "Emekli oldun.";
@@ -472,14 +478,14 @@
         const r = j.need(s);
         if (r !== true) return r;
       }
-      if (j.startup && s.cash < j.startup * s.idx.cpi)
-        return "Sermaye için " + HS.money(j.startup * s.idx.cpi) + " gerekir.";
+      if (j.startup && funds(s) < j.startup * s.idx.cpi)
+        return short(s, j.startup * s.idx.cpi);
     }
     if (fx.buy === "house" && s.assets.house) return "Zaten bir evin var.";
     if (fx.buy === "car" && s.car && !fx.trade)
       return "Önce mevcut aracını sat.";
     if (fx.buy === "house" && fx.mortgage) {
-      if (s.cash < homePrice(s, fx.homeType) * 0.3) return "Peşinat yetmiyor.";
+      if (s.cash < homePrice(s, fx.homeType) * 0.3) return "Peşinat " + short(s, homePrice(s, fx.homeType) * 0.3).replace("Fiyatı ", "");
     } else if (fx.buy) {
       const price =
         fx.buy === "house"
@@ -487,7 +493,7 @@
           : fx.buy === "car"
             ? carPrice(s, fx.model)
             : landPrice(s);
-      if (s.cash < price) return "Yeterli nakit yok.";
+      if (funds(s) < price) return short(s, price);
     }
     if (fx.apply) {
       const j = HS.JOBS[fx.apply];
@@ -506,14 +512,14 @@
     if (fx.useFree && (s.free || 0) < 1) return "Bu hafta boş zamanın kalmadı.";
     if (fx.outfitBuy) {
       const o = HS.Art && HS.Art.OUTFITS[fx.outfitBuy];
-      if (o && s.cash < o.price * s.idx.cpi) return "Yeterli nakit yok.";
+      if (o && funds(s) < o.price * s.idx.cpi) return short(s, o.price * s.idx.cpi);
     }
-    if (fx.rent && s.cash < rentFull(s) * (fx.rent === "kira" ? 2 : 1))
-      return "Depozito ve ilk kira için para yetmiyor.";
+    if (fx.rent && funds(s) < rentFull(s) * (fx.rent === "kira" ? 2 : 1))
+      return short(s, rentFull(s) * (fx.rent === "kira" ? 2 : 1));
     if (fx.save && s.cash < fx.save) return "Bu kadar nakit yok.";
     if (fx.fund && s.cash < fx.fund) return "Bu kadar nakit yok.";
-    if (fx.transplant && s.cash < E().transplant * s.idx.cpi)
-      return "Yeterli nakit yok.";
+    if (fx.transplant && funds(s) < E().transplant * s.idx.cpi)
+      return short(s, E().transplant * s.idx.cpi);
     if (fx.emigrate && !s.assets.passport) return "Önce pasaport gerekir.";
     for (const k in fx)
       if (HS.CAN[k]) {
@@ -533,13 +539,16 @@
     return delta * clamp(value / 30, 0.3, 1);
   }
   function pay(s, amount) {
-    // Para yetmezse fark borca yazılır.
+    // Önce nakit, yetmezse kredi kartı (varsa), o da yetmezse fark borca yazılır.
     s.cash -= amount;
     if (s.cash < 0) {
-      s.debt += -s.cash;
+      let left = -s.cash;
       s.cash = 0;
+      if (HS.chargeCard) left = HS.chargeCard(s, left);
+      if (left > 0) s.debt += left;
     }
   }
+  HS.pay = pay;
   function note(s, text) {
     s.log.push({ age: s.age, year: s.year, text });
     if (s.log.length > 160) s.log.splice(20, 1); // ilk anıları korur
@@ -755,7 +764,7 @@
             weekly: (loan * r) / (1 - Math.pow(1 + r, -n)),
             r,
           };
-        } else s.cash -= price;
+        } else book(s, "Ev alımı", price);
         s.assets.house = true;
         s.housing = "ev";
         s.rentMult = 1;
@@ -777,13 +786,13 @@
       } else if (fx.buy === "car") {
         if (s.car && fx.trade) s.cash += carPrice(s) * 0.55; // eskisini takasla
         const model = fx.model || "ekonomik";
-        s.cash -= carPrice(s, model);
+        book(s, HS.Art.CARS[model].name + " alımı", carPrice(s, model));
         s.car = model;
         s.carColor = fx.carColor ?? (rnd() * 6) | 0;
         s.assets.car = !["bisiklet"].includes(model);
         note(s, HS.Art.CARS[model].name + " aldı.");
       } else {
-        s.cash -= landPrice(s);
+        book(s, "Arsa alımı", landPrice(s));
         s.assets.land = true;
         note(s, "Arsa aldı.");
       }
@@ -813,7 +822,7 @@
       );
     }
     if (fx.rent) {
-      s.cash -= rentFull(s) * (fx.rent === "kira" ? 2 : 1);
+      book(s, "Depozito ve ilk kira", rentFull(s) * (fx.rent === "kira" ? 2 : 1));
       s.housing = fx.rent;
       s.rentMult = 1;
       s.homeV++;
@@ -1015,6 +1024,7 @@
   function nextEvent(s) {
     const def = s.weeks === 0 ? HS.INTRO_EVENT : chooseEvent(s);
     s.seen[def.id] = s.weeks;
+    (HS.HOOKS.event || []).forEach((f) => f(s, def));
     s.current = materialize(def, s);
     return s.current;
   }
@@ -1037,7 +1047,7 @@
     const r = apply(s, fx, ch.label, ev.t);
     if (r !== true) return { ok: false, reason: r };
     if (fx.endLife) return { ended: endLife(s, "chosen") };
-    return week(s);
+    return HS.tick ? HS.tick(s) : week(s);
   }
   HS.choose = choose;
 
@@ -1256,7 +1266,8 @@
     // Mevduat: 2026'da gerçek mevduat ortalaması, sonra enflasyonun biraz üstü
     const dep =
       s.year <= E().startYear ? E().depositRate : rate(s, "cpi") * 1.08 + 0.01;
-    if (s.savings > 0) s.savings *= 1 + dep / 52;
+    // Vadesiz (günlük getirili) hesap, vadeli mevduatın yarısı kadar faiz alır; vadeli hesaplar js/systems/bank.js içinde.
+    if (s.savings > 0) s.savings *= 1 + (dep * 0.5) / 52;
     // Fon ve diğer yatırımlar js/systems/invest.js içinde aylık değerlenir.
   }
 

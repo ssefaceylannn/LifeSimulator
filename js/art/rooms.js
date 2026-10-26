@@ -13,6 +13,8 @@
     mix = Art.mix;
   const n1 = (v) => Math.round(v * 10) / 10;
   let U = 0;
+  let NIGHT = false;
+  const has = (s, k) => (s.items || []).includes(k);
 
   function rng(seed) {
     let a = seed >>> 0;
@@ -109,7 +111,7 @@
   function outside(s, x, y, w, h, t) {
     const id = "ro" + ++U;
     const sea = Art.season(s);
-    const night = s.job === "crime";
+    const night = s.job === "crime" || NIGHT;
     const city = HS.CITIES[s.city] || {};
     const sky = night ? ["#1c2a48", "#3e5277"] : { kis: ["#b9cde3", "#eef3f8"], ilkbahar: ["#8cc4f2", "#e6f3ff"], yaz: ["#69b0ef", "#ddf0ff"], sonbahar: ["#a6bfd9", "#f4e8d6"] }[sea];
     const cold = sea === "kis" && ["ic", "dogu", "karadeniz", "abroad"].includes(city.region);
@@ -364,20 +366,27 @@
     o += lamps(t, [200, 300]);
     // sol: konsol/TV
     const tvx = wx - 6;
-    if (t.ht === "aile") o += tvUnit(tvx, 196, ww + 12, t, true);
+    if (has(s, "tv")) o += tvUnit(tvx, 196, ww + 12, { ...t, lux: 6 }, false);
+    else if (t.ht === "aile") o += tvUnit(tvx, 196, ww + 12, t, true);
     else if (t.ht === "paylasim") o += boxes(70, 198) + `<rect x="${wx + 20}" y="168" width="44" height="28" fill="#e9e1d4"/><rect x="${wx + 22}" y="160" width="40" height="8" fill="#f4efe6"/>` + G("laptop", wx + 42, 160, 26);
     else if (big) o += plant(70, 198, 40, t);
     else if (fire) o += sideboard(tvx, 196, ww + 12, t.wood, t);
     else o += r() < 0.5 ? tvUnit(tvx, 196, ww + 12, t, false) : sideboard(tvx, 196, ww + 12, t.accent, t);
     // kanepe ve masa
     if (t.ht === "paylasim") o += beanbag(sx + 46, 206, t.fabric) + beanbag(sx + 110, 208, t.fabric2);
-    else o += sofa(sx, 206, sw, t.fabric, r, t.lux >= 2 ? 1 : 0);
+    else o += sofa(sx, 206, sw, has(s, "koltuk") ? "#3d5281" : t.fabric, r, has(s, "koltuk") || t.lux >= 2 ? 1 : 0);
     if (fire) o += fireplace(212, 196);
     if (big) o += floorLamp(244, 204, t);
     if (t.ht !== "paylasim") o += plant(sx - 8, 204, 30, t);
     o += rug(300, 236, 190, 30, t.ht === "aile" ? "#a8342b" : light(t.fabric2, 0.25), t.ht === "aile" || r() < 0.2);
     o += coffeeTable(318, 244, 86, t.wood, r, t);
     if (t.lux >= 2 && r() < 0.5) o += armchair(10, 236, t.fabric2);
+    // sahip olunan eşyalar
+    if (has(s, "konsol")) o += `<rect x="${tvx + 8}" y="186" width="26" height="8" rx="2" fill="#1d222b"/><rect x="${tvx + 10}" y="188" width="6" height="1.5" fill="#4fa3ff"/><path d="M${tvx + 40} 192q4 -5 10 0q2 3 -2 3h-6q-4 0 -2 -3z" fill="#2b2f36"/>`;
+    if (has(s, "laptop")) o += G("laptop", 300, 216, 24);
+    if (has(s, "gitar")) o += `<g transform="rotate(-12 ${sx - 22} 204)">${G("guitar", sx - 22, 206, 30)}</g>`;
+    if (has(s, "klima")) o += `<rect x="${sx + 8}" y="40" width="66" height="16" rx="4" fill="#f7f9fb" stroke="#d5dbe2"/><path d="M${sx + 12} 52h58" stroke="#c9ced5"/><circle cx="${sx + 68}" cy="45" r="1.4" fill="#4fe08a"/>`;
+    if (has(s, "kitap")) o += bookcase(400 - 52, 198, 46, 112, t);
     return { svg: o, t };
   }
   function yatak(s) {
@@ -451,6 +460,7 @@
     o += `<rect x="348" y="60" width="50" height="138" rx="5" fill="${fr}"/><path d="M348 112h50" stroke="${dark(fr, 0.12)}" stroke-width="1.6"/><rect x="354" y="70" width="3" height="30" rx="1.5" fill="#9aa3ad"/><rect x="354" y="120" width="3" height="40" rx="1.5" fill="#9aa3ad"/><rect x="368" y="76" width="10" height="8" fill="${t.accent}" transform="rotate(-6 373 80)"/><circle cx="386" cy="90" r="3" fill="#4aa3e8"/><rect x="348" y="60" width="50" height="138" rx="5" fill="url(#${t.id}w)"/>`;
     // tezgâh üstü eşyalar
     o += `<rect x="290" y="128" width="22" height="18" rx="3" fill="#e0e4ea"/><rect x="294" y="132" width="14" height="8" fill="#2f4c6e"/>` + G("potted-plant", 330, 146, 16) + `<path d="M162 146q-2 -12 6 -14q8 2 6 14z" fill="${t.accent}"/>`;
+    if (has(s, "kahve")) o += `<rect x="262" y="122" width="22" height="24" rx="3" fill="#3a3f48"/><rect x="266" y="126" width="14" height="6" fill="#9aa3ad"/><rect x="268" y="136" width="10" height="2" fill="#c9cdd3"/><path d="M269 146v-5h8v5" fill="#fff"/>`;
     if (t.ht === "aile") o += `<rect x="12" y="52" width="34" height="44" fill="#fff" transform="skewY(18)"/><rect x="16" y="66" width="26" height="6" fill="#c43c35" transform="skewY(18)"/>`;
     o += lamps(t, [140, 300]);
     // kahvaltı masası
@@ -486,7 +496,7 @@
       o += `<g>${[90, 130, 170].map((y) => `<rect x="344" y="${y}" width="54" height="4" fill="#9aa3ad"/>`).join("")}<rect x="348" y="72" width="16" height="18" fill="#cf9e64"/><rect x="368" y="76" width="14" height="14" fill="#cf9e64"/><rect x="350" y="114" width="10" height="16" rx="2" fill="#2f7fbf"/><rect x="362" y="116" width="10" height="14" rx="2" fill="#e0a33a"/><circle cx="388" cy="158" r="12" fill="#2b2f36"/><circle cx="388" cy="158" r="5" fill="#9aa3ad"/></g>`;
     } else {
       // otopark
-      o += `<text x="196" y="72" font-family="Fredoka, sans-serif" font-size="22" font-weight="700" fill="#f2c84b" text-anchor="middle">B2</text><text x="196" y="88" font-family="Nunito, sans-serif" font-size="9" fill="#e9eef5" text-anchor="middle">OTOPARK · ${(t.seed % 80) + 10}</text>`;
+      o += `<text x="196" y="72" font-family="Baloo 2, Nunito, sans-serif" font-size="22" font-weight="700" fill="#f2c84b" text-anchor="middle">B2</text><text x="196" y="88" font-family="Nunito, sans-serif" font-size="9" fill="#e9eef5" text-anchor="middle">OTOPARK · ${(t.seed % 80) + 10}</text>`;
       for (const px of [104, 300]) o += `<rect x="${px}" y="34" width="24" height="164" fill="#a3a9b1"/><g>${[0, 1, 2, 3, 4].map((i) => `<path d="M${px} ${170 + i * 6}l24 -6" stroke="${i % 2 ? "#2b2f36" : "#f2c84b"}" stroke-width="4"/>`).join("")}</g>`;
       o += `<g opacity=".55" style="filter:grayscale(1)">${G("automobile", 40, 206, 110)}${G("sport-utility-vehicle", 372, 206, 110)}</g>`;
       o += `<g stroke="#e9eef5" stroke-width="3" opacity=".8"><path d="M118 260L150 200M300 200L332 260"/></g>`;
@@ -497,7 +507,7 @@
       const c = Art.CARS[s.car];
       const hue = Art.CAR_COLORS[(s.carColor || 0) % Art.CAR_COLORS.length];
       o += `<g class="hs-car" style="filter:hue-rotate(${hue}deg)">${c.small ? G(c.art, 262, 244, c.size * 1.5) : G(c.art, 268, 248, c.size * 1.65)}</g>`;
-    } else o += `<text x="230" y="238" font-family="Fredoka, sans-serif" font-size="18" font-weight="700" fill="#fff" opacity=".55" text-anchor="middle" transform="skewX(-10)">BOŞ</text>`;
+    } else o += `<text x="230" y="238" font-family="Baloo 2, Nunito, sans-serif" font-size="18" font-weight="700" fill="#fff" opacity=".55" text-anchor="middle" transform="skewX(-10)">BOŞ</text>`;
     return { svg: o, t, solo: true, cast: [96, 252, 0.72] };
   }
   // İş yerleri
@@ -519,7 +529,7 @@
         o += desk(84, 196, 70) + desk(290, 196, 80) + plant(266, 198, 34, t);
         coWorkers.push([314, 196, 0.48]);
       } else {
-        o += `<rect x="80" y="54" width="120" height="30" rx="3" fill="#2b2f36"/><text x="140" y="75" font-family="Fredoka, sans-serif" font-size="16" fill="#f2c84b" text-anchor="middle">SIRA No: ${(t.seed % 300) + 100}</text>`;
+        o += `<rect x="80" y="54" width="120" height="30" rx="3" fill="#2b2f36"/><text x="140" y="75" font-family="Baloo 2, Nunito, sans-serif" font-size="16" fill="#f2c84b" text-anchor="middle">SIRA No: ${(t.seed % 300) + 100}</text>`;
         o += `<g>${[0, 1, 2].map((i) => `<rect x="${232 + i * 52}" y="70" width="44" height="126" fill="#9aa3ad"/>${[0, 1, 2, 3].map((j) => `<rect x="${236 + i * 52}" y="${76 + j * 30}" width="36" height="26" fill="#b7bec7"/><rect x="${250 + i * 52}" y="${86 + j * 30}" width="8" height="3" fill="#6b737d"/>`).join("")}`).join("")}</g>`;
         o += `<rect x="64" y="150" width="160" height="46" fill="#c08a5a"/><rect x="60" y="146" width="168" height="6" fill="#a87148"/>` + `<g>${[0, 1, 2].map((i) => `<rect x="${86 + i * 10}" y="${130 - i * 6}" width="34" height="${16 + i * 6}" fill="${["#e0c27a", "#d9b06a", "#e9d39a"][i]}" transform="rotate(${i * 3 - 3} ${100} 140)"/>`).join("")}</g>` + clock(214, 100, 10);
         coWorkers.push([140, 150, 0.46]);
@@ -529,7 +539,7 @@
       t.side = dark(t.wall, 0.1);
       t.floor = FLOORS.ceviz;
       o = shell(t);
-      o += `<rect x="90" y="48" width="140" height="70" rx="3" fill="#2b2f36" stroke="#a87148" stroke-width="4"/><text x="160" y="68" font-family="Fredoka, sans-serif" font-size="12" fill="#fff" text-anchor="middle">MENÜ</text>${["Türk kahvesi", "Latte", "Çay", "Kurabiye"].map((m, i) => `<text x="100" y="${82 + i * 10}" font-family="Nunito, sans-serif" font-size="7" fill="#e9eef5">${m}</text><text x="220" y="${82 + i * 10}" font-family="Nunito, sans-serif" font-size="7" fill="#f2c84b" text-anchor="end">₺${Math.round([110, 160, 35, 75][i] * s.idx.food)}</text>`).join("")}`;
+      o += `<rect x="90" y="48" width="140" height="70" rx="3" fill="#2b2f36" stroke="#a87148" stroke-width="4"/><text x="160" y="68" font-family="Baloo 2, Nunito, sans-serif" font-size="12" fill="#fff" text-anchor="middle">MENÜ</text>${["Türk kahvesi", "Latte", "Çay", "Kurabiye"].map((m, i) => `<text x="100" y="${82 + i * 10}" font-family="Nunito, sans-serif" font-size="7" fill="#e9eef5">${m}</text><text x="220" y="${82 + i * 10}" font-family="Nunito, sans-serif" font-size="7" fill="#f2c84b" text-anchor="end">₺${Math.round([110, 160, 35, 75][i] * s.idx.food)}</text>`).join("")}`;
       o += `<g>${[0, 1, 2].map((i) => `<rect x="${256 + i * 0}" y="${70 + i * 34}" width="130" height="4" fill="#a87148"/>`).join("")}${Array.from({ length: 10 }, (_, i) => `<rect x="${262 + (i % 5) * 24}" y="${52 + Math.floor(i / 5) * 34}" width="14" height="18" rx="3" fill="#f4efe6" opacity=".9"/>`).join("")}</g>`;
       o += lamps({ ...t, ht: "", r: () => 0.9 }, [140, 260, 360]);
       o += `<rect x="200" y="150" width="200" height="56" fill="#a87148"/><rect x="196" y="144" width="204" height="8" fill="#d9b07c"/><rect x="300" y="112" width="44" height="34" rx="4" fill="#c9cdd3"/><rect x="306" y="120" width="32" height="10" fill="#2b2f36"/>` + G("hot-beverage", 232, 146, 18) + G("hot-beverage", 372, 146, 18);
@@ -612,26 +622,47 @@
     return { svg: o, t, solo: true, cast: [150, 252, 0.76] };
   }
 
-  const ROOMS = { salon, yatak, mutfak, garaj, is: isyeri };
-  const LABELS = { salon: "Salon", yatak: "Yatak odası", mutfak: "Mutfak", garaj: "Garaj", is: "İş yeri", sokak: "Sokak" };
+  // Bir akrabanın evi (ziyaret): onun il ve yaşına göre kurulan bir salon.
+  function ziyaret(s) {
+    const k = HS.visitNow && HS.visitNow(s);
+    if (!k) return salon(s);
+    const old = HS.kinAge(s, k) >= 40;
+    const s2 = Object.assign({}, s, { id: k.id, housing: old ? "aile" : "kira", city: k.city, homeV: 0, moves: 0, items: [], car: null });
+    const room = salon(s2);
+    room.guest = k;
+    room.solo = true;
+    room.cast = [150, 252, 0.78];
+    return room;
+  }
+  const ROOMS = { salon, yatak, mutfak, garaj, is: isyeri, ziyaret };
+  const LABELS = { salon: "Salon", yatak: "Yatak odası", mutfak: "Mutfak", garaj: "Garaj", is: "İş yeri", sokak: "Sokak", ziyaret: "Ziyaret" };
   Art.views = function (s) {
     const ht = Art.homeType(s);
     const v = ["salon", "yatak", "mutfak"];
     if (s.car || ht === "mustakil" || ht === "villa") v.push("garaj");
     if (s.job !== "none" || s.edu === "ogrenci") v.push("is");
     v.push("sokak");
-    return v.map((id) => ({ id, label: id === "garaj" && !(ht === "mustakil" || ht === "villa") ? "Otopark" : id === "is" && s.edu === "ogrenci" && s.job === "none" ? "Okul" : LABELS[id] }));
+    const k = HS.visitNow && HS.visitNow(s);
+    if (k) v.unshift("ziyaret");
+    return v.map((id) => ({ id, label: id === "ziyaret" ? HS.kinLabel(k) : id === "garaj" && !(ht === "mustakil" || ht === "villa") ? "Otopark" : id === "is" && s.edu === "ogrenci" && s.job === "none" ? "Okul" : LABELS[id] }));
   };
-  Art.scene = function (s, view = "salon") {
+  // opt.night: gece görünümü (pencerede gece, oda loş, lambalar yanık).
+  Art.scene = function (s, view = "salon", opt = {}) {
     if (view === "sokak" || !ROOMS[view]) return Art.street(s);
-    if (view === "garaj" && !Art.views(s).some((v) => v.id === "garaj")) view = "salon";
-    if (view === "is" && !Art.views(s).some((v) => v.id === "is")) view = "salon";
+    const ok = Art.views(s).map((v) => v.id);
+    if (!ok.includes(view)) view = "salon";
+    NIGHT = !!opt.night && view !== "is";
     const room = ROOMS[view](s);
     let o = `<svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${LABELS[view]}">`;
     o += room.svg;
+    if (NIGHT) o += `<rect width="400" height="260" fill="#14204a" opacity=".26"/><circle cx="200" cy="70" r="140" fill="#ffe7a8" opacity=".08"/>`;
     const [cx, by, k] = room.cast || [176, 252, 0.78];
     o += Art.cast(s, cx, by, k, { solo: room.solo });
-    if (s.job === "crime" && view !== "is") o += `<rect width="400" height="260" fill="#0b1430" opacity=".28"/>`;
+    // Ziyaret edilen akraba ya da gelen misafir
+    const g = room.guest || (view === "salon" && HS.guestNow ? HS.guestNow(s) : null);
+    if (g && HS.kinLook) o += Art.put("hs-partner", room.guest ? cx + 74 * k : 330, by + (room.guest ? 0 : -4), k * (HS.kinAge(s, g) < 14 ? 0.7 : 0.95), Art.person(HS.kinLook(s, g)));
+    if (s.job === "crime" && view !== "is" && !NIGHT) o += `<rect width="400" height="260" fill="#0b1430" opacity=".28"/>`;
+    NIGHT = false;
     return o + "</svg>";
   };
 })(globalThis.HS || (globalThis.HS = {}));

@@ -24,6 +24,7 @@ module.exports = function load() {
     "js/content/events.js",
     "js/content/events-daily.js",
     "js/content/events-family.js",
+    "js/content/events-life.js",
     "js/content/activities.js",
     "js/content/endings.js",
     "js/art/fluent.js",
@@ -39,6 +40,10 @@ module.exports = function load() {
     "js/systems/migration.js",
     "js/systems/housing.js",
     "js/systems/music.js",
+    "js/systems/time.js",
+    "js/systems/bank.js",
+    "js/systems/life.js",
+    "js/systems/family.js",
     "js/systems/achievements.js",
   ])
     vm.runInContext(

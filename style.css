@@ -15,7 +15,7 @@
   --gold: #f0ad33;
   --shadow: 0 6px 24px rgba(31, 72, 140, 0.08);
   --display:
-    "Fredoka", "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+    "Baloo 2", "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
   --body: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color-scheme: light;
 }
@@ -1649,4 +1649,351 @@ html.big-text .fine {
 .modal-card h3 {
   margin: 0;
   font: 600 20px var(--display);
+}
+
+/* ---------- İşe gidiş paralaksı ---------- */
+.hs-scroll {
+  animation: scrollR 6s linear infinite;
+}
+.hs-scroll.slow {
+  animation-duration: 18s;
+}
+.hs-scroll.mid {
+  animation-duration: 7s;
+}
+.hs-scroll.fast {
+  animation-duration: 1.6s;
+}
+@keyframes scrollR {
+  from {
+    transform: translateX(-400px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.hs-bounce {
+  animation: bounce 0.45s ease-in-out infinite alternate;
+}
+@keyframes bounce {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-1.6px);
+  }
+}
+
+/* ---------- Seviye, stres, alt sekmeler ---------- */
+.world-head > div {
+  min-width: 0;
+}
+.lv-badge {
+  border: 0;
+  background: #fff6dd;
+  color: #9a6a00;
+  border-radius: 999px;
+  padding: 3px 10px 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 800 12px var(--body);
+  margin-top: 2px;
+}
+.lv-badge > i {
+  width: 54px;
+  height: 5px;
+  border-radius: 5px;
+  background: #f3e2b0;
+  overflow: hidden;
+  display: block;
+}
+.lv-badge > i > i {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+}
+.stats {
+  grid-template-columns: 1.3fr 1fr 1fr 1fr;
+  gap: 6px;
+}
+.stat {
+  padding: 7px 8px;
+}
+.stat b {
+  font-size: 17px;
+}
+.stat span {
+  font-size: 10px;
+}
+@media (max-width: 380px) {
+  .stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.bar.stress > i {
+  background: var(--coral);
+}
+.bar.need > i {
+  background: var(--gold);
+}
+.need {
+  color: #8a5a00;
+  font-weight: 700;
+}
+.need.lv {
+  color: #9a6a00;
+}
+.choice small .bar.inline.need {
+  width: 100%;
+  margin: 4px 0 0;
+  display: block;
+}
+.subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.subtabs::-webkit-scrollbar {
+  display: none;
+}
+.subtab {
+  flex: none;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--blue-deep);
+  border-radius: 999px;
+  padding: 7px 13px;
+  font: 800 13px var(--body);
+}
+.subtab.on {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+.mini-row.wide .mini {
+  flex: 1 1 auto;
+}
+.mini-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.mini-seg button {
+  flex: 1 1 0;
+  min-width: 70px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 7px 6px;
+  font: 800 12px var(--body);
+  color: var(--blue-deep);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.mini-seg button small {
+  font-weight: 700;
+  color: var(--muted);
+}
+.mini-seg button.selected {
+  border-color: var(--blue);
+  background: #eef4ff;
+}
+.loan-form {
+  display: grid;
+  gap: 6px;
+}
+.packs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+.pack {
+  border: 1.5px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.pack b {
+  font: 600 18px var(--display);
+}
+.pack span {
+  font-weight: 800;
+  color: var(--blue-deep);
+}
+.pack small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.pack:disabled {
+  opacity: 0.85;
+}
+.tree {
+  display: grid;
+  gap: 10px;
+}
+.gen {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 8px;
+}
+.gen-name {
+  font: 800 11px var(--body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 6px 4px;
+}
+.gen-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+}
+.node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1px;
+  padding: 6px 4px;
+  border-radius: 12px;
+  background: #f7faff;
+  min-width: 0;
+}
+.node.me {
+  background: #eef4ff;
+  outline: 2px solid var(--blue);
+}
+.node.dead {
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+.node b {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.node small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.node .bar.inline {
+  width: 70%;
+  margin: 3px 0;
+}
+.node .mini-row {
+  justify-content: center;
+  gap: 4px;
+}
+.node .mini {
+  padding: 4px 7px;
+  min-height: 28px;
+  font-size: 11px;
+}
+.node .q {
+  font-size: 30px;
+  color: var(--coral);
+}
+.hairs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 6px;
+}
+.hair {
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.hair.on {
+  border-color: var(--blue);
+  background: #eef4ff;
+}
+.hair b {
+  font-size: 12px;
+}
+.hair small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.items {
+  display: grid;
+  gap: 8px;
+}
+.item {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 10px 12px;
+  display: flex;
+  gap: 10px;
+}
+.item.own {
+  border-color: var(--green);
+  background: #f2fbf6;
+}
+.item > svg {
+  flex: none;
+}
+.item > div {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.item small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.bills {
+  display: grid;
+  gap: 6px;
+}
+.bill {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 8px 10px;
+}
+.bill span {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.bill small {
+  grid-column: 1;
+  grid-row: 2;
+  color: var(--muted);
+  font-size: 12px;
+}
+.bill > b {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.bill .mini {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+.bill.late {
+  border-color: #f3c9c5;
+  background: #fff6f5;
+}
+.proc .mini {
+  margin-left: auto;
+  min-height: 28px;
+  padding: 3px 9px;
 }

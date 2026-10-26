@@ -56,7 +56,7 @@
     if ((s.fame || 0) < t.fame) return "Şöhretin en az " + t.fame + " olmalı.";
     if (t.world && !s.assets.passport) return "Pasaport gerekir.";
     if (t.schengen && !(s.schengenUntil > s.weeks)) return "Geçerli Schengen vizesi gerekir (DÜNYA sekmesi).";
-    if (s.cash < t.cost * s.idx.cpi) return "Organizasyon masrafı için " + HS.money(t.cost * s.idx.cpi) + " gerekir.";
+    if (HS.fundsOf(s) < t.cost * s.idx.cpi) return HS.short(s, t.cost * s.idx.cpi);
     return true;
   };
   HS.FX.tour = (s, k) => {
@@ -107,7 +107,7 @@
     const hotel = 3 * 3500; // 3 gece
     return (transport + hotel + 3 * 1500) * s.idx.cpi;
   };
-  HS.CAN.trip = (s, city) => ((s.free || 0) < 2 ? "Gezi için en az 2 boş zaman gerekir." : s.cash < HS.tripCost(s, city) ? "Gezi için " + HS.money(HS.tripCost(s, city)) + " gerekir." : true);
+  HS.CAN.trip = (s, city) => ((s.free || 0) < 2 ? "Gezi için en az 2 boş zaman gerekir." : HS.fundsOf(s) < HS.tripCost(s, city) ? HS.short(s, HS.tripCost(s, city)) : true);
   HS.FX.trip = (s, city) => {
     HS.book(s, HS.ek(city, "dat") + " gezi", HS.tripCost(s, city));
     s.free = 0;
@@ -127,7 +127,7 @@
     if (!s.assets.passport) return "Pasaport gerekir.";
     if (t.schengen && !(s.schengenUntil > s.weeks)) return "Geçerli Schengen vizesi gerekir.";
     if ((s.free || 0) < 2) return "Tatil için en az 2 boş zaman gerekir.";
-    if (s.cash < HS.abroadTripCost(s, k)) return "Tatil için " + HS.money(HS.abroadTripCost(s, k)) + " gerekir.";
+    if (HS.fundsOf(s) < HS.abroadTripCost(s, k)) return HS.short(s, HS.abroadTripCost(s, k));
     return true;
   };
   HS.FX.abroadTrip = (s, k) => {

@@ -31,6 +31,10 @@
     tab = "life",
     sceneSig = "",
     mapSel = null,
+    meSub = "ben",
+    depMonths = 3,
+    loanSel = { kind: "ihtiyac", frac: 0.5, months: 24 },
+    moneySub = "banka",
     lastWeekOpen = false,
     create = { look: "woman", skin: 1, hairColor: "kahve", hair: "long" },
     settings = { ...DEFAULTS },
@@ -193,16 +197,24 @@
       (s.tour ? " · turnede" : "");
     $("slotPill").textContent = "HAYAT " + (saves.indexOf(s) + 1);
     $("ageTag").textContent = s.age + " YAŞ";
-    $("weekLabel").textContent = s.year + " · " + s.week + ". hafta";
+    $("weekLabel").textContent = (s.clock ? HS.fmtTime(s.clock) : s.week + ". hafta") + " · " + s.year;
+    $("lvNum").textContent = "Sv. " + HS.level(s);
+    $("lvBar").style.width = Math.round(HS.levelProgress(s) * 100) + "%";
+    $("stressStat").textContent = Math.round(s.stress);
+    $("stressBar").style.width = s.stress + "%";
     const city = HS.CITIES[s.city] || {};
     $("dateLabel").textContent = HS.upper(s.city) + (city.country ? " · " + HS.upper(city.country) : "");
-    $("cashStat").textContent = money(s.cash);
+    $("cashStat").textContent = Math.abs(s.cash) >= 1e7 ? "₺" + (s.cash / 1e6).toLocaleString("tr-TR", { maximumFractionDigits: 1 }) + " Mn" : money(s.cash);
     $("healthStat").textContent = Math.round(s.health);
     $("moodStat").textContent = Math.round(s.mood);
     $("healthBar").style.width = s.health + "%";
     $("moodBar").style.width = s.mood + "%";
     const parts = [];
     if (s.savings > 1) parts.push("Banka " + money(s.savings));
+    if (s.deposits && s.deposits.length) parts.push("Vadeli " + money(HS.depositTotal(s)));
+    if (s.card && s.card.bal > 1) parts.push('<b class="neg">Kart ' + money(s.card.bal) + "</b>");
+    if (s.loans && s.loans.length) parts.push("Kredi " + money(s.loans.reduce((a, l) => a + l.left, 0)));
+    if (s.bills && s.bills.length) parts.push('<b class="neg">' + s.bills.length + " fatura</b>");
     const inv = HS.invTotal(s);
     if (inv > 1) parts.push("Yatırım " + money(inv));
     if (s.debt > 1) parts.push('<b class="neg">Borç ' + money(s.debt) + "</b>");
@@ -227,7 +239,15 @@
       s.mood >= 62 ? 1 : s.mood < 35 ? -1 : 0, s.partner && [s.partner.bond >= 55, s.partner.married],
       s.children.map((k) => k.name + (s.year - k.born < 4 ? 0 : s.year - k.born < 11 ? 1 : s.year - k.born < 18 ? 2 : 3)),
       s.flags.kedi, s.edu, s.body && Math.round(s.body.w), s.body && Math.round(s.body.mus / 5),
+      s.items, s.guest, s.visitKin, s.clock && s.clock.hour,
     ]);
+    // Yeni olay geldiyse sahne olayın geçtiği yere geçer
+    const evKey = s.weeks * 2 + (s.half || 0) + ":" + (s.current && s.current.id);
+    if (evKey !== s.evKey) {
+      s.evKey = evKey;
+      const room = s.clock && s.clock.room;
+      if (room) s.view = room;
+    }
     const views = Art.views(s);
     if (!views.some((v) => v.id === s.view)) s.view = "salon";
     $("viewChips").innerHTML = views.map((v) => `<button class="view-chip${v.id === s.view ? " on" : ""}" data-v="${v.id}" role="tab" aria-selected="${v.id === s.view}">${esc(v.label)}</button>`).join("");
@@ -240,9 +260,11 @@
         drawScene();
       };
     });
-    if (sig + s.view === sceneSig) return;
-    sceneSig = sig + s.view;
-    $("sceneArt").innerHTML = Art.scene(s, s.view);
+    // Gece görünümü yalnızca karakterin o an bulunduğu yerde
+    const night = !!(s.clock && s.view === s.clock.room && HS.isNight(s));
+    if (sig + s.view + night === sceneSig) return;
+    sceneSig = sig + s.view + night;
+    $("sceneArt").innerHTML = Art.scene(s, s.view, { night });
   }
   function react(delta) {
     if (Math.abs(delta) < 3) return;
@@ -261,6 +283,19 @@
   const card = (title, body, cls = "") => `<article class="card ${cls}">${title ? `<h3>${title}</h3>` : ""}${body ? `<div class="card-body">${body}</div>` : ""}</article>`;
   const sectionTitle = (t, sub) => `<div class="section-title">${t}${sub ? `<small>${sub}</small>` : ""}</div>`;
   const bar = (v, cls = "") => `<i class="bar inline ${cls}"><i style="width:${Math.max(0, Math.min(100, v))}%"></i></i>`;
+  // Parası yetmeyen için fiyat ve eksik tutar; seviye kilidi için yıldız.
+  const num = (t) => +String(t).replace(/[^\d]/g, "");
+  function needHtml(reason) {
+    const m = String(reason).match(/₺[\d.]+/g);
+    if (/eksik$/.test(reason) && m && m.length >= 2) {
+      const price = num(m[0]),
+        miss = num(m[1]);
+      const pct = price ? Math.round(((price - miss) / price) * 100) : 0;
+      return `<span class="need">${/^Peşinat/.test(reason) ? "Peşinat " : ""}<b>${m[0]}</b> · ${m[1]} daha biriktir</span>${bar(pct, "need")}`;
+    }
+    if (/^Seviye/.test(reason)) return `<span class="need lv">★ ${esc(reason)}</span>`;
+    return "🔒 " + esc(reason);
+  }
   // Eylem satırı: fx uygulanabilir değilse kilitli görünür
   function row(label, hint, fx, opt = {}) {
     let off = opt.off || null;
@@ -270,7 +305,7 @@
     }
     if (!off && opt.weekly && active.flags.tabUse?.[opt.weekly] === active.weeks) off = "Bu hafta yapıldı.";
     const icon = opt.icon ? Art.icon(opt.icon, 24) : "•";
-    return `<button class="choice"${off ? " disabled" : on(() => act(fx, opt))}><span class="bullet">${icon}</span><span><b>${esc(label)}</b><small>${esc(off ? "🔒 " + off : hint)}</small></span>${opt.badge ? `<span class="odds-tag">${esc(opt.badge)}</span>` : ""}</button>`;
+    return `<button class="choice"${off ? " disabled" : on(() => act(fx, opt))}><span class="bullet">${icon}</span><span><b>${esc(label)}</b><small>${off ? (hint && /eksik$/.test(off) ? esc(hint) + "<br>" : "") + needHtml(off) : esc(hint)}</small></span>${opt.badge ? `<span class="odds-tag">${esc(opt.badge)}</span>` : ""}</button>`;
   }
   const rows = (arr) => `<div class="choice-list">${arr.filter(Boolean).join("")}</div>`;
   function act(fx, opt = {}, confirmed = false) {
@@ -325,19 +360,20 @@
     const tags = [];
     if (s.partner) tags.push(s.partner.married ? "Evli" : "İlişkisi var");
     if (s.children.length) tags.push(s.children.length + " çocuk");
-    let html = `<article class="card story"><div class="story-meta"><span>${seasonName}</span><span>${esc(tags.join(" · "))}</span></div><h3 id="storyTitle">${esc(ev.t)}</h3><p>${esc(ev.p)}</p></article>`;
+    const place = { salon: "evde", mutfak: "mutfakta", yatak: "yatak odasında", garaj: "garajda", is: s.edu === "ogrenci" && s.job === "none" ? "okulda" : "işte", sokak: "dışarıda" }[s.clock && s.clock.room] || "";
+    let html = `<article class="card story"><div class="story-meta"><span>${s.clock ? esc(HS.fmtTime(s.clock)) + " · " + place : seasonName}</span><span>${esc(tags.join(" · "))}</span></div><h3 id="storyTitle">${esc(ev.t)}</h3><p>${esc(ev.p)}</p></article>`;
     html += `<div class="choice-list" id="choices">${ev.c
       .map(
         (c, i) =>
-          `<button class="choice" data-c="${i}"${c.off ? " disabled" : ""}><span class="bullet">${String.fromCharCode(65 + i)}</span><span><b>${esc(c.label)}</b><small>${esc(c.off ? "🔒 " + c.off : c.hint)}</small></span>${c.odds != null && !c.off ? `<span class="odds-tag" title="Başarı şansı">🎲 %${c.odds}</span>` : ""}</button>`,
+          `<button class="choice" data-c="${i}"${c.off ? " disabled" : ""}><span class="bullet">${String.fromCharCode(65 + i)}</span><span><b>${esc(c.label)}</b><small>${c.off ? needHtml(c.off) : esc(c.hint)}</small></span>${c.odds != null && !c.off ? `<span class="odds-tag" title="Başarı şansı">🎲 %${c.odds}</span>` : ""}</button>`,
       )
       .join("")}</div>`;
-    html += `<button class="advance" id="advanceBtn" disabled>Bu haftayı yaşa <span>→</span></button>`;
+    html += `<button class="advance" id="advanceBtn" disabled>${s.half ? "Perşembe-Pazar'ı yaşa" : "Pazartesi-Çarşamba'yı yaşa"} <span>→</span></button>`;
     // Boş zaman
-    const total = Math.max(s.free, HS.freeSlots(s));
+    const total = Math.max(s.free, Math.ceil(HS.freeSlots(s) / 2));
     const done = s.flags.actDone || {};
     html += `<section class="card free"><div class="free-head"><h3>Boş zaman</h3><div class="dots">${Array.from({ length: total }, (_, i) => `<i class="${i < s.free ? "" : "used"}"></i>`).join("")}</div></div>`;
-    html += `<p class="fine">${s.tour ? "Turnedesin; boş zamanın yok." : s.mil === "serving" ? "Askerdesin; boş zamanın çok kısıtlı." : s.free ? "Haftanı yaşamadan önce " + s.free + " boş zamanın var. Kurslar her hafta bir boş zaman kullanır." : "Bu haftanın boş zamanı bitti."}</p>`;
+    html += `<p class="fine">${s.tour ? "Turnedesin; boş zamanın yok." : s.mil === "serving" ? "Askerdesin; boş zamanın çok kısıtlı." : s.free ? (s.half ? "Perşembe-Pazar" : "Pazartesi-Çarşamba") + " arasında " + s.free + " boş zamanın var. İşten sonra ya da hafta sonu ne yapacaksın?" : "Bu günlerin boş zamanı bitti."}</p>`;
     html += `<div class="acts">${HS.ACTIVITIES.filter((a) => !a.when || a.when(s))
       .map((a) => `<button class="act${done[a.id] ? " done" : ""}" data-a="${a.id}"${done[a.id] || !s.free ? " disabled" : on(() => doActivity(a))}>${Art.icon(a.art, 32)}<b>${esc(a.label)}</b><small>${esc(done[a.id] ? "Yapıldı" : a.hint)}</small></button>`)
       .join("")}</div></section>`;
@@ -371,6 +407,15 @@
       out.push(`${Art.icon("books", 20)} ${esc(d.name)} · ${c.left} hafta kaldı`);
     });
     if (s.tour) out.push(`${Art.icon("stadium", 20)} ${HS.TOURS[s.tour.k].name} · ${Math.max(0, s.tour.until - s.weeks)} hafta`);
+    if (s.bills && s.bills.length) {
+      const late = s.bills.filter((b) => b.late).length;
+      out.push(`${Art.icon("receipt", 20)} ${s.bills.length} ödenmemiş fatura · ${money(s.bills.reduce((a, b) => a + b.amt, 0))}${late ? ' · <b class="neg">' + late + " gecikmiş</b>" : ""} <button class="mini"${on(() => ((tab = "money"), (moneySub = "banka"), render()))}>Öde</button>`);
+    }
+    if (s.card && s.card.stmt > 1 && s.card.paid + 1 < s.card.stmt && s.card.due >= s.weeks) out.push(`${Art.icon("credit-card", 20)} Kart ekstresi ${money(s.card.stmt - s.card.paid)} · son ödeme ${Math.max(0, s.card.due - s.weeks)} hafta (asgari ${money(Math.max(0, s.card.minDue - s.card.paid))})`);
+    (s.deposits || []).forEach((d) => out.push(`${Art.icon("bank", 20)} Vadeli hesap ${money(d.amt)} · ${Math.max(0, Math.ceil((d.until - s.weeks) / 4.33))} ay kaldı (kilitli)`));
+    if (s.gym && s.gym.until > s.weeks) out.push(`${Art.icon("flexed-biceps", 20)} Spor salonu üyeliği · ${Math.max(0, Math.ceil((s.gym.until - s.weeks) / 4.33))} ay`);
+    const sch = HS.schedule(s);
+    if (sch) out.unshift(`${Art.icon("stopwatch", 20)} ${esc(sch.label)}`);
     if (s.mil === "serving") out.push(`${Art.icon("military-helmet", 20)} Askerlik · ${Math.max(0, s.milUntil - s.weeks)} hafta`);
     (s.props || []).filter((p) => p.seeking).forEach((p) => out.push(`${Art.icon("key", 20)} ${esc(p.city)} mülkü için kiracı aranıyor`));
     return out;
@@ -401,6 +446,7 @@
     const before = active.mood;
     const r = HS.doActivity(active, a.id, param);
     if (!r.ok) return toast(r.reason, "error");
+    if (a.room && Art.views(active).some((v) => v.id === a.room)) active.view = a.room;
     sfx("select");
     save();
     render();
@@ -431,27 +477,42 @@
       showScenes();
     });
   }
-  // Sabah işe gidiş animasyonu (ayarlardan kapatılabilir; dokununca geçer)
+  // İşe gidiş ve eve dönüş (ayarlardan kapatılabilir; dokununca geçer).
+  // Hafta içi günlerde, işi ya da okulu olan karakter için oynar.
   function commute(next) {
     const s = active;
-    const goes = s.job !== "none" || s.edu === "ogrenci";
-    if (!settings.commute || reduced() || !goes || s.tour || s.mil === "serving" || s.weeks % 4 !== 1) return next();
-    const days = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma"];
-    const hour = s.job === "cafe" || s.job === "factory" ? "06:" + (40 + (s.weeks % 15)) : s.job === "music" ? "19:30" : "08:" + (10 + (s.weeks % 40));
-    const dest = s.edu === "ogrenci" && s.job === "none" ? "Okula" : s.company ? HS.co(s.company).name + "'e" : "İşe";
-    $("commuteArt").innerHTML = Art.commute(s);
-    $("commuteText").textContent = days[s.weeks % 5] + " " + hour + " · " + dest + " gidiyorsun";
+    const sch = HS.schedule(s);
+    const goes = sch && (s.job !== "none" || s.edu === "ogrenci") && !s.tour && s.mil !== "serving" && s.job !== "crime";
+    if (!settings.commute || reduced() || !goes) return next();
+    // Az önce yaşanan günler: ilk yarı bittiyse Pzt-Çrş, ikinci yarı bittiyse Prş-Cuma
+    const day = s.half ? s.weeks % 3 : 3 + (s.weeks % 2);
+    const d = HS.DAYS[day];
+    const hh = (h, m) => String(((h % 24) + 24) % 24).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+    const dest = s.edu === "ogrenci" && s.job === "none" ? "Okula" : s.company ? HS.ek(HS.co(s.company).name, "dat") : s.job === "factory" ? "Fabrikaya" : s.job === "music" ? "Sahneye" : "İşe";
+    const frames = [
+      { art: Art.commute(s, sch.start >= 18 || sch.start < 5 ? "aksam" : "sabah"), text: d + " " + hh(sch.start - 1, 20 + (s.weeks % 4) * 5) + " · " + dest + " gidiyorsun" },
+      { art: Art.commute(s, sch.end >= 17 || sch.end < 5 ? "aksam" : "sabah"), text: hh(sch.end, 0) + " · Mesai bitti, eve dönüyorsun" },
+    ];
     const el = $("commute");
     el.classList.remove("hidden");
-    let done = false;
+    let i = 0,
+      done = false,
+      timer;
+    const show = () => {
+      $("commuteArt").innerHTML = frames[i].art;
+      $("commuteText").textContent = frames[i].text;
+      timer = setTimeout(stepNext, 1700);
+    };
     const end = () => {
       if (done) return;
       done = true;
+      clearTimeout(timer);
       el.classList.add("hidden");
       next();
     };
+    const stepNext = () => (++i < frames.length ? show() : end());
     el.onclick = end;
-    setTimeout(end, 2300);
+    show();
   }
 
   // Ara sahneler: şanslı sonuçlarda kısa bir bekleyiş
@@ -530,6 +591,8 @@
     }
     info += `<br>Aylık: gelir ${money(b.income * M)} · yaşam ${money(b.living * M)}${b.rent ? " · kira " + money(b.rent * M) : ""}${b.kids ? " · çocuk " + money(b.kids * M) : ""}`;
     html += card("İş", info);
+    const sch = HS.schedule(s);
+    if (sch) html += card("Çalışma düzeni", esc(sch.label) + (sch.shift ? "<br>Vardiya her ay döner: sabah → akşam → gece. Gece vardiyası sağlığı ve stresi zorlar." : "") + "<br>Hafta sonu: " + (sch.days >= 7 ? "yok" : sch.days >= 6 ? "yalnızca pazar" : "cumartesi-pazar tatil" + (["office", "factory", "memur", "business"].includes(s.job) ? " (bazen cumartesi mesaisi çıkar)" : "")) + "<br>Stres: " + esc(HS.stressLabel(s.stress)) + " (" + Math.round(s.stress) + ")");
     // Kariyer basamakları
     const lad = HS.Skills.ladder(s);
     if (lad && s.job !== "none") {
@@ -626,55 +689,131 @@
   }
 
   // ---------- BEN ----------
+  // Alt sekme düğmeleri
+  function subTabs(cur, list, set) {
+    return `<div class="subtabs" role="tablist">${list.map(([id, label]) => `<button class="subtab${id === cur ? " on" : ""}" role="tab" aria-selected="${id === cur}"${on(() => (set(id), renderPanel()))}>${esc(label)}</button>`).join("")}</div>`;
+  }
+  const head = (P, size = 52) => `<svg viewBox="22 2 76 76" width="${size}" height="${size}" aria-hidden="true">${Art.person({ ...P, hs: 1 })}</svg>`;
   function meTab(s) {
-    const E = HS.ECONOMY,
-      cpi = s.idx.cpi;
-    let html = "";
+    let html = subTabs(meSub, [["ben", "Ben"], ["aile", "Aile"], ["stil", "Stil"], ["esya", "Eşyalar"], ["basari", "Başarımlar"]], (v) => (meSub = v));
+    if (meSub === "aile") return html + familyPanel(s);
+    if (meSub === "stil") return html + stylePanel(s);
+    if (meSub === "esya") return html + itemsPanel(s);
+    if (meSub === "basari") return html + sectionTitle("Seviye " + HS.level(s), "Deneyim " + s.xp + " · sonraki seviyeye %" + Math.round(HS.levelProgress(s) * 100)) + sectionTitle("Başarımlar", (s.ach || []).length + "/" + HS.ACHIEVEMENTS.length) + `<div class="ach-grid">${achGrid(s)}</div>` + sectionTitle("Hayatının grafiği", "Net değer (2026 TL ile)") + `<div class="chart">${chart(s)}</div>`;
+    const cpi = s.idx.cpi;
     const b = s.body;
     html += card(
-      "Beden",
-      `Boy ${Math.round(b.h)} cm · Kilo ${b.w.toFixed(1)} kg · BKİ ${HS.Body.bmi(s).toFixed(1)} (${esc(HS.Body.label(s))})<br>Kas ${bar(b.mus)} ${Math.round(b.mus)}/100 · ${esc(HS.Body.muscleLabel(s))}<br><small class="fine">Koşu, spor salonu ve sağlıklı beslenme HAYAT sekmesindeki boş zaman etkinliklerindedir. Yaş, iş, stres ve araba kullanmak kiloyu etkiler.</small>`,
+      "Durum",
+      `Sağlık ${bar(s.health)} ${Math.round(s.health)} · Mutluluk ${bar(s.mood, "mood")} ${Math.round(s.mood)}<br>Stres ${bar(s.stress, "stress")} ${Math.round(s.stress)} · <b>${esc(HS.stressLabel(s.stress))}</b><br><small class="fine">Stresi iş yükü, borç, geciken faturalar, vardiya ve mobbing artırır; dinlenmek, uyku, spor, gezmek ve sevdiklerinle vakit azaltır. 70'in üstünde sağlık ve ilişkin yıpranır.</small>`,
     );
-    // İlişkiler
-    let rel = "";
-    if (s.partner) rel += esc(s.partner.name) + (s.partner.married ? " · eşin" : " · partnerin") + bar(s.partner.bond) + "<br>";
-    else rel += "Şu an bir ilişkin yok." + (s.exes ? " Geçmişte " + s.exes + " ayrılık." : "") + "<br>";
-    s.children.forEach((k) => (rel += esc(k.name) + " · " + (s.year - k.born) + " yaş" + bar(k.bond) + "<br>"));
-    rel += "Yakın çevre: " + Math.round(s.people) + " kişi.";
-    html += card("Yakınların", rel);
-    html += rows([
-      s.partner && !s.partner.married
-        ? row("Evlenme teklif et", "Yüzük ve akşam yemeği " + money(12000 * cpi), { cost: 12000, chance: { p: Math.min(0.95, Math.max(0.1, s.partner.bond / 100 + 0.1)), win: { marry: true, m: 10 }, lose: { bond: -12, m: -8 }, winT: s.partner.name + " evet dedi!", winP: "Restoranda herkes alkışladı.", loseT: "Henüz hazır değil", loseP: s.partner.name + " biraz daha zamana ihtiyacı olduğunu söyledi." } }, { weekly: "propose", icon: "ring" })
-        : null,
-      s.partner ? row(s.partner.married ? "Boşan" : "Ayrıl", s.partner.married ? "Boşanmada birikimlerin yarısı paylaşılır." : "İlişkiyi bitir.", { breakup: true, m: -8, cost: s.partner.married ? 20000 : 0, divorceSplit: s.partner.married ? 1 : 0 }, { confirm: "Bu ilişkiyi bitirmek istediğine emin misin?", icon: "warning" }) : null,
-      !s.flags.kedi ? row("Bir kedi sahiplen", "Mama ve veteriner " + money(3000 * cpi), { cost: 3000, m: 6, flag: "kedi", log: "Bir kedi sahiplendi." }, { icon: "cat" }) : null,
-    ]);
-    // Gardırop
+    html += card(
+      "Beden",
+      `Boy ${Math.round(b.h)} cm · Kilo ${b.w.toFixed(1)} kg · BKİ ${HS.Body.bmi(s).toFixed(1)} (${esc(HS.Body.label(s))})<br>Kas ${bar(b.mus)} ${Math.round(b.mus)}/100 · ${esc(HS.Body.muscleLabel(s))}`,
+    );
+    html += sectionTitle("Spor salonu", s.gym && s.gym.until > s.weeks ? "Üyeliğin " + Math.ceil((s.gym.until - s.weeks) / 4.33) + " ay daha geçerli" : "Üyelik yoksa her giriş ₺" + Math.round(450 * cpi).toLocaleString("tr-TR"));
+    html += `<div class="packs">${HS.GYM_PACKS.map((g) => {
+      const price = HS.gymPrice(s, g.months);
+      const fx = { gymBuy: g.months };
+      const c = HS.canApply(s, fx);
+      return `<button class="pack"${c === true ? on(() => act(fx, { confirm: g.months + " aylık üyelik " + money(price) + ". Alınsın mı?", yes: "Satın al", done: "Üyeliğin başladı." })) : " disabled"}><b>${g.months} ay</b><span>${money(price)}</span><small>${g.off ? "%" + Math.round(g.off * 100) + " indirim · aylık " + money(price / g.months) : "Esnek"}</small>${c === true ? "" : `<small>${needHtml(c)}</small>`}</button>`;
+    }).join("")}</div>`;
+    html += rows([!s.flags.kedi ? row("Bir kedi sahiplen", "Mama, kum ve veteriner: ilk masraf " + money(6500 * cpi), { cost: 6500, m: 6, flag: "kedi", log: "Bir kedi sahiplendi." }, { icon: "cat" }) : null]);
+    return html;
+  }
+  function familyPanel(s) {
+    const cpi = s.idx.cpi;
+    let html = "";
+    // İlişki
+    if (s.partner) {
+      html += card(esc(s.partner.name) + (s.partner.married ? " · eşin" : " · partnerin"), `Bağ ${bar(s.partner.bond)} ${Math.round(s.partner.bond)}`);
+      html += rows([
+        !s.partner.married ? row("Evlenme teklif et", "Yüzük ve akşam yemeği " + money(35000 * cpi), { cost: 35000, chance: { p: Math.min(0.95, Math.max(0.1, s.partner.bond / 100 + 0.1)), win: { marry: true, m: 10 }, lose: { bond: -12, m: -8 }, winT: s.partner.name + " evet dedi!", winP: "Restoranda herkes alkışladı.", loseT: "Henüz hazır değil", loseP: s.partner.name + " biraz daha zamana ihtiyacı olduğunu söyledi." } }, { weekly: "propose", icon: "ring" }) : null,
+        row(s.partner.married ? "Boşan" : "Ayrıl", s.partner.married ? "Avukat ve dava " + money(45000 * cpi) + "; birikimler paylaşılır." : "İlişkiyi bitir.", { breakup: true, m: -8, stress: 10, cost: s.partner.married ? 45000 : 0, divorceSplit: s.partner.married ? 1 : 0 }, { confirm: "Bu ilişkiyi bitirmek istediğine emin misin?", icon: "warning" }),
+      ]);
+    } else html += card("İlişki", "Şu an bir ilişkin yok." + (s.exes ? " Geçmişte " + s.exes + " ayrılık." : "") + " Yakın çevren: " + Math.round(s.people) + " kişi.");
+    // Soy ağacı
+    html += sectionTitle("Soy ağacı", "Ara, ziyaret et; bağ zayıflarsa uzaklaşırsınız");
+    const gens = HS.familyTree(s);
+    const names = ["Büyükanne ve büyükbaba", "Anne, baba ve akrabalar", "Sen ve kardeşlerin", "Çocukların", "Torunlar"];
     const P = Art.fromState(s);
-    html += sectionTitle("Gardırop", "İşe uygun kıyafet başvuru ve terfi şansını artırır");
+    html += `<div class="tree">`;
+    gens.forEach((g, gi) => {
+      if (!g.length) return;
+      html += `<div class="gen"><div class="gen-name">${names[gi]}</div><div class="gen-row">`;
+      g.forEach((n) => {
+        if (n.me) html += `<div class="node me">${head(P)}<b>${esc(s.first)}</b><small>Sen · ${s.age}</small></div>`;
+        else if (n.partner) html += `<div class="node">${head(Art.partnerLook(s, P))}<b>${esc(s.partner.name)}</b><small>${s.partner.married ? "Eşin" : "Partnerin"}</small></div>`;
+        else if (n.child) html += `<div class="node">${head(Art.childLook(s, n.child, P))}<b>${esc(n.child.name)}</b><small>Çocuğun · ${s.year - n.child.born}</small>${bar(n.child.bond)}</div>`;
+        else if (n.grand) html += `<div class="node"><span class="q">♡</span><b>Torunların</b><small>Var</small></div>`;
+        else {
+          const k = n.kin;
+          const a = HS.kinAge(s, k);
+          html += `<div class="node${k.alive ? "" : " dead"}">${head(HS.kinLook(s, k))}<b>${esc(k.name)}</b><small>${esc(HS.kinLabel(k))} · ${k.alive ? a : "vefat " + k.died}</small>${k.alive ? bar(k.bond) + `<small>${esc(k.city)}</small><div class="mini-row"><button class="mini"${HS.canApply(s, { callKin: k.id }) === true ? on(() => act({ callKin: k.id }, { done: k.name + " ile konuştun." })) : " disabled"}>Ara</button><button class="mini"${HS.canApply(s, { visit: k.id }) === true ? on(() => act({ visit: k.id }, { confirm: k.name + " ziyaret edilsin mi? " + (k.city === s.city ? "Yol ve hediye " : k.city + " yolu ") + money(HS.visitCost(s, k)) + "." })) : ` disabled title="${esc(HS.canApply(s, { visit: k.id }))}"`}>Ziyaret ${money(HS.visitCost(s, k))}</button></div>` : ""}</div>`;
+        }
+      });
+      html += `</div></div>`;
+    });
+    html += `</div>`;
+    return html;
+  }
+  function stylePanel(s) {
+    const E = HS.ECONOMY,
+      cpi = s.idx.cpi;
+    const P = Art.fromState(s);
+    let html = sectionTitle("Gardırop", "İşe uygun kıyafet başvuru ve terfi şansını artırır");
     html += `<div class="outfits">${Object.entries(Art.OUTFITS)
       .filter(([k, o]) => !(o.type === "dress" && s.look === "man") && (!o.hidden || s.outfits.includes(k)))
       .map(([k, o]) => {
         const owned = s.outfits.includes(k);
         const onIt = s.outfit === k;
         const fits = s.job !== "none" && HS.outfitFits({ ...s, outfit: k }, s.job);
-        const handler = onIt ? "" : owned ? on(() => act({ wear: k })) : on(() => act({ outfitBuy: k }, { confirm: o.name + " " + money(o.price * cpi) + " karşılığında alınsın mı?", yes: "Satın al" }));
+        const can = owned ? true : HS.canApply(s, { outfitBuy: k });
+        const handler = onIt ? "" : owned ? on(() => act({ wear: k })) : can === true ? on(() => act({ outfitBuy: k }, { confirm: o.name + " " + money(o.price * cpi) + " karşılığında alınsın mı?", yes: "Satın al" })) : " disabled";
         return `<button class="outfit${onIt ? " on" : ""}"${handler}><svg viewBox="0 0 120 220">${Art.person({ ...P, outfit: k, mood: 1 })}</svg><b>${esc(o.name)}</b><small${fits ? ' class="fit"' : ""}>${onIt ? "Giyiliyor" : owned ? "Giy" : money(o.price * cpi)}${fits ? " · işe uygun" : ""}</small></button>`;
       })
       .join("")}</div>`;
-    const hairs = s.look === "man" ? ["short", "curly", "long", "shaved"] : ["long", "braid", "bun", "curly", "short", "shaved"];
-    html += sectionTitle("Berber ve kuaför");
+    html += sectionTitle("Berber ve kuaför", "Saç modeline dokun; fiyat modele göre değişir");
+    const list = Art.HAIR_FOR[s.look === "man" ? "man" : "woman"];
+    const price = (h) => Math.round(E.haircut * ({ curly: 2.4, afro: 3, braid: 1.8, wavy: 2.2, pompadour: 1.4, bob: 1.3, pixie: 1.3 }[h] || 1) * cpi);
+    html += `<div class="hairs">${list
+      .map((h) => {
+        const fx = { hair: h, cost: price(h) / cpi };
+        const c = h === s.hair ? "Şu anki modelin" : s.flags.tabUse?.barber === s.weeks ? "Bu hafta kuaföre gittin." : HS.canApply(s, fx);
+        return `<button class="hair${h === s.hair ? " on" : ""}"${c === true ? on(() => act(fx, { weekly: "barber" })) : " disabled"}>${head({ ...P, hair: h, thin: false }, 64)}<b>${esc(Art.HAIR_STYLES[h])}</b><small>${h === s.hair ? "Şu an" : money(price(h))}</small></button>`;
+      })
+      .join("")}</div>`;
     html += rows([
-      ...hairs.filter((h) => h !== s.hair).map((h) => row(HAIRS[h] + " saç", "Kuaför " + money(E.haircut * (h === "curly" ? 2.4 : 1) * cpi), { hair: h, cost: E.haircut * (h === "curly" ? 2.4 : 1) }, { weekly: "barber", icon: "barber-pole" })),
       s.look === "man" ? row(s.beard ? "Sakalı kestir" : "Sakal bırak", "Berber " + money(E.beard * cpi), { beard: !s.beard, cost: E.beard }, { weekly: "beard", icon: "barber-pole" }) : null,
-      ...Object.keys(Art.HAIR_COLORS).filter((k) => k !== s.hairColor).map((k) => row("Saçı boyat: " + Art.HAIR_NAMES[k], "Boya " + money(1500 * cpi), { hairColor: k, cost: 1500 }, { weekly: "dye", icon: "scissors" })),
+      ...Object.keys(Art.HAIR_COLORS).filter((k) => k !== s.hairColor).map((k) => row("Saçı boyat: " + Art.HAIR_NAMES[k], "Boya " + money(1800 * cpi), { hairColor: k, cost: 1800 }, { weekly: "dye", icon: "scissors" })),
       s.look === "man" && !s.transplanted ? row("Saç ekimi", "Kalıcı işlem, " + money(E.transplant * cpi) + ".", { transplant: true, m: 3 }, { confirm: "Saç ekimi yaptırmak istiyor musun?", icon: "barber-pole" }) : null,
     ]);
-    // Başarımlar ve grafik
-    html += sectionTitle("Başarımlar", (s.ach || []).length + "/" + HS.ACHIEVEMENTS.length);
-    html += `<div class="ach-grid">${achGrid(s)}</div>`;
-    html += sectionTitle("Hayatının grafiği", "Net değer (2026 TL ile)");
-    html += `<div class="chart">${chart(s)}</div>`;
+    return html;
+  }
+  function itemsPanel(s) {
+    let html = sectionTitle("Kişisel eşyalar", "Peşin ya da kredi kartıyla taksitli · bazıları odalarında görünür");
+    html += `<div class="items">${Object.entries(HS.ITEMS)
+      .map(([k, it]) => {
+        const owned = s.items.includes(k);
+        const price = HS.itemPrice(s, k, 1);
+        let btns = "";
+        if (owned) {
+          const sell = it.price * s.idx.cpi * Math.max(0.15, 0.6 - (s.weeks - (s.itemAt[k] || 0)) / 520);
+          btns = `<button class="mini"${on(() => act({ itemSell: k }, { confirm: it.name + " ikinci ele " + money(sell) + " karşılığında satılsın mı?" }))}>Sat ${money(sell)}</button>`;
+        } else {
+          const c1 = HS.canApply(s, { itemBuy: { id: k, inst: 1 } });
+          btns = `<button class="mini"${c1 === true ? on(() => act({ itemBuy: { id: k, inst: 1 } }, { confirm: it.name + " " + money(price) + " peşin alınsın mı?", yes: "Satın al" })) : " disabled"}>Peşin</button>`;
+          if (s.card && !it.consumable)
+            [3, 6, 9].forEach((n) => {
+              const c = HS.canApply(s, { itemBuy: { id: k, inst: n } });
+              const pr = HS.itemPrice(s, k, n);
+              btns += `<button class="mini"${c === true ? on(() => act({ itemBuy: { id: k, inst: n } }, { confirm: it.name + " kartla " + n + " taksit: aylık " + money(pr / n) + ", toplam " + money(pr) + ". Onaylıyor musun?", yes: "Taksitle al" })) : " disabled"}>${n} taksit · ${money(pr / n)}</button>`;
+            });
+          if (c1 !== true) btns += `<small>${needHtml(c1)}</small>`;
+        }
+        return `<div class="item${owned ? " own" : ""}">${Art.icon(it.icon, 34)}<div><b>${esc(it.name)}</b><small>${esc(it.desc)}</small><small><b>${money(price)}</b>${it.lv ? " · ★ Seviye " + it.lv : ""}${owned ? " · sende" : ""}</small><div class="mini-row">${btns}</div></div></div>`;
+      })
+      .join("")}</div>`;
+    if (!s.card) html += '<p class="fine">Taksitle almak için PARA › Banka bölümünden kredi kartına başvurabilirsin.</p>';
     return html;
   }
   function achGrid(s) {
@@ -794,15 +933,9 @@
   // ---------- PARA ----------
   function moneyTab(s) {
     const cpi = s.idx.cpi;
-    let html = card(
-      "Para",
-      "Nakit " + money(s.cash) + " · Banka " + money(s.savings) + " · Borç " + money(s.debt) + (s.mortgage ? "<br>Konut kredisi " + money(s.mortgage.left) + " (haftalık " + money(s.mortgage.weekly) + ")" : "") + "<br>Net değer <b>" + money(HS.netWorth(s)) + "</b>",
-    );
-    html += rows([
-      row("Bankaya yatır (%25)", money(s.cash * 0.25) + " mevduata.", { save: Math.round(s.cash * 0.25) }, { off: s.cash < 400 ? "Nakit yok." : null, icon: "bank" }),
-      s.savings > 1 ? row("Bankadan çek (%50)", money(s.savings * 0.5) + " nakde.", { withdraw: 0.5 }, { icon: "bank" }) : null,
-      s.debt > 1 ? row("Borcu öde", "Nakdin kadarını kapat.", { payDebt: 1 }, { icon: "money-with-wings" }) : null,
-    ]);
+    let html = subTabs(moneySub, [["banka", "Banka"], ["yatirim", "Yatırım"], ["mulk", "Ev ve mülk"], ["arac", "Araç"]], (v) => (moneySub = v));
+    if (moneySub === "banka") return html + bankPanel(s);
+    if (moneySub === "yatirim") {
     // Yatırımlar
     html += sectionTitle("Yatırımlar", "Riskli araçlarda her ay %30 kazanç, %70 kayıp ihtimali");
     html += `<div class="inv-list">${Object.entries(HS.INVEST)
@@ -827,6 +960,9 @@
     html += `<div class="bets">${Object.entries(HS.BETS)
       .map(([k, b]) => `<div class="bet"><b>${esc(b.name)}</b><small>Oran ${b.odds.toFixed(2)} · tutma ihtimali %${Math.round(b.p * 100)} · ${esc(b.desc)}</small><div class="mini-row">${stakes.map((st) => `<button class="mini"${HS.canApply(s, { bet: { type: k, stake: st } }) === true ? on(() => act({ bet: { type: k, stake: st } })) : " disabled"}>${money(st)}</button>`).join("")}</div></div>`)
       .join("")}</div><p class="fine">Bahis bağımlılık yapabilir. Oyundaki oranlar bayinin her zaman kazandığı biçimde ayarlıdır.</p>`;
+      return html;
+    }
+    if (moneySub === "mulk") {
     // Ev ve mülkler
     html += sectionTitle("Ev ve mülkler");
     const homeRows = [];
@@ -862,6 +998,8 @@
     })}>Yatırım için al</button></div>`;
     if (!s.assets.land) html += rows([row("Arsa al", "Yaklaşık " + money(HS.landPrice(s)), { buy: "land" }, { confirm: "Arsa almak istiyor musun?", icon: "national-park" })]);
     else html += rows([row("Arsayı sat", "Değer " + money(HS.landPrice(s)), { sell: "land" }, { confirm: "Arsanı satmak istiyor musun?", icon: "national-park" })]);
+      return html;
+    }
     // Araç, ehliyet, sigorta
     html += sectionTitle("Araç ve ehliyet");
     const lic = { yok: "Ehliyetin yok", kurs: "Sürücü kursundasın", direksiyon: "Direksiyon sınavı bekliyor", var: "Ehliyetin var" }[s.license];
@@ -878,6 +1016,75 @@
     }
     carRows.push(row(s.ins.health ? "Özel sağlık sigortasını iptal et" : "Özel sağlık sigortası yaptır", "Yıllık ~" + money(HS.COSTS.privateHealth * cpi) + " · sağlık olaylarında masraf azalır", { ins: { k: "health", on: !s.ins.health } }, { icon: "health-worker" }));
     html += rows(carRows);
+    return html;
+  }
+  function bankPanel(s) {
+    const cpi = s.idx.cpi;
+    const R = HS.bankRates(s);
+    const pctS = (v, d = 2) => "%" + (v * 100).toFixed(d).replace(".", ",");
+    let html = card(
+      "Hesap özeti",
+      `Nakit <b>${money(s.cash)}</b> · Vadesiz hesap <b>${money(s.savings)}</b>${s.deposits.length ? " · Vadeli " + money(HS.depositTotal(s)) : ""}<br>` +
+        (s.card ? `Kart borcu ${money(s.card.bal)} / limit ${money(s.card.limit)}<br>` : "") +
+        (s.loans.length ? `Kredi borcu ${money(s.loans.reduce((a, l) => a + l.left, 0))} · aylık taksit ${money(s.loans.reduce((a, l) => a + l.monthly, 0))}<br>` : "") +
+        (s.mortgage ? `Konut kredisi ${money(s.mortgage.left)}<br>` : "") +
+        (s.debt > 1 ? `<b class="neg">Takipteki borç ${money(s.debt)}</b><br>` : "") +
+        `Kredi notu <b>${Math.round(s.score)}</b>/1900 · ${esc(HS.scoreLabel(s.score))} · Net değer <b>${money(HS.netWorth(s))}</b>`,
+    );
+    // Vadesiz
+    html += sectionTitle("Vadesiz hesap", "Günlük getirili, istediğin an çekilir · yıllık ~" + pctS(R.deposit * 0.5, 0));
+    html += `<div class="mini-row wide">${[0.25, 0.5, 1].map((f) => `<button class="mini"${s.cash >= 100 ? on(() => act({ save: Math.round(s.cash * f) })) : " disabled"}>Yatır ${f === 1 ? "hepsi" : "%" + f * 100}</button>`).join("")}${[0.5, 1].map((f) => `<button class="mini"${s.savings > 1 ? on(() => act({ withdraw: f })) : " disabled"}>Çek ${f === 1 ? "hepsi" : "%" + f * 100}</button>`).join("")}</div>`;
+    // Vadeli
+    html += sectionTitle("Vadeli mevduat", "Vade dolana kadar para kilitli; bozarsan faiz yanar · stopaj %17,5");
+    html += `<div class="seg mini-seg">${HS.DEPOSIT_TERMS.map((t) => `<button class="${depMonths === t.months ? "selected" : ""}"${on(() => ((depMonths = t.months), renderPanel()))}>${t.months} ay<small>${pctS(HS.depositRate(s, t.months), 0)}</small></button>`).join("")}</div>`;
+    html += `<div class="mini-row wide">${[0.25, 0.5, 1].map((f) => {
+      const amt = Math.floor(s.cash * f);
+      const fx = { depositOpen: { amt, months: depMonths } };
+      const c = HS.canApply(s, fx);
+      return `<button class="mini"${c === true ? on(() => act(fx, { confirm: money(amt) + " " + depMonths + " ay vadeye yatsın mı? Net getiri ~" + money(HS.depositNet(s, amt, depMonths)) + ". Vade bitene kadar çekemezsin.", yes: "Yatır" })) : " disabled"}>${f === 1 ? "Nakdin hepsi" : "%" + f * 100} · ${money(amt)}</button>`;
+    }).join("")}</div>`;
+    s.deposits.forEach((d) => (html += rows([row("Vadeli · " + money(d.amt) + " · " + d.months + " ay", Math.max(0, Math.ceil((d.until - s.weeks) / 4.33)) + " ay kaldı · beklenen net faiz " + money(d.amt * d.rate * (d.months / 12) * (1 - R.stopaj)), { depositBreak: d.id }, { icon: "bank", confirm: "Vadeyi bozarsan işlemiş faizin tamamı yanar. Emin misin?", yes: "Boz" })])));
+    // Kart
+    html += sectionTitle("Kredi kartı", "Aylık akdi faiz " + pctS(R.card) + " · gecikme " + pctS(R.cardLate) + " · asgari ödeme %20");
+    if (!s.card) html += rows([row("Kredi kartına başvur", "Önerilen limit " + money(HS.cardOffer(s)) + " · onay şansı %" + Math.round(HS.cardChance(s) * 100), { cardApply: 1 }, { icon: "credit-card" })]);
+    else {
+      const k = s.card;
+      const inst = (k.inst || []).filter((i) => i.left > 0);
+      html += card(
+        "",
+        `Limit ${money(k.limit)} · Borç <b>${money(k.bal)}</b> · Kullanılabilir ${money(HS.cardAvail(s))}${k.blocked ? ' · <b class="neg">KULLANIMA KAPALI</b>' : ""}<br>` +
+          (k.stmt > 1 ? `Son ekstre ${money(k.stmt)} · ödenen ${money(k.paid)} · asgari ${money(k.minDue)} · son ödeme ${k.due >= s.weeks ? k.due - s.weeks + " hafta sonra" : "geçti"}<br>` : "Ekstre ay sonunda kesilir.<br>") +
+          (inst.length ? "Taksitler: " + inst.map((i) => esc(i.name) + " " + i.left + "×" + money(i.amt)).join(", ") + "<br>" : "") +
+          `Otomatik ödeme: <b>${{ off: "kapalı", min: "asgari tutar", full: "ekstrenin tamamı" }[k.auto]}</b>${k.late ? ' · <b class="neg">' + k.late + " geciken ekstre</b>" : ""}`,
+      );
+      html += `<div class="mini-row wide">
+        <button class="mini"${k.stmt - k.paid > 1 && s.cash > 1 ? on(() => act({ cardPay: "stmt" })) : " disabled"}>Ekstreyi öde ${money(Math.max(0, k.stmt - k.paid))}</button>
+        <button class="mini"${k.minDue - k.paid > 1 && s.cash > 1 ? on(() => act({ cardPay: "min" })) : " disabled"}>Asgariyi öde ${money(Math.max(0, k.minDue - k.paid))}</button>
+        <button class="mini"${k.bal > 1 && s.cash > 1 ? on(() => act({ cardPay: "all" })) : " disabled"}>Tüm borcu kapat</button></div>`;
+      html += `<div class="seg mini-seg">${[["off", "Talimat yok"], ["min", "Asgari"], ["full", "Tamamı"]].map(([v, l]) => `<button class="${k.auto === v ? "selected" : ""}"${on(() => act({ cardAuto: v }))}>${l}</button>`).join("")}</div>`;
+      html += rows([row("Limit artışı iste", "Bir yıl düzgün kullanımdan sonra gelirin 4 katına kadar", { cardLimitUp: 1 }, { icon: "chart-increasing" }), row("Kartı kapat", "Borç sıfır olmalı", { cardClose: 1 }, { icon: "scissors", confirm: "Kredi kartını kapatmak istiyor musun?" })]);
+    }
+    // Krediler
+    html += sectionTitle("Krediler", "İhtiyaç " + pctS(R.ihtiyac) + " · taşıt " + pctS(R.tasit) + " aylık (vergiler dahil) · taksitler gelirinin yarısını geçemez");
+    const mx = HS.loanMax(s, loanSel.kind);
+    const amt = Math.floor((mx * loanSel.frac) / 1000) * 1000;
+    const mon = HS.loanMonthly(amt, R[loanSel.kind], loanSel.months);
+    html += `<div class="loan-form"><div class="seg mini-seg">${Object.entries(HS.LOANS).map(([k, l]) => `<button class="${loanSel.kind === k ? "selected" : ""}"${on(() => ((loanSel.kind = k), renderPanel()))}>${esc(l.name)}</button>`).join("")}</div>
+      <div class="seg mini-seg">${[0.25, 0.5, 1].map((f) => `<button class="${loanSel.frac === f ? "selected" : ""}"${on(() => ((loanSel.frac = f), renderPanel()))}>${money(Math.floor((mx * f) / 1000) * 1000)}</button>`).join("")}</div>
+      <div class="seg mini-seg">${[12, 24, 36].map((m) => `<button class="${loanSel.months === m ? "selected" : ""}"${on(() => ((loanSel.months = m), renderPanel()))}>${m} ay</button>`).join("")}</div></div>`;
+    html += rows([row(HS.LOANS[loanSel.kind].name + " · " + money(amt), amt > 0 ? "Aylık " + money(mon) + " × " + loanSel.months + " = " + money(mon * loanSel.months) + " · onay şansı %" + Math.round(HS.loanChance(s, loanSel.kind, amt) * 100) : "Gelirine göre çekilebilecek kredi yok.", { loanApply: { kind: loanSel.kind, amt, months: loanSel.months } }, { icon: "money-bag", off: amt <= 0 ? "Düzenli gelir ve boş taksit payı gerekir." : null, confirm: money(amt) + " kredi başvurusu yapılsın mı? Aylık taksit " + money(mon) + "." })]);
+    s.loans.forEach((l) => (html += rows([row(l.name + " · kalan " + money(l.left), "Aylık " + money(l.monthly) + " · erken kapama %2 ücretli", { loanClose: l.id }, { icon: "money-with-wings", confirm: "Krediyi " + money(l.left * 1.02) + " ödeyerek kapatmak istiyor musun?" })])));
+    // Faturalar
+    html += sectionTitle("Faturalar", s.housing === "aile" ? "Aile evinde yalnızca kendi telefon faturan sende" : "Her ay gelir; 2 hafta içinde ödenmezse gecikme bedeli, 1 ay sonra kesinti");
+    if (!s.bills.length) html += card("", "Ödenmemiş faturan yok. " + (s.billAuto ? "Otomatik ödeme talimatın açık." : ""));
+    else {
+      html += `<div class="bills">${s.bills
+        .map((b) => `<div class="bill${b.late ? " late" : ""}"><span>${esc(b.name)}${s.cut[b.k] ? " · <b class='neg'>kesik</b>" : ""}</span><small>${b.late ? "gecikmiş" : "son ödeme " + Math.max(0, b.due - s.weeks) + " hafta"}</small><b>${money(b.amt * (b.late ? 1.05 : 1))}</b><button class="mini"${HS.canApply(s, { billPay: b.id }) === true ? on(() => act({ billPay: b.id })) : " disabled"}>Öde</button></div>`)
+        .join("")}</div>`;
+      html += rows([row("Hepsini öde", money(s.bills.reduce((a, b) => a + b.amt * (b.late ? 1.05 : 1), 0)), { billPay: "all" }, { icon: "page-facing-up" })]);
+    }
+    html += `<button class="setting"${on(() => act({ billAuto: !s.billAuto }))}><span><b>Otomatik fatura ödeme talimatı</b><small>Faturalar gelince nakitten (yetmezse karttan) ödenir</small></span><i class="switch${s.billAuto ? " on" : ""}"></i></button>`;
+    if (s.debt > 1) html += rows([row("Takipteki borcu öde", "Nakdin kadarını kapat · faiz işliyor", { payDebt: 1 }, { icon: "money-with-wings" })]);
     return html;
   }
 
@@ -938,11 +1145,11 @@
       tg("vibration", "Titreşim", "Destekleyen telefonlarda (iPhone tarayıcıda desteklenmez)") +
       `<label class="range"><span>Ses düzeyi</span><input type="range" id="volume" min="0" max="1" step="0.05" value="${settings.volume}"></label></article>` +
       `<article class="card"><h3>Oynanış</h3>` +
-      tg("commute", "İşe gidiş animasyonu", "Ayda bir sabah işe gidişini göster") +
+      tg("commute", "İşe gidiş ve eve dönüş", "Hafta içi sabah işe gidişi ve akşam eve dönüşü göster") +
       `<button class="setting" data-text="1"><span><b>Yazı boyutu</b><small>${settings.text === "big" ? "Büyük" : "Normal"}</small></span><i class="pill">${settings.text === "big" ? "A+" : "A"}</i></button></article>` +
       `<article class="card"><h3>Hesap</h3><p class="fine">App Store ve Google Play sürümünde kayıtların Apple ile giriş / Game Center ya da Google Play Oyunlar hesabına bağlanabilecek. Bu tarayıcı prototipinde kayıtlar yalnızca bu cihazda tutulur.</p><button class="secondary" disabled>Hesabını bağla (mağaza sürümünde)</button></article>` +
       `<article class="card"><h3>Kayıtlar</h3><p class="fine">Kayıtlarını başka bir cihaza taşımak için kodu kopyala, diğer cihazda yapıştır.</p><button class="secondary" id="exportBtn">Kayıt kodunu kopyala</button><textarea id="importBox" rows="3" placeholder="Kayıt kodunu buraya yapıştır" aria-label="Kayıt kodu"></textarea><button class="secondary" id="importBtn">Kodu içe aktar</button><button class="secondary danger" id="wipeBtn">Bütün verileri sil</button></article>` +
-      `<article class="card"><h3>Hakkında</h3><p class="fine">Hayat Simülatörü · prototip sürüm 0.3<br>Çizimler: Microsoft Fluent Emoji (MIT). Harita: Natural Earth verisi, react-turkey-map (MIT). Yazı tipleri: Fredoka ve Nunito (SIL OFL).<br>Ekonomi 2026 verileriyle kalibre edilmiştir; 2027 sonrası kurmacadır. Kişi, parti, şirket ve markalar hayal ürünüdür. Yatırım ve bahis bölümleri tavsiye değildir.</p></article>`;
+      `<article class="card"><h3>Hakkında</h3><p class="fine">Hayat Simülatörü · prototip sürüm 0.3<br>Çizimler: Microsoft Fluent Emoji (MIT). Harita: Natural Earth verisi, react-turkey-map (MIT). Yazı tipleri: Baloo 2 ve Nunito (SIL OFL).<br>Ekonomi 2026 verileriyle kalibre edilmiştir; 2027 sonrası kurmacadır. Kişi, parti, şirket ve markalar hayal ürünüdür. Yatırım ve bahis bölümleri tavsiye değildir.</p></article>`;
     $("settingsBody").querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => setSetting(b.dataset.k, !settings[b.dataset.k])));
     $("settingsBody").querySelector("[data-text]").onclick = () => setSetting("text", settings.text === "big" ? "normal" : "big");
     $("volume").oninput = (e) => {

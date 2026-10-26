@@ -16,7 +16,9 @@
   Art.HAIR_COLORS = { siyah: "#2b2220", kahve: "#5e3a24", kumral: "#93613a", sari: "#e0b864", kizil: "#b14f2b" };
   Art.HAIR_NAMES = { siyah: "Siyah", kahve: "Kahverengi", kumral: "Kumral", sari: "Sarı", kizil: "Kızıl" };
   Art.EYES = ["#5a3520", "#3f78b5", "#4f7f3a", "#8a6230"];
-  Art.HAIR_STYLES = { short: "Kısa", long: "Uzun", curly: "Kıvırcık", bun: "Topuz", braid: "Örgü", shaved: "Kazınmış" };
+  Art.HAIR_STYLES = { short: "Kısa", sidepart: "Yandan ayrık", pompadour: "Fönlü", manbun: "Erkek topuzu", long: "Uzun düz", wavy: "Uzun dalgalı", bob: "Küt", pixie: "Pixie", ponytail: "At kuyruğu", bun: "Topuz", braid: "Örgü", curly: "Kıvırcık", afro: "Afro", shaved: "Kazınmış" };
+  // Cinsiyete göre berberde önerilen modeller (hepsi herkes için seçilebilir).
+  Art.HAIR_FOR = { man: ["short", "sidepart", "pompadour", "curly", "afro", "manbun", "long", "shaved"], woman: ["long", "wavy", "bob", "pixie", "ponytail", "bun", "braid", "curly", "afro", "short", "shaved"] };
 
   // Kıyafetler. jobs: hangi işlerde "uygun kıyafet" sayılır. price: 2026 TL. hidden: gardıropta satılmaz.
   Art.OUTFITS = {
@@ -259,6 +261,57 @@
         `<path d="${cap}L${n1(R - 1)} 46C${n1(R - 3)} 30 ${n1(R - 10)} 26 60 26C${n1(L + 10)} 26 ${n1(L + 3)} 30 ${n1(L + 1)} 46z" fill="${H}"/>` +
         `<g fill="${H}">${[[-15, 25], [-6, 22], [4, 22.5], [13, 25], [-21, 31], [20, 31]].map(([x, y], i) => `<circle cx="${60 + x}" cy="${y}" r="${5.2 + (i % 2)}"/>`).join("")}</g>` +
         `<g fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="1.6">${[[-14, 22], [3, 19], [12, 23]].map(([x, y]) => `<path d="M${60 + x - 3} ${y}q3 -3 6 0"/>`).join("")}</g>`;
+    } else if (style === "bob") {
+      back = `<path d="M60 ${T - 6}C${n1(R + 12)} ${T - 5} ${n1(R + 11)} 40 ${n1(R + 9)} 64Q${n1(R + 9)} 76 ${n1(R + 2)} 78H${n1(L - 2)}Q${n1(L - 9)} 76 ${n1(L - 9)} 64C${n1(L - 11)} 40 ${n1(L - 12)} ${T - 5} 60 ${T - 6}Z" fill="${H}"/>`;
+      front =
+        `<path d="${cap}L${n1(R + 2)} 70Q${n1(R - 2)} 72 ${n1(R - 3)} 62C${n1(R - 3)} 40 ${n1(R - 8)} 32 ${n1(R - 10)} 31C${n1(R - 18)} 33 ${n1(L + 18)} 33 ${n1(L + 10)} 31C${n1(L + 8)} 32 ${n1(L + 3)} 40 ${n1(L + 3)} 62Q${n1(L + 2)} 72 ${n1(L - 2)} 70z" fill="${H}"/>` +
+        `<path d="M${n1(L + 12)} 31q6 2 10 0M${n1(60 - 2)} 32q5 2 9 0" stroke="${dark(c.hair, 0.3)}" stroke-width="1" fill="none" opacity=".5"/>` +
+        shine(L + 6, 22, R - 8, 18, 60, T - 2);
+    } else if (style === "ponytail") {
+      back = `<path d="M${n1(R - 2)} 20C${n1(R + 22)} 26 ${n1(R + 18)} 70 ${n1(R + 8)} 96C${n1(R + 14)} 70 ${n1(R + 10)} 40 ${n1(R - 6)} 30z" fill="${H}"/><circle cx="${n1(R - 1)}" cy="24" r="4.5" fill="${c.acc}"/>`;
+      front =
+        `<path d="${cap}L${n1(R - 1)} 48C${n1(R - 2)} 33 ${n1(R - 9)} 25 60 23.5C${n1(L + 9)} 25 ${n1(L + 2)} 33 ${n1(L + 1)} 48z" fill="${H}"/>` +
+        `<path d="M${n1(L + 6)} 30Q60 18 ${n1(R - 4)} 22" stroke="${dark(c.hair, 0.3)}" stroke-width="1" fill="none" opacity=".45"/>` +
+        shine(L + 8, T + 8, 60, T - 2, L + 14, T - 1);
+    } else if (style === "sidepart") {
+      front =
+        `<path d="${cap}L${n1(R - 1.5)} 50C${n1(R - 2)} 36 ${n1(R - 4)} 29 ${n1(R - 8)} 26C${n1(R - 20)} 21 ${n1(L + 20)} 25 ${n1(L + 8)} 29C${n1(L + 3)} 34 ${n1(L + 1.5)} 42 ${n1(L + 1.5)} 50z" fill="${H}"/>` +
+        `<path d="M${n1(L + 12)} ${T - 2}Q${n1(L + 10)} 14 ${n1(L + 14)} 26" stroke="${dark(c.hair, 0.4)}" stroke-width="1.3" fill="none"/>` +
+        `<path d="M${n1(L + 16)} ${T - 3}q20 -6 ${n1(d.cw * 2 - 22)} 8q-14 -2 ${n1(-(d.cw * 2 - 22))} -8z" fill="${H}"/>` +
+        shine(L + 18, T + 2, R - 8, T + 8, 60, T - 4);
+    } else if (style === "pompadour") {
+      front =
+        `<path d="${cap}L${n1(R - 1.5)} 50C${n1(R - 2)} 36 ${n1(R - 5)} 29 ${n1(R - 10)} 27C${n1(R - 18)} 26 ${n1(L + 18)} 27 ${n1(L + 8)} 29C${n1(L + 3)} 35 ${n1(L + 1.5)} 42 ${n1(L + 1.5)} 50z" fill="${H}"/>` +
+        `<path d="M${n1(L + 2)} 22C${n1(L + 2)} ${T - 16} ${n1(R - 2)} ${T - 18} ${n1(R + 2)} ${T + 4}C${n1(R - 6)} ${T - 4} ${n1(L + 10)} ${T - 6} ${n1(L + 2)} 22z" fill="${H}"/>` +
+        shine(L + 10, T - 4, R - 6, T - 2, 60, T - 14) +
+        `<path d="M${n1(L - 2)} 34v14M${n1(R + 2)} 34v14" stroke="${dark(c.hair, 0.2)}" stroke-width="2.4" opacity=".55"/>`;
+    } else if (style === "afro") {
+      const pts = [];
+      for (let i = 0; i < 18; i++) {
+        const a = (Math.PI * 2 * i) / 18;
+        pts.push([60 + Math.cos(a) * (d.cw + 9), 30 + Math.sin(a) * 27]);
+      }
+      back = `<g fill="${H}"><ellipse cx="60" cy="30" rx="${n1(d.cw + 12)}" ry="30"/>${pts.map(([x, y], i) => `<circle cx="${n1(x)}" cy="${n1(y)}" r="${6 + (i % 3)}"/>`).join("")}</g>`;
+      front =
+        `<path d="${cap}L${n1(R - 1)} 44C${n1(R - 3)} 30 ${n1(R - 10)} 25 60 25C${n1(L + 10)} 25 ${n1(L + 3)} 30 ${n1(L + 1)} 44z" fill="${H}"/>` +
+        `<g fill="#fff" opacity=".12">${[[-14, 6], [6, 2], [-2, 14]].map(([x, y]) => `<circle cx="${60 + x}" cy="${y}" r="4"/>`).join("")}</g>`;
+    } else if (style === "wavy") {
+      back = `<path d="M60 ${T - 6}C${n1(R + 14)} ${T - 5} ${n1(R + 14)} 36 ${n1(R + 12)} 60q-6 8 0 16q6 8 0 16q-6 10 -2 22Q60 122 ${n1(L - 2)} 114q4 -12 -2 -22q-6 -8 0 -16q6 -8 0 -16C${n1(L - 14)} 36 ${n1(L - 14)} ${T - 5} 60 ${T - 6}Z" fill="${H}"/>`;
+      front =
+        `<path d="${cap}L${n1(R + 3)} 64q-5 -6 -3 -14C${n1(R - 2)} 36 ${n1(R - 8)} 28 ${n1(R - 14)} 26C${n1(R - 22)} 30 ${n1(L + 20)} 24 ${n1(L + 10)} 30C${n1(L + 4)} 36 ${n1(L + 1)} 44 ${n1(L + 2)} 52q2 8 -5 12z" fill="${H}"/>` +
+        shine(L + 4, 34, 58, T, L + 6, T + 4) +
+        shine(R - 4, 20, R + 4, 50, R + 4, 30);
+    } else if (style === "pixie") {
+      front =
+        `<path d="${cap}L${n1(R - 1)} 46C${n1(R - 2)} 34 ${n1(R - 6)} 28 ${n1(R - 12)} 26L${n1(L + 14)} 34Q${n1(L + 6)} 36 ${n1(L + 2)} 46z" fill="${H}"/>` +
+        `<path d="M${n1(R - 8)} 22Q${n1(L + 20)} 24 ${n1(L + 8)} 38Q${n1(L + 20)} 32 ${n1(R - 4)} 28z" fill="${H}"/>` +
+        shine(L + 10, T + 6, R - 10, T + 2, 60, T - 4);
+    } else if (style === "manbun") {
+      back = `<ellipse cx="60" cy="${T - 3}" rx="9" ry="7" fill="${H}"/>`;
+      front =
+        `<path d="${cap}L${n1(R - 1)} 50C${n1(R - 2)} 34 ${n1(R - 9)} 25 60 24C${n1(L + 9)} 25 ${n1(L + 2)} 34 ${n1(L + 1)} 50z" fill="${H}"/>` +
+        `<path d="M${n1(L + 8)} 28Q60 14 ${n1(R - 8)} 28" stroke="${dark(c.hair, 0.3)}" stroke-width="1" fill="none" opacity=".45"/>` +
+        shine(L + 10, T + 8, 58, T, L + 14, T + 1);
     }
     return { back, front };
   }
