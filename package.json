@@ -1,0 +1,12 @@
+{
+  "name": "hayat-simulatoru",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Türkçe, mobil uyumlu, tarayıcıda çalışan hayat simülasyonu prototipi",
+  "scripts": {
+    "test": "node tests/simulate.js 200 && node tests/browser.js",
+    "test:sim": "node tests/simulate.js",
+    "test:browser": "node tests/browser.js",
+    "format": "prettier --write \"js/**/*.js\" \"tests/*.js\" index.html style.css sw.js"
+  }
+}

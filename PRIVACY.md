@@ -1,5 +1,12 @@
-# Gizlilik — Hayat Simülatörü
+# Gizlilik — Hayat Simülatörü (prototip)
 
-Bu prototip hesap, reklam, analiz, konum, kişi listesi veya sunucu kullanmaz. Karakter ve hayat kayıtları, haftalık seçim geçmişi dahil, yalnızca bu cihazdaki tarayıcı `localStorage` alanında saklanır. Uygulamayı/tarayıcıyı temizlemek kayıtları siler. Bilgi sunucuya gönderilmez.
+Bu prototip hesap, reklam, analiz, konum, kişi listesi ya da sunucu kullanmaz. Hiçbir bilgi sunucuya gönderilmez.
 
-Paylaşım veya harici bağlantı bu sürümde yoktur. Oyun çevrimdışı çalışabilecek şekilde tasarlanmıştır. App Store sürümünde kullanılan gerçek kütüphaneler, uygulama kabuğu ve depolama davranışı kontrol edilip bu açıklama ve mağaza gizlilik beyanı güncellenmelidir.
+Cihazda saklananlar, tarayıcının `localStorage` alanında:
+
+- `hayatSimulatuoruSavesV1`: hayat kayıtları. Karakterin adı, şehri, durumu, yarım kalan haftanın olayı, dönüm noktası günlüğü ve oyuncunun yazdığı çocuk adları.
+- `hayatSimEndingProfilesV2`: bu cihazda keşfedilen son profillerinin listesi.
+
+Tarayıcı verisini temizlemek, ya da kayıtlar ekranındaki ✕ düğmesi, kayıtları siler. Sunucu üzerinden açıldığında service worker oyun dosyalarını çevrimdışı kullanım için önbelleğe alır.
+
+Mağaza sürümü hazırlanırsa, kullanılan uygulama kabuğu, kütüphaneler ve depolama davranışı yeniden kontrol edilmeli; bu metin ve mağaza gizlilik beyanı ona göre güncellenmelidir.

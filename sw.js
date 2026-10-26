@@ -1,9 +1,15 @@
-const CACHE = "hayat-simulator-v3";
+// Çevrimdışı çalışma için basit önbellek. Dosya listesi değişince sürümü artır.
+const CACHE = "hayat-simulator-v4";
 const FILES = [
   "./",
   "./index.html",
   "./style.css",
-  "./game.js",
+  "./js/content/economy.js",
+  "./js/content/events.js",
+  "./js/content/events-daily.js",
+  "./js/content/endings.js",
+  "./js/engine.js",
+  "./js/ui.js",
   "./manifest.webmanifest",
   "./icon.svg",
 ];
@@ -21,21 +27,20 @@ self.addEventListener("activate", (e) =>
       ),
   ),
 );
+// Önce ağ, olmazsa önbellek: güncellemeler hemen görünür, çevrimdışı da çalışır.
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   e.respondWith(
-    caches.match(e.request).then(
-      (cached) =>
-        cached ||
-        fetch(e.request)
-          .then((response) => {
-            if (response.ok) {
-              const copy = response.clone();
-              caches.open(CACHE).then((c) => c.put(e.request, copy));
-            }
-            return response;
-          })
-          .catch(() => caches.match("./index.html")),
-    ),
+    fetch(e.request)
+      .then((r) => {
+        if (r.ok) {
+          const copy = r.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+        }
+        return r;
+      })
+      .catch(() =>
+        caches.match(e.request).then((m) => m || caches.match("./index.html")),
+      ),
   );
 });
