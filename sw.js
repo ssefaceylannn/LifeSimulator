@@ -1,5 +1,5 @@
 // Çevrimdışı çalışma için basit önbellek. Dosya listesi değişince sürümü artır.
-const CACHE = "hayat-simulator-v10";
+const CACHE = "hayat-simulator-v11";
 const FILES = [
   "./",
   "./index.html",
