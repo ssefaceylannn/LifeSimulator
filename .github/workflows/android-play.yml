@@ -7,6 +7,7 @@
 #   ANDROID_KEY_ALIAS      Anahtar adı (ör. upload)
 #   ANDROID_KEY_PASS       Anahtar parolası
 #   PGS_PROJECT_ID         (isteğe bağlı) Play Games Services proje kimliği (sayı). Yoksa hesap bağlama kapalı kalır.
+#   ADMOB_ANDROID_APP_ID, ADMOB_ANDROID_INTERSTITIAL, ADMOB_ANDROID_REWARDED (AdMob; yoksa test reklamları çıkar)
 #   PLAY_SERVICE_ACCOUNT_JSON (isteğe bağlı) Play Console API hizmet hesabı; varsa "Dahili test" kanalına otomatik yükler.
 # Ayrıntılı adımlar: MAGAZA-REHBERI.md
 name: Android Google Play
@@ -29,12 +30,16 @@ jobs:
           distribution: temurin
           java-version: 21
       - name: Oyunu derle
+        env:
+          ADMOB_ANDROID_INTERSTITIAL: ${{ secrets.ADMOB_ANDROID_INTERSTITIAL }}
+          ADMOB_ANDROID_REWARDED: ${{ secrets.ADMOB_ANDROID_REWARDED }}
         run: node scripts/build-single.js && node scripts/build-app.js
       - name: Capacitor ve oyun hizmetleri eklentisi
-        run: npm install --no-save --no-audit --no-fund @capacitor/core@8 @capacitor/cli@8 @capacitor/android@8 @idleflowgames/capacitor-play-games@0.3
+        run: npm install --no-save --no-audit --no-fund @capacitor/core@8 @capacitor/cli@8 @capacitor/android@8 @idleflowgames/capacitor-play-games@0.3 @capacitor-community/admob@8 @capgo/native-purchases@8
       - name: Android projesi oluştur
         env:
           PGS: ${{ secrets.PGS_PROJECT_ID }}
+          ADMOB_APP: ${{ secrets.ADMOB_ANDROID_APP_ID }}
         run: |
           npx cap add android
           npx cap sync android
@@ -51,6 +56,9 @@ jobs:
             # Uyarlanabilir simge: ön plan 108dp tuvalde ortadaki 72dp alana oturur
             convert assets/app/icon-1024.png -resize $((s*3/2))x$((s*3/2)) -gravity center -background none -extent $((s*108/48))x$((s*108/48)) android/app/src/main/res/mipmap-$n/ic_launcher_foreground.png
           done
+          # AdMob uygulama kimliği (yoksa Google'ın test kimliği)
+          AID=${ADMOB_APP:-ca-app-pub-3940256099942544~3347511713}
+          sed -i "s#</application>#    <meta-data android:name=\"com.google.android.gms.ads.APPLICATION_ID\" android:value=\"$AID\" />\n    </application>#" android/app/src/main/AndroidManifest.xml
           # Dikey ekran
           sed -i 's/<activity/<activity android:screenOrientation="portrait"/' android/app/src/main/AndroidManifest.xml
           # Play Games Services (varsa)

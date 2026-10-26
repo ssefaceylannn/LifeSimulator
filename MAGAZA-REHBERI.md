@@ -1,6 +1,8 @@
 # Mağaza rehberi: önce App Store, sonra Google Play
 
-Bu rehber oyunu iki mağazaya çıkarmak için yapılacak her şeyi sırayla anlatır. Kod tarafı hazır:
+Bu rehber oyunu iki mağazaya çıkarmak için yapılacak her şeyi sırayla anlatır.
+
+**Hesaplar:** Apple Developer'a kendi Apple kimliğinle, Play Console ve AdMob'a kendi Gmail hesabınla kaydol. Hesap bilgileri bu depoya yazılmaz; bu depo herkese açık. Kod tarafı hazır:
 - İmzalı derleyip yükleyen iki iş akışı var (ikisi de yalnızca elle başlatılır).
 - Gizlilik dosyaları, mağaza metinleri, ekran görüntüleri ve başarım listesi hazır.
 
@@ -119,13 +121,64 @@ Senin yapacakların hesap açmak, gizli anahtarları GitHub'a girmek ve mağaza 
 
 ---
 
-## 3. Sürüm güncelleme döngüsü
+## 3. Para kazanma: reklam ve uygulama içi satın alma
+
+### 3.1 Model (oyunda hazır, `js/shop.js`)
+- **Ücretsiz oyuncu:**
+  - İlk 25 turdan sonra, her 6 turda bir (en az 4 dakika arayla) tam ekran reklam görür.
+  - İsterse **ödüllü reklam** izler: haftada bir "+2 boş zaman", ayda bir "harçlık", "son kararı geri al".
+  - Aynı anda en fazla **3 yaşayan hayat** olabilir. **Çok hızlı** oyun hızı ve **Oyun dengesi** ayarları kilitlidir. Oyun bunlar olmadan da tamamen oynanır.
+- **Reklamsız (₺129,99, kalıcı):** Tam ekran reklam yok.
+- **Premium (₺249,99, kalıcı):** Reklamsız + bütün kilitler açık + ödüllü avantajlar reklam izlemeden.
+- **Para paketleri (tüketilebilir):** ₺39,99 / ₺99,99 / ₺249,99. Karaktere 50 bin / 250 bin / 1 milyon oyun parası ekler (2026 fiyatıyla; enflasyonla büyür).
+- **İnternet kapalıyken:**
+  - Reklam çıkmaz ama kilitler de açılmaz. Kilitler yalnızca satın almayla açılır ve satın alma cihazda saklanır.
+  - Bu yüzden interneti kapatmak "bedava premium" sağlamaz. Sadece reklamsız ama kilitli ücretsiz sürüm oynanır.
+  - Çevrimdışı oynamayı yasaklamak oyuncuyu kaçırır; önerilmez.
+- Tarayıcı sürümünde (Claude bağlantısı) mağaza yoktur: reklam çıkmaz, her şey açıktır.
+
+### 3.2 AdMob (reklam)
+1. https://admob.google.com → Google hesabınla (Play Console'daki hesap) kaydol. Ödeme profili için vergi ve banka bilgisi gir.
+2. "Uygulama ekle" adımını **iki kez** yap: iOS ve Android. Uygulama mağazada yayınlanmadan önce "listelenmemiş" diye eklenebilir; yayınlanınca mağazaya bağlanır.
+3. Her uygulama için iki reklam birimi oluştur: **Geçiş reklamı** (Interstitial) ve **Ödüllü** (Rewarded).
+4. GitHub gizli değişkenleri:
+   - iOS: `ADMOB_IOS_APP_ID` (`ca-app-pub-…~…`), `ADMOB_IOS_INTERSTITIAL`, `ADMOB_IOS_REWARDED` (`ca-app-pub-…/…`)
+   - Android: `ADMOB_ANDROID_APP_ID`, `ADMOB_ANDROID_INTERSTITIAL`, `ADMOB_ANDROID_REWARDED`
+5. Gizli değişkenler girilmezse derleme **Google'ın test reklamlarıyla** çıkar. Bu, TestFlight denemesi için doğrudur. Mağazaya göndermeden önce mutlaka gerçek kimlikleri gir.
+6. AdMob › Gizlilik ve mesajlar:
+   - **GDPR** izin mesajı oluştur. Oyun bunu Avrupa'daki oyunculara otomatik gösterir.
+   - iOS için **IDFA açıklama mesajı** oluştur (isteğe bağlı).
+7. **app-ads.txt:** AdMob'un verdiği satırı geliştirici web sitenin köküne koy (ör. GitHub Pages). Zorunlu değil ama reklam gelirini artırır.
+8. **Kendi reklamına tıklama.** Hesap kapatılır. Denerken test reklamları kullanılır.
+
+### 3.3 App Store'da satın almalar
+1. App Store Connect › **Business** (Agreements, Tax, and Banking) › **Paid Apps** sözleşmesini kabul et, banka (IBAN) ve vergi formunu doldur. Bu olmadan satın alma çalışmaz.
+2. Uygulama › Monetization › In-App Purchases: `store/app-store.md` tablosundaki 5 ürünü aynı kimliklerle oluştur.
+3. Denemek için: Users and Access › **Sandbox** › test hesabı oluştur. iPhone'da Ayarlar › App Store › Sandbox hesabıyla giriş yap ve TestFlight sürümünde satın al. Sandbox'ta para çekilmez.
+4. İlk sürümü gönderirken ürünleri de sürüm sayfasından seçip birlikte incelemeye gönder.
+5. **Küçük işletme programı:** https://developer.apple.com/app-store/small-business-program/ adresinden başvurursan Apple'ın komisyonu %30 yerine **%15** olur.
+
+### 3.4 Google Play'de satın almalar
+1. Play Console › Ayarlar › **Ödeme profili** (satıcı hesabı) oluştur ve banka bilgisi gir.
+2. Uygulama › Para kazanma › Ürünler › **Uygulama içi ürünler**: aynı 5 kimlik. Bu sayfa, uygulama en az bir kez kapalı test kanalına yüklendikten sonra açılır.
+3. Test için: Ayarlar › **Lisans testi** › testçi Gmail adreslerini ekle. Onlardan para çekilmez.
+4. Google'ın komisyonu ilk 1 milyon dolar için **%15**'tir.
+
+### 3.5 Beyanlar değişti
+Reklam yüzünden gizlilik beyanları "veri toplanmıyor" olamaz. Güncel cevaplar:
+- App Store › App Privacy: `store/app-store.md`
+- Play › Data safety ve "Reklam içerir: Evet": `store/play-store.md`
+- Gizlilik politikası (`PRIVACY.md`) güncellendi.
+
+---
+
+## 4. Sürüm güncelleme döngüsü
 1. Oyunu değiştir ve test et: `npm test`.
 2. `package.json` › `version` alanını artır (1.0.0 → 1.0.1).
 3. Actions'tan iki iş akışını da çalıştır.
 4. App Store'da yeni sürüm oluştur, TestFlight derlemesini seç ve incelemeye gönder. Play Console'da yeni sürüm oluşturup `.aab` dosyasını yükle.
 
-## 4. Kontrol listesi
+## 5. Kontrol listesi
 - [ ] Apple Developer üyeliği onaylandı
 - [ ] App ID + Game Center + iCloud kapsayıcısı
 - [ ] App Store Connect'te uygulama açıldı
@@ -140,4 +193,8 @@ Senin yapacakların hesap açmak, gizli anahtarları GitHub'a girmek ve mağaza 
 - [ ] Yükleme anahtarı + 4 gizli değişken (Android)
 - [ ] Kapalı test: 12 testçi, 14 gün
 - [ ] Play Games Services (isteğe bağlı)
+- [ ] AdMob hesabı, 2 uygulama, 4 reklam birimi, 6 gizli değişken
+- [ ] Apple Paid Apps sözleşmesi + banka; 5 uygulama içi ürün
+- [ ] Google ödeme profili; 5 uygulama içi ürün
+- [ ] Küçük işletme programına başvuru (Apple %15)
 - [ ] Üretime çıkış

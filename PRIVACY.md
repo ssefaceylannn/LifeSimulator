@@ -2,7 +2,7 @@
 
 Son güncelleme: 26 Ekim 2026
 
-Hayat Simülatörü tek kişilik, çevrimdışı oynanabilen bir oyundur. **Geliştirici olarak hiçbir kişisel veri toplamıyor, saklamıyor ve kimseyle paylaşmıyoruz.**
+Hayat Simülatörü tek kişilik, çevrimdışı oynanabilen bir oyundur. **Geliştirici olarak kişisel veri toplamıyor ve saklamıyoruz.** Ücretsiz sürümdeki reklamlar Google AdMob tarafından gösterilir; aşağıda açıklanmıştır.
 
 ## Cihazında saklananlar
 - Oyun kayıtların: karakterin adı, şehri, oyundaki durumu ve kararların. Oyuncunun yazdığı isimler de buna dahildir.
@@ -17,8 +17,17 @@ Bu bilgiler yalnızca cihazındaki uygulama depolama alanında tutulur. Hiçbir 
 - Bu veriler Apple'ın veya Google'ın hizmetlerinde, onların gizlilik politikalarına göre tutulur. Geliştirici bu verilere erişmez.
 - Bağlantıyı telefonunun ayarlarından Game Center ya da Google Play Games oturumunu kapatarak kesebilirsin.
 
+## Reklamlar (ücretsiz sürüm)
+Ücretsiz sürümde reklamlar **Google AdMob** ile gösterilir. AdMob, reklam göstermek ve ölçmek için cihaz reklam kimliği, IP adresi, kaba konum (ülke/şehir), cihaz bilgisi ve reklam etkileşimleri gibi verileri toplayabilir. Bu veriler Google tarafından işlenir: https://policies.google.com/technologies/ads
+- iPhone'da kişiselleştirilmiş reklam için önce **izleme izni** sorulur; izin vermezsen kişiselleştirilmemiş reklam görürsün.
+- Avrupa Ekonomik Alanı ve İngiltere'de oyun açılışta **izin formu** gösterir. Kararını Ayarlar › Premium › "Reklam gizlilik seçenekleri" ile değiştirebilirsin.
+- Reklamsız ya da Premium satın alınınca tam ekran reklamlar gösterilmez.
+
+## Satın almalar
+Satın almalar Apple App Store ya da Google Play üzerinden yapılır. Ödeme bilgilerini geliştirici görmez. Satın alma kayıtların cihazda tutulur ve "Satın alımları geri yükle" ile geri getirilir.
+
 ## Yok
-Reklam, analiz/izleme aracı, konum, kişi listesi, kamera, mikrofon, uygulama içi satın alma ve sunucu yoktur. Yazı tipleri uygulamanın içindedir. Oyun internete bağlanmadan da çalışır.
+Analiz aracı, konum izni, kişi listesi, kamera, mikrofon ve geliştiriciye ait sunucu yoktur. Yazı tipleri uygulamanın içindedir. Oyun internete bağlanmadan da çalışır; çevrimdışıyken reklam çıkmaz.
 
 ## Çocuklar
 Oyun, sanal bahis ve şans oyunu içerdiği için çocuklara yönelik değildir.

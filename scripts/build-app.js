@@ -8,9 +8,12 @@ const single = fs.readFileSync(path.join(ROOT, "dist/hayat-simulatoru.html"), "u
 // Uygulamada yazı tipleri cihazdan yüklenir (Google'a istek gitmez)
 const fontCss = fs.readFileSync(path.join(ROOT, "assets/fonts/fonts.css"), "utf8").replace(/url\(([\w.-]+\.woff2)\)/g, "url(fonts/$1)");
 const noGoogle = single.replace(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com[^>]*>\n?/, "<style>\n" + fontCss + "</style>\n");
-const cut = noGoogle.indexOf("<style>", noGoogle.indexOf("</style>") + 1);
-const headPart = noGoogle.slice(0, cut),
-  bodyPart = noGoogle.slice(cut);
+// Mağaza derlemesinde gerçek AdMob reklam birimleri (GitHub gizli değişkenlerinden) yazılır
+let app = noGoogle;
+for (const k of ["ADMOB_IOS_INTERSTITIAL", "ADMOB_IOS_REWARDED", "ADMOB_ANDROID_INTERSTITIAL", "ADMOB_ANDROID_REWARDED"]) if (process.env[k]) app = app.split("__" + k + "__").join(process.env[k]);
+const cut = app.indexOf("<style>", app.indexOf("</style>") + 1);
+const headPart = app.slice(0, cut),
+  bodyPart = app.slice(cut);
 const out =
   "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\" />\n" +
   headPart +

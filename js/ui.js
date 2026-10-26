@@ -41,7 +41,8 @@
     lastWeekOpen = false,
     create = { look: "woman", skin: 1, hairColor: "kahve", hair: "long" },
     settings = { ...DEFAULTS },
-    H = []; // panel tıklama işleyicileri
+    H = [], // panel tıklama işleyicileri
+    undoSnap = null; // son karardan önceki durum (geri alma için)
 
   // ---------- Depolama ----------
   const store = {
@@ -207,6 +208,8 @@
     $("hairPicker").querySelectorAll("button").forEach((b) => (b.onclick = () => ((create.hair = b.dataset.h), renderCreate())));
   }
   function begin() {
+    if (HS.Shop && HS.Shop.locked("lives") && saves.filter((x) => x.alive).length >= HS.Shop.LIFE_LIMIT)
+      return paywall("Ücretsiz sürümde aynı anda " + HS.Shop.LIFE_LIMIT + " hayat yaşanabilir. Kayıtlar ekranından birini bitir ya da sil, veya Premium ile sınırsız hayat aç.");
     const first = $("firstName").value.trim() || "Deniz",
       last = $("lastName").value.trim() || "Yılmaz";
     active = HS.newLife({ first, last, city: $("birthCity").value, ...create });
@@ -420,14 +423,20 @@
     const last = (s.evDone || 0) + 1 >= (s.weekPlan || 4);
     html += `<div class="week-dots" aria-label="Bu haftanın olayları">${Array.from({ length: s.weekPlan || 4 }, (_, i) => `<i class="${i < (s.evDone || 0) ? "done" : i === (s.evDone || 0) ? "now" : ""}"></i>`).join("")}<span>Bu hafta ${s.weekPlan || 4} olay</span><button class="speed-chip" title="Oyun hızı"${on(() => {
       const i = HS.SPEEDS.indexOf(HS.speedNow());
-      HS.setSpeed(HS.SPEEDS[(i + 1) % HS.SPEEDS.length].id);
+      let nx = HS.SPEEDS[(i + 1) % HS.SPEEDS.length];
+      if (nx.id === "cokhizli" && HS.Shop && HS.Shop.locked("turbo")) nx = HS.SPEEDS[0];
+      HS.setSpeed(nx.id);
       renderPanel();
     })}>⏩ ${HS.speedNow() ? HS.speedNow().name : "Özel"}</button></div>`;
     html += `<button class="advance" id="advanceBtn" disabled>${last ? "Seç ve haftayı tamamla" : "Seç ve devam et"} <span>→</span></button>`;
+    if (undoSnap && undoSnap.id === s.id && HS.Shop && HS.Shop.native)
+      html += `<button class="undo-btn"${on(undoLast)}>↶ Son kararı geri al ${HS.Shop.premium ? "" : "<small>(reklam izle)</small>"}</button>`;
     // Boş zaman
     const total = Math.max(s.free, HS.freeSlots(s));
     const done = s.flags.actDone || {};
     html += `<section class="card free"><div class="free-head"><h3>Boş zaman</h3><div class="dots">${Array.from({ length: total }, (_, i) => `<i class="${i < s.free ? "" : "used"}"></i>`).join("")}</div></div>`;
+    if (HS.Shop && HS.Shop.native && !HS.perkLeft(s, "free"))
+      html += `<button class="perk-btn"${on(() => perk("free"))}>${HS.Shop.premium ? "⭐" : "🎬"} ${HS.Shop.premium ? "Premium: +2 boş zaman" : "Reklam izle: +2 boş zaman"}</button>`;
     html += `<p class="fine">${s.tour ? "Turnedesin; boş zamanın yok." : s.mil === "serving" ? "Askerdesin; boş zamanın çok kısıtlı." : s.free ? "Bu hafta " + s.free + " boş zamanın var. İşten sonra ya da hafta sonu ne yapacaksın?" : "Bu haftanın boş zamanı bitti."}</p>`;
     html += `<div class="acts">${HS.ACTIVITIES.filter((a) => !a.when || a.when(s))
       .map((a) => `<button class="act${done[a.id] ? " done" : ""}" data-a="${a.id}"${done[a.id] || !s.free ? " disabled" : on(() => doActivity(a))}>${Art.icon(a.art, 32)}<b>${esc(a.label)}</b><small>${esc(done[a.id] ? "Yapıldı" : a.hint)}</small></button>`)
@@ -526,11 +535,14 @@
   function doChoose(name) {
     const s = active;
     const before = s.mood;
+    const snap = HS.Shop && HS.Shop.native ? JSON.stringify(s) : null;
     const r = HS.choose(s, selected, name);
     if (r.ok === false) return toast(r.reason, "error");
+    if (snap) undoSnap = { id: s.id, json: snap };
     save();
     sfx("advance");
     if (r.ended) return finish();
+    if (!r.mid && HS.Shop) HS.Shop.onTurn();
     tab = "life";
     // Hafta içinde yeni olay: animasyonsuz devam; hafta bitince işe gidiş-dönüş
     (r.mid ? (f) => f() : commute)(() => {
@@ -1047,7 +1059,8 @@
   // ---------- PARA ----------
   function moneyTab(s) {
     const cpi = s.idx.cpi;
-    let html = subTabs(moneySub, [["butce", "Bütçe"], ["banka", "Banka"], ["yatirim", "Yatırım"], ["mulk", "Ev ve mülk"], ["arac", "Araç"]], (v) => (moneySub = v));
+    let html = subTabs(moneySub, [["butce", "Bütçe"], ["banka", "Banka"], ["yatirim", "Yatırım"], ["mulk", "Ev ve mülk"], ["arac", "Araç"]].concat(HS.Shop && HS.Shop.native ? [["magaza", "Mağaza"]] : []), (v) => (moneySub = v));
+    if (moneySub === "magaza") return html + shopPanel(s);
     if (moneySub === "butce") return html + budgetPanel(s);
     if (moneySub === "banka") return html + bankPanel(s);
     if (moneySub === "yatirim") {
@@ -1402,6 +1415,94 @@
       }
     };
   }
+  // ---------- Mağaza, premium ve ödüllü avantajlar ----------
+  function paywall(msg) {
+    const S = HS.Shop;
+    const prem = HS.PRODUCTS.find((p) => p.kind === "premium");
+    info("PREMIUM", "Premium", `<p>${esc(msg)}</p><p class="fine">${esc(prem.desc)}</p>`, [
+      { label: "Premium al · " + S.price(prem), icon: "gem-stone", run: () => buyProduct(prem) },
+      { label: "Satın alımları geri yükle", icon: "receipt", run: () => restoreBuys() },
+    ]);
+  }
+  function buyProduct(p) {
+    HS.Shop.buy(p, active).then(
+      () => {
+        sfx("levelup");
+        toast(p.consumable ? p.name + " hesabına eklendi." : p.name + " açıldı. Teşekkürler!");
+        if (active) save();
+        if (!$("settings").classList.contains("hidden")) renderSettings();
+        else if (active) render();
+      },
+      (e) => toast(String((e && e.message) || e).slice(0, 120), "error"),
+    );
+  }
+  function restoreBuys() {
+    HS.Shop.restore().then(
+      (ok) => {
+        toast(ok ? "Satın alımların geri yüklendi." : "Geri yüklenecek satın alım bulunamadı.");
+        if (!$("settings").classList.contains("hidden")) renderSettings();
+      },
+      () => toast("Mağazaya ulaşılamadı.", "error"),
+    );
+  }
+  function perk(k) {
+    HS.Shop.reward().then(
+      (ok) => {
+        if (!ok) return toast("Reklam yarıda kaldı; ödül verilmedi.");
+        HS.applyPerk(active, k);
+        save();
+        render();
+        toast(k === "free" ? "+2 boş zaman eklendi." : "Harçlık hesabına yattı.");
+      },
+      (e) => toast(String((e && e.message) || e), "error"),
+    );
+  }
+  function undoLast() {
+    if (!undoSnap || !active || undoSnap.id !== active.id) return;
+    const go = () => {
+      const s = HS.migrate(JSON.parse(undoSnap.json));
+      const i = saves.findIndex((x) => x.id === s.id);
+      if (i >= 0) saves[i] = s;
+      active = s;
+      undoSnap = null;
+      save();
+      render();
+      toast("Son karar geri alındı.");
+    };
+    if (!HS.Shop.locked("undo")) return go();
+    HS.Shop.reward().then((ok) => (ok ? go() : toast("Reklam yarıda kaldı.")), (e) => toast(String((e && e.message) || e), "error"));
+  }
+  function shopPanel(s) {
+    const S = HS.Shop;
+    let html = sectionTitle("Mağaza", "Ödemeler " + (S.native ? "mağaza hesabınla" : "") + " güvenle yapılır");
+    html += `<div class="choice-list">${HS.PRODUCTS.map((p) => {
+      const own = !p.consumable && (S.owned(p.kind) || (p.kind === "noads" && S.owned("premium")));
+      return `<button class="choice shop-item"${own ? " disabled" : on(() => buyProduct(p))}><b>${esc(p.name)}</b><small>${esc(p.desc)}</small><span class="mtag">${own ? "Sende var" : esc(S.price(p))}</span></button>`;
+    }).join("")}</div>`;
+    if (!HS.perkLeft(s, "cash"))
+      html += `<button class="perk-btn"${on(() => perk("cash"))}>${S.premium ? "⭐ Premium harçlığı" : "🎬 Reklam izle: harçlık"} · ${money(HS.perkCash(s))}</button>`;
+    else html += `<p class="fine">Sıradaki harçlık ${HS.perkLeft(s, "cash")} hafta sonra.</p>`;
+    html += `<p class="fine">Oyundaki para sanaldır; gerçek paraya çevrilemez. Satın alınan para yalnızca şu anki karakterine eklenir.</p>`;
+    html += `<button class="secondary"${on(restoreBuys)}>Satın alımları geri yükle</button>`;
+    return html;
+  }
+  function premiumCard() {
+    const S = HS.Shop;
+    if (!S || !S.native) return "";
+    const prem = HS.PRODUCTS.find((p) => p.kind === "premium"),
+      noads = HS.PRODUCTS.find((p) => p.kind === "noads");
+    const status = S.premium ? "Premium açık: reklam yok, bütün özellikler açık." : S.adFree ? "Reklamsız sürüm açık." : "Ücretsiz sürüm: arada reklam çıkar; Oyun dengesi, Çok hızlı oyun ve sınırsız hayat Premium'da.";
+    return `<article class="card"><h3>Premium</h3><p class="fine">${esc(status)}</p>${S.premium ? "" : `<button class="secondary" id="buyPremium">Premium · ${esc(S.price(prem))}</button>`}${S.adFree ? "" : `<button class="secondary" id="buyNoads">Sadece reklamsız · ${esc(S.price(noads))}</button>`}<button class="secondary" id="restoreBuys">Satın alımları geri yükle</button>${S.privacyForm ? '<button class="secondary" id="adPrivacy">Reklam gizlilik seçenekleri</button>' : ""}</article>`;
+  }
+  function bindPremium() {
+    const S = HS.Shop;
+    if (!S || !S.native) return;
+    const b = (id, fn) => $(id) && ($(id).onclick = fn);
+    b("buyPremium", () => buyProduct(HS.PRODUCTS.find((p) => p.kind === "premium")));
+    b("buyNoads", () => buyProduct(HS.PRODUCTS.find((p) => p.kind === "noads")));
+    b("restoreBuys", restoreBuys);
+    b("adPrivacy", () => S.showPrivacyForm());
+  }
   // Hesap: Game Center / Google Play Games (yalnızca uygulama sürümünde)
   function accountCard() {
     const C = HS.Cloud;
@@ -1468,8 +1569,9 @@
       tg("saver", "Pil tasarrufu (önerilir)", "Karakterlerin nefes alma, göz kırpma ve arka plan animasyonlarını kapatır; telefon ısınmaz, pil uzun gider") +
       tg("commute", "İşe gidiş ve eve dönüş", "Hafta içi sabah işe gidişi ve akşam eve dönüşü göster") +
       `<button class="setting" data-text="1"><span><b>Yazı boyutu</b><small>${settings.text === "big" ? "Büyük" : "Normal"}</small></span><i class="pill">${settings.text === "big" ? "A+" : "A"}</i></button></article>` +
-      `<article class="card"><h3>Oyun hızı</h3><p class="fine">Yıllar yavaş geçiyorsa hızlandır. Aradaki haftalarda maaş, giderler ve yaş yine işlenir; yalnızca soru sayısı azalır.</p><div class="speed-row">${HS.SPEEDS.map((sp) => `<button class="speed${HS.speedNow() === sp ? " on" : ""}" data-speed="${sp.id}"><b>${sp.name}</b><small>${sp.desc}</small></button>`).join("")}</div></article>` +
+      `<article class="card"><h3>Oyun hızı</h3><p class="fine">Yıllar yavaş geçiyorsa hızlandır. Aradaki haftalarda maaş, giderler ve yaş yine işlenir; yalnızca soru sayısı azalır.</p><div class="speed-row">${HS.SPEEDS.map((sp) => `<button class="speed${HS.speedNow() === sp ? " on" : ""}" data-speed="${sp.id}"><b>${sp.name}${sp.id === "cokhizli" && HS.Shop && HS.Shop.locked("turbo") ? " 🔒" : ""}</b><small>${sp.desc}</small></button>`).join("")}</div></article>` +
       `<article class="card"><h3>Oyun dengesi</h3><p class="fine">Başlangıç parası, giderler, maaşlar, haftalık olay sayısı, borsa ihtimali gibi değerleri kendin ayarla. Değişiklikler hemen geçerli olur (başlangıç parası ve yaşı yeni hayatlarda).</p><button class="secondary" id="cfgToggle">${cfgOpen ? "Kapat" : "Ayarları düzenle"}</button>${cfgOpen ? cfgForm() : ""}</article>` +
+      premiumCard() +
       accountCard() +
       `<article class="card"><h3>Kayıtlar</h3><p class="fine">Kayıtlarını başka bir cihaza taşımak için kodu kopyala, diğer cihazda yapıştır.</p><button class="secondary" id="exportBtn">Kayıt kodunu kopyala</button><textarea id="importBox" rows="3" placeholder="Kayıt kodunu buraya yapıştır" aria-label="Kayıt kodu"></textarea><button class="secondary" id="importBtn">Kodu içe aktar</button><button class="secondary danger" id="wipeBtn">Bütün verileri sil</button></article>` +
       `<article class="card"><h3>Hakkında</h3><p class="fine">Hayat Simülatörü · sürüm 1.0<br>Çizimler: Microsoft Fluent Emoji (MIT). Harita: Natural Earth verisi, react-turkey-map (MIT). Yazı tipleri: Baloo 2 ve Nunito (SIL OFL).<br>Ekonomi 2026 verileriyle kalibre edilmiştir; 2027 sonrası kurmacadır. Kişi, parti, şirket ve markalar hayal ürünüdür. Oyunda gerçek para kullanılmaz; yatırım ve bahis bölümleri tamamen sanaldır ve tavsiye değildir.</p></article>`;
@@ -1477,11 +1579,13 @@
     $("settingsBody").querySelectorAll("[data-speed]").forEach(
       (b) =>
         (b.onclick = () => {
+          if (b.dataset.speed === "cokhizli" && HS.Shop && HS.Shop.locked("turbo")) return paywall("Çok hızlı oyun Premium'a dahil.");
           HS.setSpeed(b.dataset.speed);
           renderSettings();
         }),
     );
     $("cfgToggle").onclick = () => {
+      if (!cfgOpen && HS.Shop && HS.Shop.locked("balance")) return paywall("Oyun dengesi ayarları Premium'a dahil.");
       cfgOpen = !cfgOpen;
       renderSettings();
     };
@@ -1493,6 +1597,7 @@
       if (HS.Audio) HS.Audio.set("volume", settings.volume);
     };
     bindAccount();
+    bindPremium();
     $("exportBtn").onclick = () => {
       const code = btoa(unescape(encodeURIComponent(JSON.stringify(saves))));
       const done = () => toast("Kayıt kodu kopyalandı.");
@@ -1559,7 +1664,9 @@
   // ---------- Bağlantılar ----------
   function init() {
     load();
-    if (HS.Cloud) HS.Cloud.init(() => !$("settings").classList.contains("hidden") && renderSettings());
+    const cloud = () => HS.Cloud && HS.Cloud.init(() => !$("settings").classList.contains("hidden") && renderSettings());
+    if (HS.Shop) HS.Shop.init().then(cloud, cloud);
+    else cloud();
     applyText();
     if (HS.Audio) HS.Audio.init({ music: settings.music, sfx: settings.sfx, vibration: settings.vibration, volume: settings.volume });
     $("birthCity").innerHTML = HS.HOME_CITIES.map((c) => `<option${c === "İstanbul" ? " selected" : ""}>${esc(c)}</option>`).join("");

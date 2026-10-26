@@ -16,13 +16,18 @@ Play Console › Uygulama › "Mağaza girişi" ve "Uygulama içeriği" sayfalar
 
 ## Uygulama içeriği
 - **Gizlilik politikası:** yukarıdaki URL
-- **Reklamlar:** Uygulama reklam içermez
+- **Reklamlar:** **Evet, uygulama reklam içerir** (Google AdMob)
 - **Uygulama erişimi:** Tüm işlevler özel erişim gerektirmez
 - **İçerik derecelendirmesi (IARC):** `STORE-COMPLIANCE.md` › bölüm 5. Simüle kumar: Evet; gerçek para: Hayır.
 - **Hedef kitle:** 18 ve üzeri (simüle kumar nedeniyle). "Uygulama çocukları cezbedebilir mi?" Hayır.
-- **Veri güvenliği (Data safety):**
-  - Uygulamanız kullanıcı verisi topluyor veya paylaşıyor mu? **Hayır**
-  - Google Play Games kayıtlı oyunları Google'ın hizmetidir; geliştirici verisi değildir.
+- **Veri güvenliği (Data safety):** (AdMob nedeniyle)
+  - Veri topluyor musunuz? **Evet**. Paylaşıyor musunuz? **Evet** (reklam ağıyla).
+  - Toplanan: **Cihaz veya diğer kimlikler** (reklam kimliği), **Uygulama etkinliği › Uygulama etkileşimleri**, **Uygulama bilgileri ve performans › Kilitlenme günlükleri, Teşhis**, **Konum › Yaklaşık konum** (IP).
+  - Amaç: Reklam veya pazarlama; Analiz; Dolandırıcılık önleme.
+  - Veriler aktarım sırasında şifrelenir: Evet. Kullanıcı veri silme isteyebilir: Evet (reklam kimliği telefon ayarlarından sıfırlanır; oyun verisi cihazdan silinir).
+  - Satın almalar Google Play tarafından işlenir.
+- **Uygulama içi ürünler (Para kazanma › Ürünler › Uygulama içi ürünler):** `store/app-store.md`'deki tablodaki 5 ürün aynı kimliklerle. Para paketleri "tüketilebilir"dir; Play'de tür ayrımı yok, oyun tüketir.
+- **Ödeme profili:** Para kazanma için Play Console › Ayarlar › Ödeme profili (satıcı hesabı) ve banka bilgisi gerekir.
 - **Haber uygulaması / COVID / finans / sağlık uygulaması:** Hayır. Bu bir oyun; finans bölümleri kurmacadır.
 - **Devlet uygulaması:** Hayır
 - **Kumar:** Gerçek parayla kumar yok. Simüle kumar içerik derecelendirmesinde beyan edildi.

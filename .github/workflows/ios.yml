@@ -18,7 +18,7 @@ jobs:
       - name: Oyunu tek dosyada derle
         run: node scripts/build-single.js && node scripts/build-app.js
       - name: Capacitor kur
-        run: npm install --no-save --no-audit --no-fund @capacitor/core@8 @capacitor/cli@8 @capacitor/ios@8 @idleflowgames/capacitor-play-games@0.3
+        run: npm install --no-save --no-audit --no-fund @capacitor/core@8 @capacitor/cli@8 @capacitor/ios@8 @idleflowgames/capacitor-play-games@0.3 @capacitor-community/admob@8 @capgo/native-purchases@8
       - name: iOS projesi oluştur
         run: |
           npx cap add ios
@@ -26,6 +26,8 @@ jobs:
           cp assets/app/icon-1024.png ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
           /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Hayat Simülatörü" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Add :UIRequiresFullScreen bool true" ios/App/App/Info.plist || true
+          /usr/libexec/PlistBuddy -c "Add :GADApplicationIdentifier string ca-app-pub-3940256099942544~1458002511" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :NSUserTrackingUsageDescription string Bu izin, sana daha alakalı reklamlar gösterilmesi için kullanılır." ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Delete :UISupportedInterfaceOrientations" ios/App/App/Info.plist || true
           /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations array" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait" ios/App/App/Info.plist

@@ -10,7 +10,7 @@ App Store Connect › Uygulamam › (sürüm) sayfasına bunları gir. Karakter 
 - **SKU:** hayatsim-001
 - **Birincil dil:** Türkçe
 - **Kategori:** Oyunlar › Simülasyon. İkincil kategori: Oyunlar › Rol Yapma
-- **Fiyat:** Ücretsiz. Uygulama içi satın alma yok.
+- **Fiyat:** Ücretsiz, uygulama içi satın almalı ve reklamlı.
 - **Telif (Copyright):** 2026 [Adın Soyadın]
 
 ## Tanıtım metni (170)
@@ -49,7 +49,7 @@ HAYATIN ANI DEFTERİ
 • Yavaş, normal, hızlı ya da çok hızlı oyna. İnternet gerekmez.
 • İstersen Game Center ile hayatlarını yedekle, başarımlarını topla.
 
-Oyundaki para, yatırım ve bahis tamamen sanaldır. Gerçek para kullanılmaz, gerçek ödül verilmez.
+Ücretsiz oynanır; reklam içerir. Reklamsız sürüm, Premium ve oyun parası uygulama içinden satın alınabilir. Oyundaki para, yatırım ve bahis sanaldır; gerçek paraya çevrilemez, gerçek ödül verilmez.
 
 ## Anahtar kelimeler (100, virgülle, boşluksuz)
 hayat,simülasyon,yaşam,kariyer,aile,türkiye,karar,hikaye,ömür,evlilik,meslek,yks,üniversite,ev,para
@@ -62,15 +62,30 @@ hayat,simülasyon,yaşam,kariyer,aile,türkiye,karar,hikaye,ömür,evlilik,mesle
 - **Pazarlama URL'si:** boş bırakılabilir
 
 ## Uygulama gizliliği (App Privacy)
-"Do you or your third-party partners collect data from this app?" → **No, we do not collect data from this app.**
-Etiket: **Data Not Collected**. Game Center ve iCloud Apple'ın hizmetleridir; geliştirici veri toplamaz.
+Reklam (AdMob) nedeniyle "Data Not Collected" **seçilemez**. "Yes, we collect data" seç ve şunları işaretle:
+- **Identifiers › Device ID** (reklam kimliği): Third-Party Advertising; Linked to user: Hayır; **Used for tracking: Evet**
+- **Usage Data › Advertising Data**: Third-Party Advertising; tracking: Evet
+- **Location › Coarse Location** (IP'den): Third-Party Advertising; tracking: Evet
+- **Diagnostics › Crash Data, Performance Data**: Third-Party Advertising / App Functionality; tracking: Hayır
+- **Purchases › Purchase History**: App Functionality; Linked: Hayır; tracking: Hayır
+Game Center ve iCloud Apple'ın hizmetleridir, beyan edilmez.
+
+## Uygulama içi satın almalar (App Store Connect › Monetization › In-App Purchases)
+| Ürün kimliği | Tür | Ad | Önerilen fiyat |
+|---|---|---|---|
+| com.hayatsimulatoru.oyun.premium | Non-Consumable | Premium | ₺249,99 |
+| com.hayatsimulatoru.oyun.reklamsiz | Non-Consumable | Reklamsız | ₺129,99 |
+| com.hayatsimulatoru.oyun.para1 | Consumable | Cep harçlığı (₺50.000 oyun parası) | ₺39,99 |
+| com.hayatsimulatoru.oyun.para2 | Consumable | Kumbara (₺250.000 oyun parası) | ₺99,99 |
+| com.hayatsimulatoru.oyun.para3 | Consumable | Miras (₺1.000.000 oyun parası) | ₺249,99 |
+Her ürüne Türkçe ad, açıklama ve inceleme için bir ekran görüntüsü (`store/screenshots/ios/05-para.png` olabilir) ekle. İlk sürümle birlikte **incelemeye gönder** (sürüm sayfasında "In-App Purchases" bölümünden seç).
 
 ## Yaş derecelendirmesi
 `STORE-COMPLIANCE.md` › bölüm 4'teki cevaplar. Bahis sekmesi nedeniyle "Simulated Gambling: Frequent" seçilir ve sonuç **18+** olur.
 
 ## İnceleme bilgileri (App Review Information)
 - **Oturum açma gerekli mi?** Hayır.
-- **Not:** "Tek kişilik, çevrimdışı bir hayat simülasyonu. Hesap gerekmez. Game Center isteğe bağlıdır (Ayarlar › Hesap). Oyundaki para, yatırım ve bahis tamamen sanaldır; gerçek para kullanılmaz ve ödül verilmez."
+- **Not:** "Tek kişilik, çevrimdışı bir hayat simülasyonu. Hesap gerekmez. Game Center isteğe bağlıdır (Ayarlar › Hesap). Oyundaki para, yatırım ve bahis sanaldır; gerçek paraya çevrilemez. Uygulama içi satın almaları sandbox hesabıyla deneyebilirsiniz; Ayarlar › Premium bölümünde 'Satın alımları geri yükle' düğmesi var."
 - **İletişim:** ad, telefon, e-posta (seninki)
 
 ## Ekran görüntüleri

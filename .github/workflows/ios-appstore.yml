@@ -6,6 +6,7 @@
 #   ASC_KEY_ID      App Store Connect API anahtar kimliği
 #   ASC_ISSUER_ID   App Store Connect API "Issuer ID"
 #   ASC_KEY_P8      API anahtarının .p8 dosyasının tüm içeriği (BEGIN/END satırları dahil)
+#   ADMOB_IOS_APP_ID, ADMOB_IOS_INTERSTITIAL, ADMOB_IOS_REWARDED  (AdMob; yoksa test reklamları çıkar)
 # Anahtar rolü "Admin" olmalı (Xcode bulut imzalama sertifika ve profil oluşturur).
 # Ayrıntılı adımlar: MAGAZA-REHBERI.md
 name: iOS App Store (TestFlight)
@@ -28,10 +29,15 @@ jobs:
           sudo xcode-select -s "$X"
           xcodebuild -version
       - name: Oyunu derle
+        env:
+          ADMOB_IOS_INTERSTITIAL: ${{ secrets.ADMOB_IOS_INTERSTITIAL }}
+          ADMOB_IOS_REWARDED: ${{ secrets.ADMOB_IOS_REWARDED }}
         run: node scripts/build-single.js && node scripts/build-app.js
       - name: Capacitor ve oyun hizmetleri eklentisi
-        run: npm install --no-save --no-audit --no-fund @capacitor/core@8 @capacitor/cli@8 @capacitor/ios@8 @idleflowgames/capacitor-play-games@0.3
+        run: npm install --no-save --no-audit --no-fund @capacitor/core@8 @capacitor/cli@8 @capacitor/ios@8 @idleflowgames/capacitor-play-games@0.3 @capacitor-community/admob@8 @capgo/native-purchases@8
       - name: iOS projesi oluştur
+        env:
+          ADMOB_IOS_APP_ID: ${{ secrets.ADMOB_IOS_APP_ID }}
         run: |
           npx cap add ios
           npx cap sync ios
@@ -47,6 +53,15 @@ jobs:
           /usr/libexec/PlistBuddy -c "Delete :UISupportedInterfaceOrientations" $P || true
           /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations array" $P
           /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait" $P
+          # AdMob uygulama kimliği (yoksa Google'ın test kimliği), izleme izni metni, SKAdNetwork
+          /usr/libexec/PlistBuddy -c "Add :GADApplicationIdentifier string ${ADMOB_IOS_APP_ID:-ca-app-pub-3940256099942544~1458002511}" $P
+          /usr/libexec/PlistBuddy -c "Add :NSUserTrackingUsageDescription string Bu izin, sana daha alakalı reklamlar gösterilmesi için kullanılır. İzin vermesen de oyun aynen çalışır." $P
+          /usr/libexec/PlistBuddy -c "Add :SKAdNetworkItems array" $P
+          i=0; for id in cstr6suwn9 4fzdc2evr5 2fnua5tdw4 ydx93a7ass 5a6flpkh64 p78axxw29g v72qych5uu c6k4g5qg8m s39g8k73mm 3qy4746246 3sh42y64q3 f38h382jlk hs6bdukanm prcb7njmu6 wzmmz9fp6w yclnxrl5pm 4468km3ulz t38b2kh725 7ug5zh24hu 9rd848q2bz n6fk4nfna4 kbd757ywx3 9t245vhmpl a2p9lx4jpn 22mmun2rn5 4pfyvq9l8r 3rd42ekr43 ludvb6z3bs; do
+            /usr/libexec/PlistBuddy -c "Add :SKAdNetworkItems:$i dict" $P
+            /usr/libexec/PlistBuddy -c "Add :SKAdNetworkItems:$i:SKAdNetworkIdentifier string $id.skadnetwork" $P
+            i=$((i+1))
+          done
           sudo gem install xcodeproj --no-document
           ruby store/ios/add-files.rb
       - name: API anahtarını yaz
