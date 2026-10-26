@@ -7,8 +7,14 @@
     active = null,
     look = "woman",
     selected = -1,
-    event = null,
+    event = null, // ekranda gösterilen olay (haftalık olay ya da sekme menüsü)
+    weekEvent = null, // bu haftanın hikâye olayı; sekmeden HAYAT'a dönünce geri gelir
+    onEventContinue = null,
     tab = "life";
+  const RETIRE_AGE = 64,
+    ARC_COOLDOWN = 156; // aynı yan hikâye en erken ~3 yıl sonra tekrar gelir
+  // Hayat boyunca geçen toplam hafta (yıl içindeki 1–52 haftadan bağımsız).
+  const lifeWeek = (s = active) => (s.history?.length || 0) + 1;
   const ECONOMY = {
     year: 2026,
     cpi: 0.2973,
@@ -689,7 +695,8 @@
         [
           "Birlikte eve çık",
           "Paylaşımlı kira düzenine geç.",
-          { rentStart: 2 * rentPrice(), m: 3, people: 1 },
+          // true = depozito + ilk ay, oyuncunun o anki şehrine göre apply() içinde hesaplanır
+          { rentStart: true, m: 3, people: 1 },
         ],
         ["Şimdiki düzenimde kal", "Değişiklik için hazır değilsin.", { m: 1 }],
       ],
@@ -940,6 +947,8 @@
       skill: 0,
       people: 0,
       debt: 0,
+      risk: 0,
+      retired: false,
       renting: false,
       policy: "neutral",
       partner: false,
@@ -992,11 +1001,7 @@
         (b.onclick = () => {
           active = saves.find((s) => s.id === b.dataset.id);
           if (!active.alive) ending();
-          else {
-            page("world");
-            renderLife();
-            newWeek(true);
-          }
+          else resume();
         }),
     );
     page("records");
@@ -1089,6 +1094,13 @@
       idx *= 1 + Math.max(0.04, scenarioRate(ECONOMY.cpi, y) * 0.9);
     return JOBS[job].pay * idx;
   }
+  // Emekli maaşı: çalışmış olana son işinin ücretinin %60'ı, hiç çalışmamışa
+  // asgari ücretin %40'ı kadar sosyal destek (oyun varsayımı).
+  function pension() {
+    return active.worked
+      ? wage(active.lastJob || "cafe") * 0.6
+      : wage("cafe") * 0.4;
+  }
   function choices(list) {
     selected = -1;
     $("choices").innerHTML = "";
@@ -1115,7 +1127,14 @@
     $("advanceBtn").disabled = true;
   }
   function jobEvent() {
-    if (active.job === "none")
+    // İşsizken her hafta değil, ilk haftalarda ve sonra 3 haftada bir iş ilanı gelir;
+    // aradaki haftalarda diğer hikâyeler de görünebilsin. Emekliye iş ilanı gelmez.
+    if (
+      active.job === "none" &&
+      !active.retired &&
+      active.age < RETIRE_AGE &&
+      (lifeWeek() <= 3 || active.week % 3 === 1)
+    )
       return {
         t: "İş arama haftası",
         p: "Bu hafta üç farklı ilan dikkatini çekti. Hangi gündelik hayatı denemek istersin?",
@@ -1199,8 +1218,33 @@
       };
   }
 
+  // Kayıttan devam ederken yarım kalan haftanın olayını geri getirir.
+  function resume() {
+    page("world");
+    tab = "life";
+    if (active.current) {
+      weekEvent = active.current;
+      renderLife();
+      showEvent(weekEvent);
+    } else newWeek(true);
+  }
+  function showEvent(ev) {
+    event = ev;
+    $("storyTitle").textContent = ev.t;
+    $("storyText").textContent = ev.p;
+    $("storyTags").innerHTML =
+      '<span class="tag">' +
+      esc(active.city) +
+      '</span><span class="tag">' +
+      esc(active.retired ? "Emekli" : JOBS[active.job].name) +
+      "</span>" +
+      (active.partner ? '<span class="tag">Bir ilişki</span>' : "") +
+      (active.children.length ? '<span class="tag">Aile</span>' : "");
+    choices(ev.c);
+  }
   function newWeek(first = false) {
     if (!active || !active.alive) return;
+    tab = "life";
     renderLife();
     $("weather").textContent = [
       "☁ SERİN",
@@ -1258,7 +1302,7 @@
       !first &&
       active.age >= 24 &&
       !active.partner &&
-      active.week % 39 === 0 &&
+      lifeWeek() % 39 === 0 &&
       active.mood > 40
     )
       ev = { ...PARTNER };
@@ -1268,7 +1312,7 @@
       active.partner &&
       !active.children.length &&
       active.age >= 28 &&
-      active.week % 73 === 0
+      lifeWeek() % 73 === 0
     )
       ev = {
         t: "Aileniz büyüyebilir",
@@ -1303,7 +1347,7 @@
       active.partner &&
       active.married === false &&
       active.age >= 25 &&
-      active.week % 137 === 0
+      lifeWeek() % 137 === 0
     )
       ev = {
         t: "Birlikte bir gelecek",
@@ -1328,7 +1372,7 @@
       active.children.length > 0 &&
       active.children.length < 3 &&
       active.age >= 30 &&
-      active.week % 211 === 0
+      lifeWeek() % 211 === 0
     )
       ev = {
         t: "Aileniz yeniden büyüyebilir",
@@ -1355,7 +1399,7 @@
       !ev &&
       !first &&
       active.age >= 50 &&
-      active.week % 87 === 0 &&
+      lifeWeek() % 87 === 0 &&
       active.health < 76
     )
       ev = {
@@ -1370,45 +1414,60 @@
           ["Şimdilik dinlen", "Belirtileri takip et.", { h: -7, m: -2 }],
         ],
       };
-    if (!ev && !first && active.age >= 21 && active.week % 101 === 0)
+    if (
+      !ev &&
+      !first &&
+      active.age >= 21 &&
+      !active.abroad &&
+      lifeWeek() % 101 === 0
+    )
       ev = {
         t: "Başka bir ülkede fırsat",
         p: "Yurt dışında iş bulma ihtimali belirdi. Yeni bir ülke, yeni başlangıç; ama yol masraflı ve belirsiz.",
         c: [
-          [
-            "Pasaportum var, taşın",
-            "Berlin’de yeni bir düzen kur.",
-            { city: "Berlin", cash: -6500, abroad: 1, m: 5 },
-          ],
-          [
-            "Pasaport çıkar",
-            "Önce başvuru masrafını karşıla.",
-            { passport: 1, cash: -1800 },
-          ],
+          active.assets.passport
+            ? [
+                "Pasaportum var, taşın",
+                "Berlin’de yeni bir düzen kur.",
+                { city: "Berlin", cash: -6500, abroad: 1, m: 5 },
+              ]
+            : [
+                "Pasaport çıkar",
+                "Önce başvuru masrafını karşıla.",
+                { passport: 1, cash: -1800 },
+              ],
           ["Burada kal", "Kurduğun hayatı sürdür.", { m: 2 }],
         ],
       };
-    if (!ev && !first && active.savings > 0 && active.week % 31 === 0)
+    if (!ev && !first && active.savings > 0 && lifeWeek() % 31 === 0)
       ev = {
         t: "Birikimin büyüyor",
-        p: "Banka hesabındaki birikim bu yıl faiz kazandı. Parayı koruyabilir ya da hedefin için kullanabilirsin.",
+        p: "Banka hesabındaki birikim faiz kazandı. Vadede tutarsan küçük bir ek getiri alırsın ya da bir kısmını bugünkü ihtiyacın için çekebilirsin.",
         c: [
-          ["Vadede tut", "Güvenceyi koru.", { interest: 1 }],
+          ["Vadede tut", "Güvenceyi koru, ek faiz al.", { interest: 1 }],
           [
             "Bir kısmını çek",
-            "Bugünkü ihtiyacına harca.",
-            { cash: Math.round(active.savings * 0.4), save: -1 },
+            "Birikimin %40’ını bugünkü ihtiyacına harca.",
+            { save: -1 },
           ],
         ],
       };
-    if (!ev && !first) {
-      active.arcSeen = active.arcSeen || [];
-      let candidates = ARCS.concat(ARCS_MORE).filter(
-        (a) => a.ok(active) && !active.arcSeen.includes(a.t),
-      );
+    // Yan hikâyeler: her biri en fazla ARC_COOLDOWN haftada bir gelir.
+    // Eski kayıtlarda arcSeen bir diziydi; nesneye çevrilir.
+    if (!ev && !first && Math.random() < 0.75) {
+      if (Array.isArray(active.arcSeen) || !active.arcSeen)
+        active.arcSeen = Object.fromEntries(
+          (active.arcSeen || []).map((t) => [t, lifeWeek()]),
+        );
+      let now = lifeWeek(),
+        candidates = ARCS.concat(ARCS_MORE).filter(
+          (a) =>
+            a.ok(active) &&
+            !(now - (active.arcSeen[a.t] ?? -Infinity) < ARC_COOLDOWN),
+        );
       if (candidates.length) {
         let a = candidates[(Math.random() * candidates.length) | 0];
-        active.arcSeen.push(a.t);
+        active.arcSeen[a.t] = now;
         ev = {
           t: a.t,
           p: typeof a.p === "function" ? a.p(active) : a.p,
@@ -1422,22 +1481,41 @@
       active.lastStory = x.t;
       ev = { t: x.t, p: x.p, c: x.c.map((y) => [...y]) };
     }
-    event = ev || {
+    if (!ev && first && lifeWeek() === 1)
+      ev = {
+        t: "İlk hafta",
+        p:
+          active.first +
+          ", " +
+          active.city +
+          "’deki aile evinde 18 yaşına bastın. Cebinde " +
+          cash(active.cash) +
+          " var. Önünde koca bir hayat; ilk adımı nereden atacaksın?",
+        c: [
+          [
+            "Hemen iş aramaya başla",
+            "Önce düzenli bir gelir.",
+            { m: 1, skill: 1 },
+          ],
+          [
+            "Bir hafta kendine ayır",
+            "Biraz dinlen, şehri dolaş.",
+            { cash: -400, m: 5, h: 1 },
+          ],
+          [
+            "Bir kursa yazıl",
+            "Erken yaşta beceri edin.",
+            { cash: -2500, skill: 4, m: 2 },
+          ],
+        ],
+      };
+    weekEvent = ev || {
       t: "Sıradan bir hafta",
       p: "Yeni bir haftaya uyandın. Hayat küçük seçimlerle yön değiştiriyor.",
       c: [["Günlük düzenine devam et", "Bu hafta sakin geçsin.", { m: 1 }]],
     };
-    $("storyTitle").textContent = event.t;
-    $("storyText").textContent = event.p;
-    $("storyTags").innerHTML =
-      '<span class="tag">' +
-      esc(active.city) +
-      '</span><span class="tag">' +
-      esc(JOBS[active.job].name) +
-      "</span>" +
-      (active.partner ? '<span class="tag">Bir ilişki</span>' : "") +
-      (active.children.length ? '<span class="tag">Aile</span>' : "");
-    choices(event.c);
+    active.current = weekEvent;
+    showEvent(weekEvent);
     save();
   }
   function apply(e) {
@@ -1457,17 +1535,30 @@
     if (e.passport) active.assets.passport = true;
     if (e.city) active.city = e.city;
     if (e.rentStart) {
-      if (active.cash < e.rentStart) {
+      if (active.renting || active.assets.house) {
+        toast("Zaten kendi düzenin var.");
+        return false;
+      }
+      let cost = e.rentStart === true ? 2 * rentPrice() : e.rentStart;
+      if (active.cash < cost) {
         toast("Taşınmak için depozito ve ilk kira yeterli değil.");
         return false;
       }
       active.renting = true;
-      active.cash -= e.rentStart;
+      active.rentMultiplier = 1;
+      active.cash -= cost;
     }
-    if (e.moveHome) active.renting = false;
+    if (e.moveHome) {
+      active.renting = false;
+      active.rentMultiplier = 1;
+    }
     if (e.policy) active.policy = e.policy;
-    if (e.moveHome) active.renting = false;
-    if (e.rentCut && active.renting) active.rentMultiplier = e.rentCut;
+    // Kira indirimleri birikir ama kira tam dairenin payının %40'ının altına inmez.
+    if (e.rentCut && active.renting)
+      active.rentMultiplier = Math.max(
+        0.4,
+        (active.rentMultiplier || 1) * e.rentCut,
+      );
     if (e.debtPlan) active.debtPlan = true;
     if (e.debtGift) active.debt = Math.max(0, active.debt - e.debtGift);
     if (e.riskDown) active.risk = Math.max(0, active.risk - e.riskDown);
@@ -1502,8 +1593,15 @@
     }
     if (e.child) active.children.push(e.child);
     if (e.job) {
+      if (active.retired && e.job !== "none") {
+        toast("Emekliliğin başladı; artık çalışmıyorsun.");
+        return false;
+      }
       active.job = e.job;
-      active.worked = true;
+      if (e.job !== "none") {
+        active.worked = true;
+        active.lastJob = e.job;
+      }
     }
     if (e.abroad) active.abroad = true;
     if (e.save) {
@@ -1515,8 +1613,9 @@
         active.savings *= 0.6;
       }
     }
+    // Vadede tutma bonusu: yıllık oranın ~%5'i kadar tek seferlik ek getiri.
     if (e.interest)
-      active.savings += Math.round(active.savings * inflation() * 0.4);
+      active.savings += Math.round(active.savings * inflation() * 0.05);
     if (e.investment && active.cash >= e.investment) {
       active.cash -= e.investment;
       active.invest += e.investment;
@@ -1563,7 +1662,9 @@
     let income =
       active.job !== "none"
         ? (wage(active.job) / 4.345) * (1 + active.skill * 0.006)
-        : 0;
+        : active.retired
+          ? pension() / 4.345
+          : 0;
     if (active.debt > 0) {
       active.debt *=
         1 + (scenarioRate(ECONOMY.cpi) * (active.debtPlan ? 0.65 : 1)) / 52;
@@ -1575,8 +1676,9 @@
     if (active.policy === "transit") active.cash += 280;
     if (active.policy === "enterprise" && active.job !== "none")
       active.cash += 190;
+    // Mevduat: yıllık getiri enflasyonun ~%90'ı, haftaya bölünür.
     if (active.savings)
-      active.savings += Math.round(active.savings * inf * 0.12);
+      active.savings += Math.round((active.savings * inf * 0.9) / 52);
     if (active.invest)
       active.invest = Math.max(
         0,
@@ -1586,7 +1688,11 @@
       active.age++;
       if (active.age >= 44)
         active.health = Math.max(0, active.health - (active.age >= 70 ? 2 : 1));
-      if (active.age >= 64) active.job = "none";
+      if (active.age >= RETIRE_AGE && !active.retired) {
+        active.retired = true;
+        active.job = "none";
+        toast("Emekli oldun. Bundan sonra emekli maaşı alacaksın.");
+      }
     }
     active.week++;
     if (active.health <= 0) {
@@ -1617,14 +1723,39 @@
     save();
     newWeek();
     renderLife();
-    if (active.history.length % 26 === 0) cutscene(event);
+    if (active.history.length % 26 === 0) halfYear();
   }
-  function cutscene(e) {
-    $("eventTitle").textContent = e.t;
-    $("eventText").textContent = e.p;
-    $("eventArt").textContent = ["✳", "☼", "◒", "♫", "♡"][
-      (Math.random() * 5) | 0
-    ];
+  // Her 26 haftada bir kısa ara özet.
+  function halfYear() {
+    let s = active;
+    cutscene(
+      "Altı ay daha geçti",
+      s.first +
+        ", " +
+        s.age +
+        " yaşındasın. Nakit " +
+        cash(s.cash) +
+        ", banka " +
+        cash(s.savings) +
+        (s.debt > 0 ? ", borç " + cash(s.debt) : "") +
+        ". Sağlığın " +
+        s.health +
+        ", mutluluğun " +
+        s.mood +
+        ". " +
+        (s.retired
+          ? "Emekli maaşınla günlerini kendi ritminde geçiriyorsun."
+          : s.job === "none"
+            ? "Henüz düzenli bir işin yok."
+            : JOBS[s.job].name + " olarak çalışıyorsun."),
+    );
+  }
+  function cutscene(title, text, art, next = null) {
+    $("eventTitle").textContent = title;
+    $("eventText").textContent = text;
+    $("eventArt").textContent =
+      art || ["✳", "☼", "◒", "♫", "♡"][(Math.random() * 5) | 0];
+    onEventContinue = next;
     $("event").classList.remove("hidden");
   }
   function finish(reason) {
@@ -1699,14 +1830,15 @@
                       : s.age < 90
                         ? "80ler"
                         : "90lar",
+      net = s.cash + (s.savings || 0) + (s.invest || 0) - (s.debt || 0),
       moneyBand =
-        s.cash - (s.debt || 0) < 0
+        net < 0
           ? "borç"
-          : s.cash < 25000
+          : net < 25000
             ? "kısıtlı"
-            : s.cash < 250000
+            : net < 250000
               ? "birikim"
-              : s.cash < 2500000
+              : net < 2500000
                 ? "rahat"
                 : "varlıklı",
       healthBand =
@@ -1882,22 +2014,23 @@
     if (s.debt > 0) p.push("Son hesabında " + cash(s.debt) + " borç kaldı.");
     if (s.children.length)
       p.push("Çocukları " + s.children.join(", ") + " onu sevgiyle anıyor.");
-    $("eventTitle").textContent =
+    cutscene(
       w === "health"
         ? "Bir hayatın son sayfası"
         : w === "crime"
           ? "Bir kararın ağır bedeli"
           : w === "chosen"
             ? "Bu hayatı burada kapattın"
-            : "Dolu dolu bir ömür";
-    $("eventText").textContent =
+            : w === "crisis"
+              ? "Ağır bir dönemin sonu"
+              : "Dolu dolu bir ömür",
       p.join(" ") +
-      " Bu cihazda keşfedilen farklı son profili: " +
-      discovered.length +
-      " / 100.000.";
-    $("eventArt").textContent = w === "age" ? "☼" : "✿";
-    $("event").classList.remove("hidden");
-    $("eventContinue").onclick = records;
+        " Bu cihazda keşfedilen farklı son profili: " +
+        discovered.length +
+        " / 100.000.",
+      w === "age" ? "☼" : "✿",
+      records,
+    );
   }
   function toast(t) {
     $("toast").textContent = t;
@@ -1909,6 +2042,7 @@
     tab = t;
     if (t === "life") {
       renderLife();
+      if (weekEvent) showEvent(weekEvent);
       return;
     }
     let title = "",
@@ -2095,7 +2229,7 @@
   $("beginLife").onclick = begin;
   $("advanceBtn").onclick = advance;
   $("slotPill").onclick = records;
-  $("recordBack").onclick = () => (active ? page("world") : page("home"));
+  $("recordBack").onclick = () => (active?.alive ? resume() : page("home"));
   $("backBtn").onclick = () =>
     !$("world").classList.contains("hidden") ? records() : page("home");
   document.querySelectorAll(".look").forEach(
@@ -2112,7 +2246,10 @@
     .forEach((b) => (b.onclick = () => tabView(b.dataset.tab)));
   $("eventContinue").onclick = () => {
     $("event").classList.add("hidden");
-    if (active?.alive) renderLife();
+    let next = onEventContinue;
+    onEventContinue = null;
+    if (next) next();
+    else if (active?.alive) renderLife();
   };
   $("endCurrent").onclick = () => {
     if (

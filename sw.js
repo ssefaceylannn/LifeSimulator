@@ -1,4 +1,4 @@
-const CACHE = "hayat-simulator-v2";
+const CACHE = "hayat-simulator-v3";
 const FILES = [
   "./",
   "./index.html",
