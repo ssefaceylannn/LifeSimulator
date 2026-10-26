@@ -1,4 +1,4 @@
-# Mağaza rehberi: önce App Store, sonra Google Play
+# Mağaza rehberi: App Store ve Google Play
 
 Bu rehber oyunu iki mağazaya çıkarmak için yapılacak her şeyi sırayla anlatır.
 
@@ -6,10 +6,53 @@ Bu rehber oyunu iki mağazaya çıkarmak için yapılacak her şeyi sırayla anl
 - İmzalı derleyip yükleyen iki iş akışı var (ikisi de yalnızca elle başlatılır).
 - Gizlilik dosyaları, mağaza metinleri, ekran görüntüleri ve başarım listesi hazır.
 
-Senin yapacakların hesap açmak, gizli anahtarları GitHub'a girmek ve mağaza formlarını doldurmak.
+Senin yapacakların hesap açmak, gizli anahtarları GitHub'a girmek ve mağaza formlarını doldurmak. Önce ortak işler, sonra her mağazanın kendine özel adımları gelir. Para, kesinti ve vergi ayrıntıları kaynaklarıyla birlikte **PARA-VE-VERGI.md** dosyasında.
 
-| | App Store | Google Play |
+## Tek bakışta: iki mağaza yan yana
+
+| | App Store (iPhone) | Google Play (Android) |
 |---|---|---|
+| **Hesap ücreti** | Yıllık **99 USD** (TL ile tahsil edilir; kura göre yaklaşık 4.900 TL) | **Tek seferlik 25 USD** |
+| **Hesap onayı** | Bireysel: 1-2 gün (satıcı adı olarak gerçek adın görünür) | Kimlik doğrulama: birkaç gün |
+| **Mağazaya çıkış süresi** | Hesap + 1 hafta (TestFlight denemesi + 1-2 gün inceleme) | Hesap + **en az 14 gün** (12 testçiyle kapalı test zorunlu) + birkaç gün |
+| **Satıştan kesinti** | %30; **Küçük İşletme Programı'na başvurursan %15** | **%15** (yılda ilk 1 milyon USD; kayıt olman gerekir) |
+| **Abonelik kesintisi** | %30 → bir yıl sonra %15 (programdaysan baştan %15) | %15 |
+| **KDV + dijital hizmet vergisi** | Apple %20 KDV'yi müşteriden alıp kendisi öder; %5 dijital hizmet vergisini (2027'de %2,5) senin payından düşer | Benzer (Google da KDV'yi kendisi öder; doğrulanmalı) |
+| **Para ne zaman gelir** | Ay kapanışından ~33 gün sonra, en az 40 USD birikince, bankana (IBAN/SWIFT) | Her ayın ~15'i, döviz havalesinde en az 100 USD |
+| **Derleme düğmesi** | GitHub › Actions › "iOS App Store (TestFlight)" | GitHub › Actions › "Android Google Play" |
+| **Reklam** | AdMob (ikisi için tek hesap, ücretsiz, ayın ~21'i, en az 100 USD) | AdMob |
+
+**Örnek hesap:** Bir oyuncu ₺100'lük ürün aldı.
+- Fiyatın içinde %20 KDV var (~₺16,7). Kalan ~₺83,3 üzerinden Apple %15 (programdaysan) ve %5 dijital hizmet vergisi keser.
+- Eline yaklaşık **₺67** geçer.
+- 20/B istisnasıyla banka bunun %15'ini stopaj keser; net **~₺57** kalır.
+- Rakamlar yaklaşık; ayrıntı `PARA-VE-VERGI.md`'de.
+
+## Ortak işler (bir kez yapılır, iki mağaza ve gelecekteki bütün oyunlar için geçerli)
+1. **Hesaplar:** Apple Developer (iCloud hesabınla), Google Play Console ve AdMob (Gmail hesabınla). Bir hesap **sınırsız oyun** yayınlar. Koleksiyon için hesap başına bir kez ödenir. Hesap bilgileri bu depoya yazılmaz; depo herkese açık.
+2. **Vergi ve banka:**
+   - Türkiye'de mobil uygulama gelirleri için **GVK 20/B istisnası** var. Bir bankada "mobil uygulama geliştiriciliği" hesabı açarsın ve vergi dairesinden istisna belgesi alırsın. Apple, Google ve AdMob ödemeleri bu hesaba gelir. Banka %15 keser, bu kesinti nihai vergidir; beyanname yok.
+   - 2026'da yıllık sınır yaklaşık **5,3 milyon TL** (doğrulanmalı). Aşılırsa bütün yıl beyan edilir; o noktada şahıs ya da limited şirket ve muhasebeci düşünülür.
+   - Bağ-Kur zorunluluğu kaynaklarda net değil. **Başlamadan önce bir mali müşavire danış.**
+3. **ABD vergi formu (W-8BEN):** Apple ve Google hesaplarında ABD vergi formu (W-8BEN) bir kez doldurulur; Türkiye–ABD anlaşması seçilir.
+4. **Oyun tarafı (hazır):**
+   - Gizlilik politikası: `PRIVACY.md`. Bağlantısı: https://github.com/ssefaceylannn/LifeSimulator/blob/main/PRIVACY.md
+   - Yaş sınırı 13+ (bahis ve piyango kaldırıldı).
+   - Mağaza metinleri: `store/`. Ekran görüntüleri: `store/screenshots/`.
+   - Başarım listesi: `store/achievements.md`. Ürün kimlikleri: `store/app-store.md`.
+5. **Gelir modeli (iki mağazada aynı):** Reklam (AdMob) + Reklamsız + Premium + para paketleri. Ayrıntı: bölüm 3. Abonelik eklemek istersen (ör. aylık "Premium Kulüp"), kod aynı altyapıyla eklenir; kesinti %15 (Apple'da programdaysan).
+6. **Sürüm numarası:** `package.json` › `version`. İki mağazaya aynı sürüm gider.
+
+## Koleksiyon: birden çok oyun
+- Aynı Apple ve Google hesabı, aynı AdMob hesabı, aynı banka hesabı ve aynı 20/B belgesi bütün oyunlarda kullanılır.
+- Her yeni oyun için:
+  - yeni paket kimliği (ör. `com.hayatsimulatoru.oyun2`),
+  - kendi mağaza sayfası, ürünleri ve reklam birimleri,
+  - Google'da yine **12 testçi / 14 gün** kapalı test (yeni kişisel hesaplarda her uygulama için gerekiyor olabilir; doğrulanmalı).
+- Bu depodaki iş akışları ve oyun motoru (hikâye, mağaza, reklam, hesap bağlama) yeni oyunlara kopyalanabilir. Her oyun bir öncekinden daha hızlı çıkar.
+- Oyunlar birbirini tanıtabilir: ayarlarda "Diğer oyunlarımız" bölümü. İstersen eklerim.
+
+---|---|---|
 | Geliştirici hesabı | Apple Developer Program, **yıllık 99 USD** | Google Play Console, **tek seferlik 25 USD** |
 | Hesap onayı | Bireysel: 1-2 gün. Şirket: D-U-N-S numarası gerekir, 1-2 hafta | Kimlik doğrulaması: birkaç gün |
 | Derleme | `.github/workflows/ios-appstore.yml` → TestFlight'a yükler | `.github/workflows/android-play.yml` → `.aab` + `.apk` üretir |
@@ -18,7 +61,7 @@ Senin yapacakların hesap açmak, gizli anahtarları GitHub'a girmek ve mağaza 
 
 ---
 
-## 1. App Store
+## 1. Sadece App Store'a özel adımlar
 
 ### 1.1 Hesap
 1. https://developer.apple.com/programs/enroll/ adresinden Apple kimliğinle (iki adımlı doğrulama açık olmalı) **Bireysel** üyeliğe başvur ve 99 USD öde.
@@ -63,19 +106,19 @@ Senin yapacakların hesap açmak, gizli anahtarları GitHub'a girmek ve mağaza 
 1. `store/app-store.md`'deki metinleri ilgili kutulara yapıştır.
 2. Ekran görüntüleri: `store/screenshots/ios/`.
 3. **App Privacy** › "Data Not Collected".
-4. **Age Rating** anketini `STORE-COMPLIANCE.md` › bölüm 4'e göre doldur (sonuç 18+).
+4. **Age Rating** anketini `store/app-store.md` › Yaş derecelendirmesi bölümüne göre doldur (sonuç 13+).
 5. Build bölümünden TestFlight'taki derlemeyi seç. "Export compliance" sorusu otomatik geçer, çünkü `ITSAppUsesNonExemptEncryption = NO`.
 6. **Add for Review** › **Submit**. Cevap genellikle 1-2 gün içinde gelir.
 
 ### 1.8 Sık ret nedenleri ve cevapları
 - **4.2 Minimum işlevsellik ("web sitesi sarmalayıcı"):** Oyun tamamen yerel ve çevrimdışı çalışıyor; içinde web sitesi açılmıyor. Ret gelirse bunu ve Game Center entegrasyonunu not olarak yaz.
 - **2.1 Eksik özellik:** Hesap bağlama düğmesi gerçekten çalışmalı, yani Game Center 1.6'daki gibi kurulmuş olmalı.
-- **5.3 Kumar:** Gerçek para yok. Yaş derecelendirmesi doğru doldurulmalı.
+- **3.1.1 Satın alma:** Bütün ödemeler Apple satın alma sistemiyle; "Satın alımları geri yükle" düğmesi Ayarlar › Premium bölümünde var.
 - **2.3.7 Anahtar kelime:** Başka oyun adı yazma.
 
 ---
 
-## 2. Google Play
+## 2. Sadece Google Play'e özel adımlar
 
 ### 2.1 Hesap
 1. https://play.google.com/console › hesap türü **Kişisel** (ya da şirket) › 25 USD.
@@ -121,7 +164,7 @@ Senin yapacakların hesap açmak, gizli anahtarları GitHub'a girmek ve mağaza 
 
 ---
 
-## 3. Para kazanma: reklam ve uygulama içi satın alma
+## 3. Para kazanma: reklam ve uygulama içi satın alma (ortak model, mağazaya özel kurulum)
 
 ### 3.1 Model (oyunda hazır, `js/shop.js`)
 - **Ücretsiz oyuncu:**
@@ -162,7 +205,7 @@ Senin yapacakların hesap açmak, gizli anahtarları GitHub'a girmek ve mağaza 
 1. Play Console › Ayarlar › **Ödeme profili** (satıcı hesabı) oluştur ve banka bilgisi gir.
 2. Uygulama › Para kazanma › Ürünler › **Uygulama içi ürünler**: aynı 5 kimlik. Bu sayfa, uygulama en az bir kez kapalı test kanalına yüklendikten sonra açılır.
 3. Test için: Ayarlar › **Lisans testi** › testçi Gmail adreslerini ekle. Onlardan para çekilmez.
-4. Google'ın komisyonu ilk 1 milyon dolar için **%15**'tir.
+4. Google'ın komisyonu ilk 1 milyon dolar için **%15**'tir; Play Console › Ayarlar › "15% hizmet ücreti" programına kaydol.
 
 ### 3.5 Beyanlar değişti
 Reklam yüzünden gizlilik beyanları "veri toplanmıyor" olamaz. Güncel cevaplar:

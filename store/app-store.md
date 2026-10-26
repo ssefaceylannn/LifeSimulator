@@ -81,7 +81,7 @@ Game Center ve iCloud Apple'ın hizmetleridir, beyan edilmez.
 Her ürüne Türkçe ad, açıklama ve inceleme için bir ekran görüntüsü (`store/screenshots/ios/05-para.png` olabilir) ekle. İlk sürümle birlikte **incelemeye gönder** (sürüm sayfasında "In-App Purchases" bölümünden seç).
 
 ## Yaş derecelendirmesi
-`STORE-COMPLIANCE.md` › bölüm 4'teki cevaplar. Sanal kumar kaldırıldı. Cevaplar: Simulated Gambling **None**, Mature/Suggestive Themes **Infrequent/Mild**, Medical/Treatment **Infrequent/Mild**, diğerleri None; Advertising: Yes; In-App Purchases: Yes. Beklenen sonuç: **13+**.
+Sanal kumar kaldırıldı. Cevaplar: Simulated Gambling **None**, Mature/Suggestive Themes **Infrequent/Mild**, Medical/Treatment **Infrequent/Mild**, diğerleri None; Advertising: Yes; In-App Purchases: Yes. Beklenen sonuç: **13+**.
 
 ## İnceleme bilgileri (App Review Information)
 - **Oturum açma gerekli mi?** Hayır.
