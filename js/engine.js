@@ -984,7 +984,7 @@
     return {
       id: def.id,
       t: resolveText(def.title, s),
-      p: resolveText(def.text, s),
+      p: HS.annotateNames ? HS.annotateNames(resolveText(def.text, s), s) : resolveText(def.text, s),
       art: def.art || null,
       tag: def.tag || null,
       c,

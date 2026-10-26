@@ -416,7 +416,7 @@
     title: "Haftada beş gün ofis",
     text: (s, h) =>
       h.ek(coName(s), "gen") + " yönetimi duyurdu: hibrit dönem bitiyor, ay sonundan itibaren herkes haftada beş gün ofiste. Yol, yemek, servis… " +
-      (HS.inStory(s, "w_serbest") || done(s, "w_serbest") === "buyudu" ? "Akşamları yürüttüğün serbest işler de bu düzene sığmayacak." : "Ekip WhatsApp grubu çoktan kaynamaya başladı."),
+      (HS.inStory(s, "w_serbest") || done(s, "w_serbest") === "buyudu" ? "Akşamları yürüttüğün serbest işler de bu düzene sığmayacak." : "Ekibin mesaj grubu çoktan kaynamaya başladı."),
     choices: (s, h) => [
       c("Uy, şikâyet etme", "Yol masrafı · ilişki +", { cost: 2500, rel: { yonetici: 4 }, stress: 3, end: "uydu" }),
       c("Hibrit için gerekçe yaz", "Müzakere · şans", {
@@ -678,7 +678,7 @@
     weight: 0.65,
     room: "is",
     title: "Tedarikçiden yeni liste",
-    text: (s, h) => "Toptancı yeni fiyat listesini WhatsApp'tan attı: her kalemde %18 zam, \"döviz yüzünden\". Bir başka satıcı faturasız, %10 ucuza mal veriyor.",
+    text: (s, h) => "Toptancı yeni fiyat listesini telefondan mesajla attı: her kalemde %18 zam, \"döviz yüzünden\". Bir başka satıcı faturasız, %10 ucuza mal veriyor.",
     choices: (s, h) => [
       c("Zammı fiyatlara yansıt", "Müşteri kaybı riski", { sk: { muhasebe: 1 }, people: -1, set: { yol: "fiyat" }, go: "vergi" }),
       c("Kârdan kıs, fiyat sabit", "₺12.000 · müşteri sadakati", { cost: 12000, people: 2, set: { yol: "kis" }, go: "vergi" }),
@@ -877,7 +877,7 @@
     weight: 0.65,
     room: "salon",
     title: "Dört kişilik grup, bir kişilik emek",
-    text: (s, h) => "Dönem projesi dört kişilik. Grup WhatsApp'ında iki kişi \"görüldü\" atıyor, biri ise \"ben sunumda konuşurum\" dedi. Teslime üç hafta var." + (flag(s, "kulupBaskani") ? " Kulüp başkanlığından alıştığın iş bölümü burada da işe yarayabilir." : ""),
+    text: (s, h) => "Dönem projesi dört kişilik. Grubun mesaj kanalında iki kişi \"görüldü\" atıyor, biri ise \"ben sunumda konuşurum\" dedi. Teslime üç hafta var." + (flag(s, "kulupBaskani") ? " Kulüp başkanlığından alıştığın iş bölümü burada da işe yarayabilir." : ""),
     choices: (s, h) => [
       c("Görev dağılımı tablosu çıkar", "Proje yönetimi +", { sk: { proje: 2, liderlik: flag(s, "kulupBaskani") ? 2 : 1 }, set: { yol: "tablo" }, go: "sunum" }),
       c("Hepsini kendin yap", "Uyku − · not garantisi", { sleep: 5, stress: 5, sk: { disiplin: 2 }, set: { yol: "tek" }, go: "sunum" }),
@@ -1086,7 +1086,7 @@
         when: isWork,
         title: "İlk üç ayın hesabı",
         text: (s, h) =>
-          "Excel tablosu ortada: ilk siparişler geldi ama kârın ancak kargo ve reklamı karşılıyor. " +
+          "Hesap tablosu ortada: ilk siparişler geldi ama kârın ancak kargo ve reklamı karşılıyor. " +
           (h.d.ortak ? h.cast("isArk").name + " sermayeyi artırmak istiyor; sen temkinlisin." : "Akşamların ve hafta sonların tamamen bu işe gidiyor."),
         choices: (s, h) => [
           c("Biraz daha büyüt", "₺25.000 · şans", {

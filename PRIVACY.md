@@ -1,14 +1,30 @@
-# Gizlilik — Hayat Simülatörü (prototip)
+# Gizlilik Politikası: Hayat Simülatörü
 
-Bu prototip hesap, reklam, analiz, konum, kişi listesi ya da sunucu kullanmaz. Oyun verisi hiçbir sunucuya gönderilmez.
+Son güncelleme: 26 Ekim 2026
 
-Tek dış bağlantı yazı tipleridir: çevrimiçiyken Baloo 2 ve Nunito yazı tipleri Google Fonts'tan yüklenir. Bu istekte tarayıcı, her web sitesinde olduğu gibi IP adresini ve tarayıcı bilgisini Google'a iletir; oyun verisi iletilmez. Mağaza sürümünde yazı tipleri uygulamanın içine gömülmeli.
+Hayat Simülatörü tek kişilik, çevrimdışı oynanabilen bir oyundur. **Geliştirici olarak hiçbir kişisel veri toplamıyor, saklamıyor ve kimseyle paylaşmıyoruz.**
 
-Cihazda saklananlar, tarayıcının `localStorage` alanında:
+## Cihazında saklananlar
+- Oyun kayıtların: karakterin adı, şehri, oyundaki durumu ve kararların. Oyuncunun yazdığı isimler de buna dahildir.
+- Ayarların: ses, titreşim, yazı boyutu, oyun hızı ve denge ayarları.
 
-- `hayatSimulatuoruSavesV1`: hayat kayıtları. Karakterin adı, şehri, durumu, yarım kalan haftanın olayı, dönüm noktası günlüğü ve oyuncunun yazdığı çocuk adları.
-- `hayatSimEndingProfilesV2`: bu cihazda keşfedilen son profillerinin listesi.
+Bu bilgiler yalnızca cihazındaki uygulama depolama alanında tutulur. Hiçbir sunucuya gönderilmez. Ayarlar › "Bütün verileri sil" düğmesi ya da uygulamayı silmek hepsini kaldırır.
 
-Tarayıcı verisini temizlemek, ya da kayıtlar ekranındaki ✕ düğmesi, kayıtları siler. Sunucu üzerinden açıldığında service worker oyun dosyalarını çevrimdışı kullanım için önbelleğe alır.
+## Hesap bağlama (isteğe bağlı)
+İstersen iPhone'da **Game Center**, Android'de **Google Play Games** hesabını bağlayabilirsin. Bu durumda:
+- Hayat kayıtların, platformun "kayıtlı oyunlar" hizmetiyle senin hesabına yedeklenir: iPhone'da Apple'ın Game Center / iCloud hizmeti, Android'de Google Play Games.
+- Başarımların ve en yüksek servet puanın, bu hizmetlerin kendi sıralama ve başarım ekranlarında görünür.
+- Bu veriler Apple'ın veya Google'ın hizmetlerinde, onların gizlilik politikalarına göre tutulur. Geliştirici bu verilere erişmez.
+- Bağlantıyı telefonunun ayarlarından Game Center ya da Google Play Games oturumunu kapatarak kesebilirsin.
 
-Mağaza sürümü hazırlanırsa, kullanılan uygulama kabuğu, kütüphaneler ve depolama davranışı yeniden kontrol edilmeli; bu metin ve mağaza gizlilik beyanı ona göre güncellenmelidir.
+## Yok
+Reklam, analiz/izleme aracı, konum, kişi listesi, kamera, mikrofon, uygulama içi satın alma ve sunucu yoktur. Yazı tipleri uygulamanın içindedir. Oyun internete bağlanmadan da çalışır.
+
+## Çocuklar
+Oyun, sanal bahis ve şans oyunu içerdiği için çocuklara yönelik değildir.
+
+## Simülasyon
+Oyundaki para, yatırım, bahis ve piyango tamamen sanaldır. Gerçek para kullanılmaz ve gerçek ödül verilmez.
+
+## İletişim
+Soru ve silme talepleri için: [DESTEK E-POSTA ADRESİ — yayından önce yazılacak]

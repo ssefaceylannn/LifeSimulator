@@ -86,6 +86,7 @@
     if (i < 0) saves.push(active);
     else saves[i] = active;
     persist();
+    if (HS.Cloud) HS.Cloud.autoBackup(saves);
   }
   function addProfile(key) {
     const p = store.get(PROFILE_KEY, []);
@@ -99,7 +100,10 @@
   // ---------- Ses ----------
   const sfx = (n) => HS.Audio && HS.Audio.play(n);
   const buzz = (n) => HS.Audio && HS.Audio.vibrate(n);
-  HS.onAchievement = () => sfx("levelup");
+  HS.onAchievement = (a) => {
+    sfx("levelup");
+    if (HS.Cloud && a) HS.Cloud.unlock(a.id);
+  };
 
   // ---------- Gezinme ----------
   function page(id) {
@@ -779,8 +783,9 @@
   }
   const head = (P, size = 52) => `<svg viewBox="22 2 76 76" width="${size}" height="${size}" aria-hidden="true">${Art.person({ ...P, hs: 1 })}</svg>`;
   function meTab(s) {
-    let html = subTabs(meSub, [["ben", "Ben"], ["aile", "Aile"], ["stil", "Stil"], ["esya", "Eşyalar"], ["basari", "Başarımlar"]], (v) => (meSub = v));
+    let html = subTabs(meSub, [["ben", "Ben"], ["aile", "Aile"], ["cevre", "Çevre"], ["stil", "Stil"], ["esya", "Eşyalar"], ["basari", "Başarımlar"]], (v) => (meSub = v));
     if (meSub === "aile") return html + familyPanel(s);
+    if (meSub === "cevre") return html + circlePanel(s);
     if (meSub === "stil") return html + stylePanel(s);
     if (meSub === "esya") return html + itemsPanel(s);
     if (meSub === "basari") return html + sectionTitle("Seviye " + HS.level(s), "Deneyim " + s.xp + " · sonraki seviyeye %" + Math.round(HS.levelProgress(s) * 100)) + sectionTitle("Başarımlar", (s.ach || []).length + "/" + HS.ACHIEVEMENTS.length) + `<div class="ach-grid">${achGrid(s)}</div>` + sectionTitle("Hayatının grafiği", "Net değer (2026 TL ile)") + `<div class="chart">${chart(s)}</div>`;
@@ -802,6 +807,31 @@
       return `<button class="pack"${c === true ? on(() => act(fx, { confirm: g.months + " aylık üyelik " + money(price) + ". Alınsın mı?", yes: "Satın al", done: "Üyeliğin başladı." })) : " disabled"}><b>${g.months} ay</b><span>${money(price)}</span><small>${g.off ? "%" + Math.round(g.off * 100) + " indirim · aylık " + money(price / g.months) : "Esnek"}</small>${c === true ? "" : `<small>${needHtml(c)}</small>`}</button>`;
     }).join("")}</div>`;
     html += rows([!s.flags.kedi ? row("Bir kedi sahiplen", "Mama, kum ve veteriner: ilk masraf " + money(6500 * cpi), { cost: 6500, m: 6, flag: "kedi", log: "Bir kedi sahiplendi." }, { icon: "cat" }) : null]);
+    return html;
+  }
+  // Çevre: hikâyelerde geçen kişiler, arkadaşlar ve eski tanıdıklar
+  function circlePanel(s) {
+    const relWord = (v) => (v >= 80 ? "çok yakın" : v >= 60 ? "iyi" : v >= 40 ? "normal" : v >= 20 ? "mesafeli" : "küs");
+    const ROLE = HS.CAST_ROLES || {};
+    const cast = Object.entries(s.cast || {});
+    let html = sectionTitle("Hayatındaki kişiler", "Olaylarda adı geçen tanıdıkların. Taşınınca ve iş değişince yenileri gelir.");
+    html += cast.length
+      ? `<div class="rows">${cast
+          .map(([role, x]) => `<div class="row"><span><b>${esc(x.name)}</b><small>${esc((ROLE[role] || ["Tanıdığın"])[0])} · ${s.year - x.born} yaşında · ${relWord(x.rel)}</small></span>${bar(x.rel)}</div>`)
+          .join("")}</div>`
+      : `<p class="fine">Henüz kimseyle tanışmadın; hafta hafta çevren oluşacak.</p>`;
+    const fr = s.friends || [];
+    html += sectionTitle("Arkadaşların", fr.length ? fr.length + " kişi" : "Yeni insanlarla tanıştıkça burada görünür");
+    if (fr.length)
+      html += `<div class="rows">${fr
+        .map((f) => `<div class="row"><span><b>${esc(f.name)}</b><small>${esc(f.how)} tanıştınız · ${esc(f.job)} · ${f.gone ? esc(f.gone) : relWord(f.rel)}</small></span>${bar(f.rel)}</div>`)
+        .join("")}</div>`;
+    const past = s.circlePast || [];
+    if (past.length)
+      html += sectionTitle("Eski tanıdıklar", "Hayatından çıkanlar") + `<div class="rows">${past
+        .slice(0, 12)
+        .map((x) => `<div class="row"><span><b>${esc(x.name)}</b><small>eski ${esc(((ROLE[x.role] || ["tanıdığın"])[0]).toLocaleLowerCase("tr-TR"))} · ${esc(x.why)}</small></span></div>`)
+        .join("")}</div>`;
     return html;
   }
   function familyPanel(s) {
@@ -1065,7 +1095,7 @@
         if (v <= 0) return toast("Önce bir tutar yaz.", "error");
         act({ bet: { type: k, stake: v } });
       })}>Yazdığım tutarla oyna</button>${stakes.map((st) => `<button class="mini"${HS.canApply(s, { bet: { type: k, stake: st } }) === true ? on(() => act({ bet: { type: k, stake: st } })) : " disabled"}>${money(st)}</button>`).join("")}</div></div>`)
-      .join("")}</div><p class="fine">Bahis bağımlılık yapabilir. Oyundaki oranlar bayinin her zaman kazandığı biçimde ayarlıdır.</p>`;
+      .join("")}</div><p class="fine">Bu bölüm gerçek para içermeyen bir simülasyondur; gerçek bahis oynanamaz ve ödül verilmez. Bahis bağımlılık yapabilir. Oyundaki oranlar bayinin her zaman kazandığı biçimde ayarlıdır.</p>`;
       return html;
     }
     if (moneySub === "mulk") {
@@ -1372,13 +1402,67 @@
       }
     };
   }
+  // Hesap: Game Center / Google Play Games (yalnızca uygulama sürümünde)
+  function accountCard() {
+    const C = HS.Cloud;
+    if (!C || !C.available)
+      return `<article class="card"><h3>Hesap</h3><p class="fine">Hesap açmak gerekmez; kayıtların bu cihazda tutulur. Başka bir cihaza taşımak için aşağıdaki kayıt kodunu kullan.</p></article>`;
+    const S = C.state;
+    if (!S.signedIn)
+      return `<article class="card"><h3>Hesap</h3><p class="fine">İstersen ${esc(C.serviceName)} hesabını bağla: hayatların buluta yedeklenir, yeni telefonda geri yüklenir; başarımların ${esc(C.serviceName)} içinde görünür. Bağlamazsan oyun aynen çalışır.</p><button class="secondary" id="cloudSignIn">${esc(C.serviceName)} ile bağlan</button>${S.error ? `<p class="fine neg">${esc(S.error)}</p>` : ""}</article>`;
+    return `<article class="card"><h3>Hesap</h3><p class="fine">${esc(C.serviceName)}: <b>${esc((S.player && S.player.displayName) || "bağlı")}</b>. Hayatların kaydettikçe (en fazla 2 dakikada bir) buluta yedeklenir.${S.last ? " Son yedek: " + new Date(S.last).toLocaleTimeString("tr-TR") + "." : ""} Bağlantıyı kesmek için telefonun ayarlarından ${esc(C.serviceName)} oturumunu kapatabilirsin.</p><button class="secondary" id="cloudBackup">Şimdi yedekle</button><button class="secondary" id="cloudRestore">Buluttan geri yükle</button><button class="secondary" id="cloudAch">Başarımlarım</button><button class="secondary" id="cloudBoard">Servet sıralaması</button></article>`;
+  }
+  function bindAccount() {
+    const C = HS.Cloud;
+    if (!C || !C.available) return;
+    const bind = (id, fn) => $(id) && ($(id).onclick = fn);
+    bind("cloudSignIn", () =>
+      C.signIn().then(
+        () => {
+          toast("Hesap bağlandı.");
+          C.backup(saves).catch(() => {});
+          renderSettings();
+        },
+        (e) => toast(String((e && e.message) || e), "error"),
+      ),
+    );
+    bind("cloudBackup", () =>
+      C.backup(saves).then(
+        (ok) => {
+          toast(ok ? "Buluta yedeklendi." : "Yedeklenemedi.");
+          renderSettings();
+        },
+        () => toast("Yedeklenemedi.", "error"),
+      ),
+    );
+    bind("cloudRestore", () =>
+      C.restore().then(
+        (r) => {
+          if (!r || !r.saves.length) return toast("Bulutta yedek yok.");
+          ask(
+            "Buluttaki " + r.saves.length + " hayat (" + new Date(r.at).toLocaleString("tr-TR") + ") bu cihaza alınsın mı? Aynı hayatın bulut sürümü bu cihazdakinin yerine geçer.",
+            () => {
+              const ids = new Set(r.saves.map((x) => x.id));
+              saves = saves.filter((x) => !ids.has(x.id)).concat(r.saves.map((x) => HS.migrate(x)));
+              persist();
+              toast("Hayatlar geri yüklendi.");
+            },
+            "Geri yükle",
+          );
+        },
+        () => toast("Bulut okunamadı.", "error"),
+      ),
+    );
+    bind("cloudAch", () => C.showAchievements());
+    bind("cloudBoard", () => C.showLeaderboard());
+  }
   function renderSettings() {
     const tg = (k, label, hint) => `<button class="setting" data-k="${k}" role="switch" aria-checked="${!!settings[k]}"><span><b>${label}</b><small>${hint}</small></span><i class="switch${settings[k] ? " on" : ""}"></i></button>`;
     $("settingsBody").innerHTML =
       `<article class="card"><h3>Ses</h3>` +
       tg("music", "Müzik", "Hafif, akustik oyun müziği") +
       tg("sfx", "Ses efektleri", "Tuş sesleri, kazanma ve kaybetme sesleri") +
-      tg("vibration", "Titreşim", "Destekleyen telefonlarda (iPhone tarayıcıda desteklenmez)") +
+      tg("vibration", "Titreşim", "Destekleyen cihazlarda (bazı cihazlarda desteklenmez)") +
       `<label class="range"><span>Ses düzeyi</span><input type="range" id="volume" min="0" max="1" step="0.05" value="${settings.volume}"></label></article>` +
       `<article class="card"><h3>Oynanış</h3>` +
       tg("saver", "Pil tasarrufu (önerilir)", "Karakterlerin nefes alma, göz kırpma ve arka plan animasyonlarını kapatır; telefon ısınmaz, pil uzun gider") +
@@ -1386,9 +1470,9 @@
       `<button class="setting" data-text="1"><span><b>Yazı boyutu</b><small>${settings.text === "big" ? "Büyük" : "Normal"}</small></span><i class="pill">${settings.text === "big" ? "A+" : "A"}</i></button></article>` +
       `<article class="card"><h3>Oyun hızı</h3><p class="fine">Yıllar yavaş geçiyorsa hızlandır. Aradaki haftalarda maaş, giderler ve yaş yine işlenir; yalnızca soru sayısı azalır.</p><div class="speed-row">${HS.SPEEDS.map((sp) => `<button class="speed${HS.speedNow() === sp ? " on" : ""}" data-speed="${sp.id}"><b>${sp.name}</b><small>${sp.desc}</small></button>`).join("")}</div></article>` +
       `<article class="card"><h3>Oyun dengesi</h3><p class="fine">Başlangıç parası, giderler, maaşlar, haftalık olay sayısı, borsa ihtimali gibi değerleri kendin ayarla. Değişiklikler hemen geçerli olur (başlangıç parası ve yaşı yeni hayatlarda).</p><button class="secondary" id="cfgToggle">${cfgOpen ? "Kapat" : "Ayarları düzenle"}</button>${cfgOpen ? cfgForm() : ""}</article>` +
-      `<article class="card"><h3>Hesap</h3><p class="fine">App Store ve Google Play sürümünde kayıtların Apple ile giriş / Game Center ya da Google Play Oyunlar hesabına bağlanabilecek. Bu tarayıcı prototipinde kayıtlar yalnızca bu cihazda tutulur.</p><button class="secondary" disabled>Hesabını bağla (mağaza sürümünde)</button></article>` +
+      accountCard() +
       `<article class="card"><h3>Kayıtlar</h3><p class="fine">Kayıtlarını başka bir cihaza taşımak için kodu kopyala, diğer cihazda yapıştır.</p><button class="secondary" id="exportBtn">Kayıt kodunu kopyala</button><textarea id="importBox" rows="3" placeholder="Kayıt kodunu buraya yapıştır" aria-label="Kayıt kodu"></textarea><button class="secondary" id="importBtn">Kodu içe aktar</button><button class="secondary danger" id="wipeBtn">Bütün verileri sil</button></article>` +
-      `<article class="card"><h3>Hakkında</h3><p class="fine">Hayat Simülatörü · prototip sürüm 0.3<br>Çizimler: Microsoft Fluent Emoji (MIT). Harita: Natural Earth verisi, react-turkey-map (MIT). Yazı tipleri: Baloo 2 ve Nunito (SIL OFL).<br>Ekonomi 2026 verileriyle kalibre edilmiştir; 2027 sonrası kurmacadır. Kişi, parti, şirket ve markalar hayal ürünüdür. Yatırım ve bahis bölümleri tavsiye değildir.</p></article>`;
+      `<article class="card"><h3>Hakkında</h3><p class="fine">Hayat Simülatörü · sürüm 1.0<br>Çizimler: Microsoft Fluent Emoji (MIT). Harita: Natural Earth verisi, react-turkey-map (MIT). Yazı tipleri: Baloo 2 ve Nunito (SIL OFL).<br>Ekonomi 2026 verileriyle kalibre edilmiştir; 2027 sonrası kurmacadır. Kişi, parti, şirket ve markalar hayal ürünüdür. Oyunda gerçek para kullanılmaz; yatırım ve bahis bölümleri tamamen sanaldır ve tavsiye değildir.</p></article>`;
     $("settingsBody").querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => setSetting(b.dataset.k, !settings[b.dataset.k])));
     $("settingsBody").querySelectorAll("[data-speed]").forEach(
       (b) =>
@@ -1408,6 +1492,7 @@
       store.set(SET_KEY, settings);
       if (HS.Audio) HS.Audio.set("volume", settings.volume);
     };
+    bindAccount();
     $("exportBtn").onclick = () => {
       const code = btoa(unescape(encodeURIComponent(JSON.stringify(saves))));
       const done = () => toast("Kayıt kodu kopyalandı.");
@@ -1446,6 +1531,7 @@
 
   // ---------- Son ve anı defteri ----------
   function finish() {
+    if (HS.Cloud && active) HS.Cloud.submitNetWorth(HS.netWorth(active) / active.idx.cpi);
     showScenes(() => memoir(true));
   }
   function memoir(fresh) {
@@ -1473,6 +1559,7 @@
   // ---------- Bağlantılar ----------
   function init() {
     load();
+    if (HS.Cloud) HS.Cloud.init(() => !$("settings").classList.contains("hidden") && renderSettings());
     applyText();
     if (HS.Audio) HS.Audio.init({ music: settings.music, sfx: settings.sfx, vibration: settings.vibration, volume: settings.volume });
     $("birthCity").innerHTML = HS.HOME_CITIES.map((c) => `<option${c === "İstanbul" ? " selected" : ""}>${esc(c)}</option>`).join("");

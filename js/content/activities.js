@@ -240,6 +240,7 @@
       id: "piyango",
       label: "Piyango bileti al",
       art: "four-leaf-clover",
+      when: (s) => s.age >= 18,
       hint: "₺100 · küçük bir umut",
       fx: { cost: 100 },
       done: "Bilet cüzdanında; çekiliş yakında.",

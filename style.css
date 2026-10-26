@@ -2285,8 +2285,15 @@ html.bg *::after {
 
 /* Oyun hızı */
 .speed-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
-.speed { text-align: left; padding: 10px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--card, transparent); color: inherit; font: inherit; }
+.speed { text-align: left; padding: 10px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); color: inherit; font: inherit; }
 .speed b { display: block; }
 .speed small { opacity: 0.75; font-size: 0.78em; }
 .speed.on { border-color: var(--blue); box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 25%, transparent); }
 .speed-chip { margin-left: 6px; flex: none; border: 0; border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 0.78em; background: color-mix(in srgb, var(--blue) 14%, transparent); color: inherit; }
+
+/* Çevre listesi */
+.rows { display: grid; gap: 6px; margin: 6px 0 12px; }
+.rows .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
+.rows .row span { display: flex; flex-direction: column; min-width: 0; }
+.rows .row small { color: var(--muted); font-size: 0.8em; }
+.rows .row .bar { flex: 0 0 70px; }

@@ -271,10 +271,10 @@
         " yaşında geçmişin hesabı kapısını çaldı; hikâyesi bir mahkeme koridorunda yarım kaldı.",
       kriz: (s) =>
         s.age +
-        " yaşında, uzun bir karanlık dönemin içinde yorgun düştü; hikâye orada sustu.",
+        " yaşında, uzun ve yorucu bir hastalık döneminin ardından bedeni daha fazla dayanamadı.",
       "secim-genc": (s) =>
         s.age +
-        " yaşında bu hikâyeyi kendi isteğinle kapattın; yazılmamış sayfalar başka bir hayata kaldı.",
+        " yaşında anı defterini burada kapattın; yazılmamış sayfalar başka bir oyuna kaldı.",
       "secim-olgun": (s) =>
         s.age + " yaşında anı defterini kendi elinle kapattın.",
     },
@@ -496,6 +496,12 @@
         " yoktu; haberi " +
         crowd +
         " gazeteden öğrendi."
+      );
+    // Oyuncunun kendi kapattığı hayatlarda veda/cenaze sahnesi yok: bu bir oyun kapanışıdır.
+    if (p.son === "secim-genc" || p.son === "secim-olgun")
+      return (
+        "Defter kapandığında hikâyesi sürüyordu" +
+        (who.length ? "; " + who.join(", ") + " yine hayatının içindeydi." : "; önünde hâlâ yazılacak sayfalar vardı.")
       );
     if (!who.length && p.cevre === "yalniz")
       return "Vedasında yalnızca birkaç komşu vardı; biri pencere önündeki saksıları sulamayı üstlendi.";

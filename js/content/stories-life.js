@@ -59,7 +59,7 @@
       hatirlat: {
         gap: 4,
         title: "Bahaneler bitmiyor",
-        text: (s) => F(s) + " yine “bu ay da olmadı” diyor. Ama dün akşam Instagram’da yeni telefonunun kutu açılışını paylaştı.",
+        text: (s) => F(s) + " yine “bu ay da olmadı” diyor. Ama dün akşam sosyal medyada yeni telefonunun kutu açılışını paylaştı.",
         choices: (s, h) => {
           const a = h.d.amt || 10000;
           return [
@@ -101,7 +101,7 @@
       hazirlik: {
         gap: 3,
         title: "Bekârlığa veda",
-        text: (s) => "Bekârlığa veda organizasyonu senin üstünde. WhatsApp grubu “" + F(s) + " Son Kez Özgür” adıyla açıldı; herkes fikir atıyor, kimse para göndermiyor.",
+        text: (s) => "Bekârlığa veda organizasyonu senin üstünde. Mesaj grubu “" + F(s) + " Son Kez Özgür” adıyla açıldı; herkes fikir atıyor, kimse para göndermiyor.",
         choices: (s, h) => [
           c("Kapadokya’da hafta sonu", h.tl(12000) + " · unutulmaz", { cost: 12000, m: 6, people: 2, rel: { enYakin: 6 }, go: "gun" }),
           c("Evde mütevazı bir gece", h.tl(2500) + " · pizza ve eski fotoğraflar", { cost: 2500, m: 2, rel: { enYakin: 2 }, go: "gun" }),
@@ -223,7 +223,7 @@
     weight: 0.55,
     room: "salon",
     title: "Lise 10. yıl buluşması",
-    text: (s, h) => L(s) + " WhatsApp’ta “12-C Efsaneleri” grubunu kurdu; 34 kişi eklendi, bildirimler susmuyor. Ay sonunda bir restoranda 10. yıl buluşması var: kişi başı " + h.tl(2500) + ". Gruba şimdiden eski sınıf fotoğrafları düşmeye başladı.",
+    text: (s, h) => L(s) + " mesajlaşma uygulamasında “12-C Efsaneleri” grubunu kurdu; 34 kişi eklendi, bildirimler susmuyor. Ay sonunda bir restoranda 10. yıl buluşması var: kişi başı " + h.tl(2500) + ". Gruba şimdiden eski sınıf fotoğrafları düşmeye başladı.",
     choices: (s, h) => [
       c("Katıl", h.tl(2500) + " · nostalji", { cost: 2500, set: { org: 0 }, go: "gece" }),
       c("Organizasyonu üstlen", h.tl(2500) + " · stres ama herkes seni hatırlar", { cost: 2500, stress: 4, sk: { iletisim: 1 }, rel: { liseArk: 8 }, set: { org: 1 }, go: "gece" }),
@@ -351,7 +351,7 @@
     room: "yatak",
     title: "Flört uygulaması",
     text: (s) => {
-      if (s.flags.dugunTanisma) return "Düğünde bekâr masasında sohbet ettiğin kişi Instagram’dan takip isteği gönderdi. " + F(s) + " hemen yorum yaptı: “Bırak uygulamaları, buna yaz!”";
+      if (s.flags.dugunTanisma) return "Düğünde bekâr masasında sohbet ettiğin kişi sosyal medyadan takip isteği gönderdi. " + F(s) + " hemen yorum yaptı: “Bırak uygulamaları, buna yaz!”";
       return F(s) + " telefonunu elinden aldı ve flört uygulamasında profil açtı: “Bu fotoğraflar olmaz, biri seni pasaport fotoğrafından tanıyacak.” Bir haftada on iki eşleşme, iki anlamlı mesaj.";
     },
     choices: (s, h) => [
@@ -607,7 +607,7 @@
         },
         choices: (s, h) => [
           c("Hafta sonları kasaya geç", "Yorucu ama baba-evlat zamanı", { stress: 3, h: -1, m: 3, kinBond: { id: h.d.kid, v: 6 }, set: { emek: 1 }, go: "yil" }),
-          c("Instagram hesabını kur", "Dijital pazarlama", { sk: { pazarlama: 0.8, bilgisayar: 0.5 }, set: { dijital: 1 }, go: "yil" }),
+          c("Sosyal medya hesabı aç", "Dijital pazarlama", { sk: { pazarlama: 0.8, bilgisayar: 0.5 }, set: { dijital: 1 }, go: "yil" }),
           c("Uzaktan izle", "Kendi hayatın da var.", { go: "yil" }),
         ],
       },
@@ -806,11 +806,11 @@
       yari: {
         gap: 10,
         title: "Yarı maraton: 21 kilometre",
-        text: "10K’dan sonra hırslandın. Önünde iki seçenek var: köprüden geçen İstanbul Yarı Maratonu ya da düz parkuru ve deniz manzarasıyla Antalya.",
+        text: "10K’dan sonra hırslandın. Önünde iki seçenek var: köprüden geçen büyük şehir yarı maratonu ya da düz parkuru ve deniz manzarasıyla Antalya.",
         choices: (s, h) => {
           const ist = s.city === "İstanbul";
           return [
-            c("İstanbul Yarı Maratonu", (ist ? h.tl(2000) : h.tl(9000)) + (ist ? " · kayıt" : " · kayıt, yol, otel") + " · Şans %68", { cost: ist ? 2000 : 9000, chance: { p: 0.68, win: { m: 10, esteem: 8, h: 3, kg: -1, flag: "yariMaraton", end: "yariMaraton" }, lose: { m: -4, h: -2, end: "yarida" }, winT: "21,1 km!", winP: "Köprünün üstünde boğaza bakıp “ben bunu yapıyorum” dedin.", loseT: "16. kilometrede yürüdün", loseP: "Yokuşlar acımasızdı. Ama bir dahaki sefere." } }),
+            c("Köprülü şehir yarı maratonu", (ist ? h.tl(2000) : h.tl(9000)) + (ist ? " · kayıt" : " · kayıt, yol, otel") + " · Şans %68", { cost: ist ? 2000 : 9000, chance: { p: 0.68, win: { m: 10, esteem: 8, h: 3, kg: -1, flag: "yariMaraton", end: "yariMaraton" }, lose: { m: -4, h: -2, end: "yarida" }, winT: "21,1 km!", winP: "Köprünün üstünde boğaza bakıp “ben bunu yapıyorum” dedin.", loseT: "16. kilometrede yürüdün", loseP: "Yokuşlar acımasızdı. Ama bir dahaki sefere." } }),
             c("Antalya Yarı Maratonu", h.tl(14000) + " · kayıt, uçak, otel · Şans %75", { cost: 14000, people: 1, chance: { p: 0.75, win: { m: 10, esteem: 8, h: 3, kg: -1, stress: -4, flag: "yariMaraton", end: "yariMaraton" }, lose: { m: -3, h: -2, end: "yarida" }, winT: "Bitiş çizgisinde deniz", winP: "Madalyayı aldın ve doğruca denize girdin.", loseT: "Sıcak çarptı", loseP: "Mart dedik ama güneş acımadı; 15. kilometrede bıraktın." } }),
             c("Hazır değilim, 10K’da kal", "Sakatlıktan uzak", { h: 1, end: "onK" }),
           ];
@@ -882,10 +882,10 @@
     weight: 0.5,
     room: "salon",
     title: "Köşedeki gitar",
-    text: (s, h) => "Gitar köşede tozlanıyor. Semtteki müzik atölyesi haftada bir akşam ders veriyor (aylık " + h.tl(4000) + "); YouTube’da da “30 günde gitar” videoları var.",
+    text: (s, h) => "Gitar köşede tozlanıyor. Semtteki müzik atölyesi haftada bir akşam ders veriyor (aylık " + h.tl(4000) + "); internette de “30 günde gitar” videoları var.",
     choices: (s, h) => [
       c("Atölyeye yazıl", h.tl(4000) + " · düzenli ders", { cost: 4000, sk: { enstruman: 1 }, people: 1, set: { ders: 1 }, go: "pratik" }),
-      c("YouTube’dan öğren", "Ücretsiz · disiplin ister", { sk: { enstruman: 0.5 }, go: "pratik" }),
+      c("İnternet videolarından öğren", "Ücretsiz · disiplin ister", { sk: { enstruman: 0.5 }, go: "pratik" }),
       c("Gitarı sat", "Biraz para · biraz hüzün", { itemSell: "gitar", m: -1, end: "satti" }),
     ],
     steps: {
@@ -931,8 +931,8 @@
     title: "“Kesin bilgi” kripto",
     text: (s, h) => {
       const sd = done(s, "l_saadet");
-      if (sd && sd !== "reddetti") return L(s) + " yine aradı: “Altın Yaşam işini unut, asıl para burada.” Telegram’daki bir sinyal grubunun önerdiği yeni bir coin. “Bir haftada iki katı, garanti.”";
-      let t = F(s) + " heyecanla ekran görüntüsü atıyor: Telegram’daki bir “sinyal grubu” yeni bir coin önermiş. “Kuzenim yüzde üç yüz kazandı, kaçırma!”";
+      if (sd && sd !== "reddetti") return L(s) + " yine aradı: “Altın Yaşam işini unut, asıl para burada.” mesajlaşma uygulamasındaki bir sinyal grubunun önerdiği yeni bir coin. “Bir haftada iki katı, garanti.”";
+      let t = F(s) + " heyecanla ekran görüntüsü atıyor: mesajlaşma uygulamasındaki bir “sinyal grubu” yeni bir coin önermiş. “Kuzenim yüzde üç yüz kazandı, kaçırma!”";
       if (done(s, "l_ortaklik") === "batti") t += " Dükkânın zararını bununla çıkaracağına inanıyor.";
       return t;
     },
@@ -962,7 +962,7 @@
       cokus: {
         gap: 3,
         title: "Çekim yapılamıyor",
-        text: (s, h) => "Sabah uyandığında platform “bakım çalışması” diyordu. Öğlen Telegram grubu silindi. Akşam haberlerde: “Kripto platformu kurucuları yurt dışına kaçtı.” İçeride " + h.tl(h.d.amt || 5000) + " var.",
+        text: (s, h) => "Sabah uyandığında platform “bakım çalışması” diyordu. Öğlen sinyal grubu silindi. Akşam haberlerde: “Kripto platformu kurucuları yurt dışına kaçtı.” İçeride " + h.tl(h.d.amt || 5000) + " var.",
         choices: (s, h) => {
           const a = h.d.amt || 5000;
           const who = h.d.who || "enYakin";
@@ -1069,7 +1069,7 @@
     weight: 0.5,
     room: "sokak",
     title: "Acil kan aranıyor",
-    text: (s) => "Mahalle WhatsApp grubunda bir mesaj: “ACİL! " + ek(HS.castName(s, "komsu"), "gen") + " babası ameliyatta, A Rh+ ve 0 Rh− kan aranıyor. Devlet hastanesi kan merkezi, akşam 8’e kadar.”",
+    text: (s) => "Mahallenin mesaj grubunda bir mesaj: “ACİL! " + ek(HS.castName(s, "komsu"), "gen") + " babası ameliyatta, A Rh+ ve 0 Rh− kan aranıyor. Devlet hastanesi kan merkezi, akşam 8’e kadar.”",
     choices: (s) => [
       c("Hemen git, bağış yap", "Yarım gün · halsizlik", { h: -2, m: 6, people: 2, rel: { komsu: 8 }, flag: "kanBagisci", go: "sms" }),
       c("Mesajı paylaş, çevreni seferber et", "Kendi kanın değil, sesin", { people: 1, rel: { komsu: 3 }, end: "paylasti" }),

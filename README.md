@@ -4,6 +4,10 @@ Telefonda dikey ekranda oynanan, Türkçe bir yaşam simülasyonu. Oyuncu adın�
 
 > **Durum:** Bu bir **prototip**tir. Tarayıcıda oynanabilir ve otomatik testlerden geçer, ama App Store'a ya da Google Play'e gönderilmeye hazır **değildir**. Ayrıntılar aşağıda, "Neler hâlâ prototip" bölümünde.
 
+## Mağaza
+
+App Store ve Google Play'e çıkış adımları: **MAGAZA-REHBERI.md**. Mağaza metinleri ve ekran görüntüleri `store/` klasöründe (`node scripts/screenshots.js` yeniden üretir), içerik uygunluk denetimi ve yaş derecelendirmesi cevapları `STORE-COMPLIANCE.md` dosyasında, gizlilik politikası `PRIVACY.md`. Yazı tipleri uygulamanın içindedir (`assets/fonts`); oyun hiçbir sunucuya bağlanmaz.
+
 ## Çalıştırma
 
 `index.html` dosyasını tarayıcıda açman yeterli. Telefonda denemek için klasörü herhangi bir statik sunucuyla yayınla (ör. `npx serve .` ya da GitHub Pages). Sunucu üzerinden açıldığında service worker devreye girer ve oyun çevrimdışı da çalışır.
@@ -59,6 +63,8 @@ Telefonda dikey ekranda oynanan, Türkçe bir yaşam simülasyonu. Oyuncu adın�
 
 - **Tekrarsız olaylar.** Her olayın kaç kez görüldüğü tutulur. Hiç görülmemiş olaylar öne çıkar; sıradan bir olay n. görülüşünden sonra en az n×2 yıl gelmez (sınav, mesai gibi süreç olayları hariç). Haftada yeni konu kalmazsa hafta erken kapanır; "boş akşam" yedek olayı her seferinde farklı giriş ve son kullanılmamış seçeneklerle gelir. YKS soruları, soru bankası bitmeden tekrar sorulmaz. `tests/variety.js` ilk iki oyun yılında hiçbir sıradan olayın iki kez gelmediğini denetler.
 - **Birbirine bağlı hikâyeler.** `js/systems/stories.js` aşama aşama ilerleyen hikâye motorudur. Komşu, en yakın arkadaş, iş arkadaşı, yönetici, liseden arkadaş, bakkal, usta, apartman yöneticisi ve aile hekimi hayat boyu aynı kişidir; bir hikâyedeki karar başka hikâyelerin metnini ve seçeneklerini değiştirir (kombi ustası seni dolandırdıysa çamaşır makinesinde o ustayı aramazsın; arkadaşına verdiğin borç ödenmediyse düğününde sağdıç teklifi farklı gelir). Ev ve komşuluk (19), sosyal hayat, aile ve sağlık (23), iş ve okul (25) hikâyesi ile 160 tek seferlik an var; YKS soru bankasında 170 soru var.
+- **Çevre.** Olaylarda adı geçen tanıdığın rolü metinde yazar ("komşun Handan", "iş arkadaşın Kerem"). Taşınınca komşu, apartman yöneticisi ve bakkal; iş değişince iş arkadaşı ve yönetici değişir; iyi anlaştığın eskiler arkadaş listene geçer. Spor salonunda, kursta, işte, düğünde, otobüste yeni insanlarla tanışıp arkadaş olursun; arkadaşlarının hayatından haberler gelir (evlenir, taşınır, borç ister, bebek bekler) ve aynı haber iki kez gelmez. Çok yakınlaştığın biri en yakın arkadaşın olabilir. BEN › Çevre bölümü herkesi rolü ve aranızdaki bağla listeler.
+- **Hesap bağlama (uygulama sürümü).** iPhone'da Game Center, Android'de Google Play Games ile isteğe bağlı giriş: hayatlar platformun kayıtlı oyun hizmetine otomatik yedeklenir ve yeni telefonda geri yüklenir, başarımlar ve "en yüksek servet" sıralaması hesapta görünür (`js/cloud.js`, eklenti `@idleflowgames/capacitor-play-games`). Tarayıcıda kayıt kodu ile taşınır.
 - **Eşyalar kalıcı.** Bulaşık ve çamaşır makinesi gibi eşyalar alınınca evde kalır; "bulaşık dağı" sorusu makine alındıktan sonra bir daha gelmez.
 - **Gerçekçi işe alım ve staj.** Seçici şirketler (yüksek puanlı ya da 3-4 aşamalı mülakatlı) beyaz yaka kadrolara üniversite diploması ister; lise mezunu, 20 yaşından sonra iş tecrübesi ve becerisiyle ancak küçük ve orta ölçekli şirketlerde "ofis asistanı" olarak başlar. Staj yalnızca üniversite öğrencilerine açıktır: bahar döneminde başvuru, yazın 8 haftalık staj, iyi geçerse mezuniyette o şirketten mülakatsız iş teklifi. Örgün üniversiteye başlayan tam zamanlı işinden ayrılır (açıköğretim hariç).
 - **Cinsiyete göre dil.** Kadın karakter kuaföre, erkek karakter berbere gider. Evlenme teklifini geleneksel olarak erkek eder: kadın karaktere partneri teklif eder, ama istersen teklifi sen de edebilirsin.

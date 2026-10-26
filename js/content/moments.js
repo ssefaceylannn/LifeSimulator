@@ -1077,7 +1077,7 @@
     A("ogretmenVeli", "is", {
       when: (s) => s.job === "teacher" && WORK(s),
       title: "Veli grubu, 23.15",
-      text: "Veli WhatsApp grubunda bir veli, ödevin \"çok ağır\" olduğunu yazdı. Altına on iki kişi \"aynen\" yazmış.",
+      text: "Veli mesaj grubunda bir veli, ödevin \"çok ağır\" olduğunu yazdı. Altına on iki kişi \"aynen\" yazmış.",
       choices: [
         c("Sabah sakin bir açıklama yaz", "Pedagoji +", { sk: { pedagoji: 0.5 }, stress: 1 }),
         c("Ödevi hafiflet", "Veliler mutlu · sen kırgın", { people: 1, esteem: -1 }),

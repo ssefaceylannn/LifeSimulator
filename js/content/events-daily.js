@@ -261,6 +261,7 @@
     {
       id: "lottery",
       weight: 0.4,
+      minAge: 18,
       cooldown: 104,
       title: "Yılbaşı biletinden ikramiye",
       text: "Kurmaca piyangodan küçük bir ikramiye çıktı.",

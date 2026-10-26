@@ -30,7 +30,7 @@
     A("dunya", "Dünya vatandaşı", "10 ülke gör.", "airplane-departure", (s) => s.visited && s.visited.world.length >= 10),
     A("yildiz", "Yıldız", "Şöhretin 80'i geçsin.", "microphone", (s) => (s.fame || 0) >= 80),
     A("turne", "Yollarda", "Bir turneyi tamamla.", "stadium", (s) => (s.log || []).some((l) => /turnesini tamamladı/.test(l.text))),
-    A("bahis", "Kuponun kralı", "Tek kuponda 7 üstü oranla kazan.", "soccer-ball", (s) => !!s.flags.bigBet),
+    A("bahis", "Sınırını bilen", "Kuponlar birikince destek alıp bahsi bırak.", "soccer-ball", (s) => !!s.flags.betQuit),
     A("asker", "Tezkere", "Askerliğini tamamla.", "military-helmet", (s) => s.mil === "yapildi" || s.mil === "bedelli"),
     A("kedi", "Patili dost", "Bir kedi sahiplen.", "cat", (s) => !!s.flags.kedi),
     A("yuzyil", "Asırlık çınar", "90 yaşını gör.", "deciduous-tree", (s) => s.age >= 90),
@@ -61,12 +61,4 @@
   const snap = (s) => s.hist.push({ age: s.age, year: s.year, net: Math.round(HS.netWorth(s) / s.idx.cpi), cash: Math.round(s.cash / s.idx.cpi), health: Math.round(s.health), mood: Math.round(s.mood), kg: s.body ? Math.round(s.body.w) : null });
   HS.HOOKS.newLife.push(snap);
   HS.HOOKS.yearly.push(snap);
-  // Büyük bahis başarımı için işaret
-  const prevBet = HS.FX.bet;
-  if (prevBet)
-    HS.FX.bet = (s, v) => {
-      const won0 = s.bets.won;
-      prevBet(s, v);
-      if (s.bets.won > won0 && HS.BETS[v.type].odds >= 7) s.flags.bigBet = 1;
-    };
 })(globalThis.HS || (globalThis.HS = {}));

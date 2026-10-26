@@ -52,9 +52,11 @@ module.exports = function load() {
     "js/systems/realism.js",
     "js/systems/stories.js",
     "js/systems/internship.js",
+    "js/systems/circle.js",
     "js/content/stories-home.js",
     "js/content/stories-life.js",
     "js/content/stories-work.js",
+    "js/content/stories-fame.js",
     "js/content/moments.js",
     "js/systems/achievements.js",
   ])

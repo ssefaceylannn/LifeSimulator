@@ -926,7 +926,7 @@
             winP: "Zarfı alırken elin titriyordu. Kimse bir şey sormadı.",
             loseT: "Polis çevirmesi",
             loseP:
-              "Son anda kurtuldun ama malı bırakmak zorunda kaldın. Borçlu çıktın.",
+              "Son anda sıyrıldın ama iş yarıda kaldı; üstüne borçlu çıktın.",
           },
         }),
         c("Kesin olarak reddet", "Bu yollara girmeyeceksin.", {

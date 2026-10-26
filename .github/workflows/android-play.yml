@@ -1,0 +1,89 @@
+# Google Play derlemesi: imzalı .aab (Play Console'a yüklenir) ve denemek için imzalı .apk üretir.
+# YALNIZCA ELLE başlatılır: GitHub › Actions › "Android Google Play" › Run workflow.
+#
+# Gereken gizli değişkenler (GitHub › Settings › Secrets and variables › Actions):
+#   ANDROID_KEYSTORE_B64   Yükleme anahtar deposu (.jks) dosyasının base64 hâli
+#   ANDROID_KEYSTORE_PASS  Anahtar deposu parolası
+#   ANDROID_KEY_ALIAS      Anahtar adı (ör. upload)
+#   ANDROID_KEY_PASS       Anahtar parolası
+#   PGS_PROJECT_ID         (isteğe bağlı) Play Games Services proje kimliği (sayı). Yoksa hesap bağlama kapalı kalır.
+#   PLAY_SERVICE_ACCOUNT_JSON (isteğe bağlı) Play Console API hizmet hesabı; varsa "Dahili test" kanalına otomatik yükler.
+# Ayrıntılı adımlar: MAGAZA-REHBERI.md
+name: Android Google Play
+on:
+  workflow_dispatch:
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      APP_ID: com.hayatsimulatoru.oyun
+      HAS_PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Oyunu derle
+        run: node scripts/build-single.js && node scripts/build-app.js
+      - name: Capacitor ve oyun hizmetleri eklentisi
+        run: npm install --no-save --no-audit --no-fund @capacitor/core@8 @capacitor/cli@8 @capacitor/android@8 @idleflowgames/capacitor-play-games@0.3
+      - name: Android projesi oluştur
+        env:
+          PGS: ${{ secrets.PGS_PROJECT_ID }}
+        run: |
+          npx cap add android
+          npx cap sync android
+          VERSION=$(node -p "require('./package.json').version")
+          G=android/app/build.gradle
+          sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/" $G
+          sed -i "s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" $G
+          # Uygulama simgesi (1024 px kaynaktan)
+          sudo apt-get install -y -qq imagemagick >/dev/null
+          for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+            n=${d%%:*}; s=${d##*:}
+            convert assets/app/icon-1024.png -resize ${s}x${s} android/app/src/main/res/mipmap-$n/ic_launcher.png
+            cp android/app/src/main/res/mipmap-$n/ic_launcher.png android/app/src/main/res/mipmap-$n/ic_launcher_round.png
+            # Uyarlanabilir simge: ön plan 108dp tuvalde ortadaki 72dp alana oturur
+            convert assets/app/icon-1024.png -resize $((s*3/2))x$((s*3/2)) -gravity center -background none -extent $((s*108/48))x$((s*108/48)) android/app/src/main/res/mipmap-$n/ic_launcher_foreground.png
+          done
+          # Dikey ekran
+          sed -i 's/<activity/<activity android:screenOrientation="portrait"/' android/app/src/main/AndroidManifest.xml
+          # Play Games Services (varsa)
+          if [ -n "$PGS" ]; then
+            printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n  <string name="game_services_project_id" translatable="false">%s</string>\n</resources>\n' "$PGS" > android/app/src/main/res/values/games-ids.xml
+            sed -i 's#<application#<application#; s#</application>#    <meta-data android:name="com.google.android.gms.games.APP_ID" android:value="@string/game_services_project_id" />\n    </application>#' android/app/src/main/AndroidManifest.xml
+          fi
+      - name: İmzalı AAB ve APK
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASS }}
+        run: |
+          echo "$KS_B64" | base64 -d > $RUNNER_TEMP/upload.jks
+          cd android
+          SIGN="-Pandroid.injected.signing.store.file=$RUNNER_TEMP/upload.jks -Pandroid.injected.signing.store.password=$KS_PASS -Pandroid.injected.signing.key.alias=$KEY_ALIAS -Pandroid.injected.signing.key.password=$KEY_PASS"
+          ./gradlew --no-daemon bundleRelease assembleRelease $SIGN
+          mkdir -p ../out
+          cp app/build/outputs/bundle/release/app-release.aab ../out/HayatSimulatoru.aab
+          cp app/build/outputs/apk/release/app-release.apk ../out/HayatSimulatoru.apk
+          ls -la ../out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HayatSimulatoru-android
+          path: out/
+          retention-days: 30
+      - name: Play Console › Dahili test (hizmet hesabı varsa)
+        if: ${{ env.HAS_PLAY_JSON == 'true' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.hayatsimulatoru.oyun
+          releaseFiles: out/HayatSimulatoru.aab
+          track: internal
+          status: draft

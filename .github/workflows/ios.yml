@@ -8,17 +8,17 @@ on:
   workflow_dispatch:
 jobs:
   ipa:
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - name: Oyunu tek dosyada derle
         run: node scripts/build-single.js && node scripts/build-app.js
       - name: Capacitor kur
-        run: npm install --no-save --no-audit --no-fund @capacitor/core@6 @capacitor/cli@6 @capacitor/ios@6
+        run: npm install --no-save --no-audit --no-fund @capacitor/core@8 @capacitor/cli@8 @capacitor/ios@8 @idleflowgames/capacitor-play-games@0.3
       - name: iOS projesi oluştur
         run: |
           npx cap add ios
@@ -32,7 +32,8 @@ jobs:
       - name: Xcode ile derle (imzasız)
         run: |
           cd ios/App
-          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -sdk iphoneos \
+          if [ -d App.xcworkspace ]; then SRC="-workspace App.xcworkspace"; else SRC="-project App.xcodeproj"; fi
+          xcodebuild $SRC -scheme App -configuration Release -sdk iphoneos \
             -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             build | tail -n 40
       - name: IPA paketle
